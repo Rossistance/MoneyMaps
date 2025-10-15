@@ -22,8 +22,7 @@
         #sidebar-content { flex-grow: 1; overflow-y: auto; }
         .sidebar-view { display: none; }
         .sidebar-view.active { display: block; }
-        #map { width: 100%; height: 100%; z-index: 10; filter: grayscale(0.1) contrast(1.1); }
-        .leaflet-tile-pane { filter: brightness(0.8) contrast(1.2) saturate(1.1); }
+        #map { width: 100%; height: 100%; z-index: 10; }
         .custom-pin { background-color: #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); width: 36px; height: 36px; display: flex; justify-content: center; align-items: center; border: 2px solid #4f46e5; box-shadow: 0 2px 5px rgba(0,0,0,0.2); cursor: pointer; transition: transform 0.1s ease-in-out; }
         .custom-pin:hover { transform: rotate(-45deg) scale(1.1); }
         .custom-pin div { transform: rotate(45deg); font-size: 16px; }
@@ -108,16 +107,14 @@
 
     <script>
         // =================================================================================
-        // CRITICAL API KEY INSTRUCTIONS
-        // =================================a=================================================
-        // TO FIX "401 UNAUTHORIZED" ERRORS, YOU MUST:
-        // 1. Go to your HERE Developer Portal: https://developer.here.com/
-        // 2. Generate a BRAND NEW API Key.
-        // 3. IMPORTANT: Set a "Domain Restriction" on the new key to your deployment URL 
-        //    (e.g., "your-username.github.io") to protect it.
-        // 4. Paste your new, restricted key below.
+        // API KEY INSTRUCTIONS
         // =================================================================================
-        const HERE_API_KEY = '6iHV0y797UXNMW3TZlJX6gXy67xGh2uEIX77Q7tHdjU' ;
+        // If you get a "401 Unauthorized" error, your key may be restricted.
+        // For testing, remove domain restrictions in your HERE Developer Portal.
+        // Before deploying to a public site (like GitHub Pages), you MUST add a
+        // domain restriction (e.g., "your-username.github.io") to protect your key.
+        // =================================================================================
+        const HERE_API_KEY = '6iHV0y797UXNMW3TZlJX6gXy67xGh2uEIX77Q7tHdjU';
 
         // --- STATE & CONFIG ---
         let map;
@@ -154,7 +151,7 @@
         
         async function searchPlaces() { 
             const mapLoader = document.getElementById('map-loader');
-            if (HERE_API_KEY === '6iHV0y797UXNMW3TZlJX6gXy67xGh2uEIX77Q7tHdjU' || !HERE_API_KEY) {
+            if (HERE_API_KEY === 'YOUR_NEW_HERE_API_KEY' || !HERE_API_KEY) {
                 console.error("HERE Maps API Key is not set or invalid.");
                 document.getElementById('map').innerHTML = `<div class="w-full h-full flex items-center justify-center bg-gray-800 p-4"><div class="text-center bg-gray-900 rounded-lg shadow-xl p-6 border border-red-500/50"><h3 class="text-xl font-bold text-red-400">API Key Error</h3><p class="text-gray-300 mt-2">Your HERE Maps API Key is invalid or missing.<br>Please generate a new, restricted key and add it to the HTML file.</p></div></div>`;
                 mapLoader.style.display = 'none';
@@ -187,7 +184,16 @@
         function updateActiveFilterButton() { document.querySelectorAll('.category-filter-btn').forEach(b => { const isActive = b.dataset.category === activeCategory; b.classList.toggle('gradient-bg', isActive); b.classList.toggle('text-white', isActive); b.classList.toggle('bg-gray-800', !isActive); b.classList.toggle('text-gray-300', !isActive); b.classList.toggle('hover:bg-gray-700', !isActive); }); }
         
         // --- INITIALIZATION & EVENT LISTENERS ---
-        function initializeMap() { const startPos = [35.7915, -77.9153]; map = L.map('map', { center: startPos, zoom: 13, zoomControl: false, attributionControl: false }); L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', attribution: '&copy; CARTO' }).addTo(map); const debouncedSearch = debounce(searchPlaces, 500); map.on('moveend', () => { if (!document.getElementById('search-input').value) debouncedSearch(); }); }
+        function initializeMap() { 
+            const startPos = [35.7915, -77.9153]; 
+            map = L.map('map', { center: startPos, zoom: 13, zoomControl: false, attributionControl: false }); 
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { 
+                subdomains: 'abcd', 
+                attribution: '&copy; CARTO' 
+            }).addTo(map); 
+            const debouncedSearch = debounce(searchPlaces, 500); 
+            map.on('moveend', () => { if (!document.getElementById('search-input').value) debouncedSearch(); }); 
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             initializeMap();
