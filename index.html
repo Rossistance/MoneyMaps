@@ -109,7 +109,7 @@
         // 3. Select your key and add a "Domain Restriction" (or "HTTP Referer Restriction").
         // 4. Set the allowed domain to your GitHub Pages URL (e.g., "your-username.github.io").
         // This makes the key usable ONLY on your website, even if someone copies it.
-        const HERE_API_KEY = 'YOUR_HERE_API_KEY'; // <-- PASTE YOUR RESTRICTED KEY HERE BEFORE DEPLOYING
+        const HERE_API_KEY = '6iHV0y797UXNMW3TZlJX6gXy67xGh2uEIX77Q7tHdjU'; // <-- PASTE YOUR RESTRICTED KEY HERE BEFORE DEPLOYING
 
         let budgetData = {
             'dining-out': { name: '🍽️ Dining Out', total: 250.00, color: 'red-500' }, 'groceries': { name: '🛒 Groceries', total: 500.00, color: 'green-500' }, 'transportation': { name: '⛽ Transportation', total: 150.00, color: 'yellow-500' }, 'shopping': { name: '🛍️ Shopping', total: 200.00, color: 'purple-500' }, 'entertainment': { name: '🎬 Entertainment', total: 150.00, color: 'pink-500' }, 'utilities': { name: '💡 Utilities', total: 200.00, color: 'amber-500' }, 'health': { name: '💊 Health', total: 100.00, color: 'teal-500' }, 'fitness': { name: '💪 Fitness', total: 50.00, color: 'emerald-500' }, 'home-improvement': { name: '🛠️ Home', total: 250.00, color: 'cyan-500' }, 'income': { name: '💰 Income', color: 'green-600' }, 'transfers': { name: '🔄 Transfers', color: 'gray-500' }
@@ -207,7 +207,7 @@
         }
         
         async function searchPlaces() {
-            if (HERE_API_KEY === 6iHV0y797UXNMW3TZlJX6gXy67xGh2uEIX77Q7tHdjU) {
+            if (HERE_API_KEY === 'YOUR_HERE_API_KEY') {
                 console.error("API Key is not set. Please replace 'YOUR_HERE_API_KEY' with your actual key.");
                 // Optionally, show a user-facing error message on the UI
                 return;
