@@ -15,28 +15,35 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <style>
-        body, html { height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        body, html { height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Inter', sans-serif; background-color: #111827; color: #f9fafb; }
         .main-container { display: flex; height: 100vh; }
         #map-container { flex-grow: 1; position: relative; }
-        #sidebar { width: 450px; flex-shrink: 0; background-color: #ffffff; box-shadow: -5px 0 15px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
+        #sidebar { width: 450px; flex-shrink: 0; background-color: #030712; border-left: 1px solid #1f2937; display: flex; flex-direction: column; }
         #sidebar-content { flex-grow: 1; overflow-y: auto; }
         .sidebar-view { display: none; }
         .sidebar-view.active { display: block; }
-        #map { width: 100%; height: 100%; z-index: 10; }
-        .custom-pin { background-color: #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); width: 36px; height: 36px; display: flex; justify-content: center; align-items: center; border: 2px solid #1e40af; box-shadow: 0 2px 5px rgba(0,0,0,0.2); cursor: pointer; transition: transform 0.1s ease-in-out; }
+        #map { width: 100%; height: 100%; z-index: 10; filter: grayscale(0.1) contrast(1.1); }
+        .leaflet-tile-pane { filter: brightness(0.8) contrast(1.2) saturate(1.1); }
+        .custom-pin { background-color: #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); width: 36px; height: 36px; display: flex; justify-content: center; align-items: center; border: 2px solid #4f46e5; box-shadow: 0 2px 5px rgba(0,0,0,0.2); cursor: pointer; transition: transform 0.1s ease-in-out; }
         .custom-pin:hover { transform: rotate(-45deg) scale(1.1); }
         .custom-pin div { transform: rotate(45deg); font-size: 16px; }
-        .leaflet-control-attribution { font-size: 11px !important; }
-        .nav-btn.active { background-color: #eef2ff; color: #3b82f6; }
-        .keypad-btn:active { background-color: #dbeafe; }
+        .leaflet-control-attribution { display: none !important; }
+        .nav-btn.active { background-color: #1f2937; color: #ffffff; }
+        .keypad-btn:active { background-color: #374151; }
         /* Scrollbar styles */
-        #sidebar-content::-webkit-scrollbar, .category-filters::-webkit-scrollbar, #autocomplete-results::-webkit-scrollbar { width: 4px; height: 4px; }
-        #sidebar-content::-webkit-scrollbar-thumb, .category-filters::-webkit-scrollbar-thumb, #autocomplete-results::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        #sidebar-content::-webkit-scrollbar, .category-filters::-webkit-scrollbar, #autocomplete-results::-webkit-scrollbar { width: 6px; height: 6px; }
+        #sidebar-content::-webkit-scrollbar-thumb, .category-filters::-webkit-scrollbar-thumb, #autocomplete-results::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
+        #sidebar-content::-webkit-scrollbar-track, .category-filters::-webkit-scrollbar-track, #autocomplete-results::-webkit-scrollbar-track { background: #1f2937; }
+
         .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
         @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
-        .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #3498db; width: 30px; height: 30px; animation: spin 1s linear infinite; }
+        .loader { border: 4px solid #4b5563; border-radius: 50%; border-top: 4px solid #6366f1; width: 30px; height: 30px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .sankey-link { fill: none; stroke-opacity: 0.3; } .sankey-link:hover { stroke-opacity: 0.6; } .sankey-node rect { stroke: #fff; stroke-width: 2px; }
+        .sankey-link { fill: none; stroke-opacity: 0.5; } .sankey-link:hover { stroke-opacity: 0.8; } .sankey-node rect { stroke: #111827; stroke-width: 2px; }
+        
+        .gradient-text { background-image: linear-gradient(to right, #4f46e5, #a855f7); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .gradient-bg { background-image: linear-gradient(to right, #4f46e5, #a855f7); }
+        .gradient-border { border: 2px solid; border-image-slice: 1; border-image-source: linear-gradient(to right, #4f46e5, #a855f7); }
     </style>
 </head>
 <body>
@@ -47,43 +54,43 @@
             <div class="absolute top-0 left-0 right-0 p-4 z-20 space-y-2">
                 <div class="max-w-xl mx-auto">
                     <div class="relative">
-                        <input type="text" id="search-input" placeholder="Search city, state, or business..." class="w-full pl-10 pr-4 py-3 bg-white rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800">
-                        <div class="absolute top-1/2 left-3 -translate-y-1/2 text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></div>
-                        <div id="autocomplete-results" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg z-30 overflow-hidden hidden max-h-80 overflow-y-auto"></div>
+                        <input type="text" id="search-input" placeholder="Search city, state, or business..." class="w-full pl-10 pr-4 py-3 bg-gray-900/80 backdrop-blur-sm border border-gray-700 rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-200 placeholder-gray-500">
+                        <div class="absolute top-1/2 left-3 -translate-y-1/2 text-gray-500"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></div>
+                        <div id="autocomplete-results" class="absolute top-full left-0 right-0 mt-2 bg-gray-900/90 backdrop-blur-sm border border-gray-700 rounded-xl shadow-lg z-30 overflow-hidden hidden max-h-80 overflow-y-auto"></div>
                     </div>
-                    <div id="category-filters-container" class="category-filters flex items-center space-x-2 overflow-x-auto p-2 bg-white/80 backdrop-blur-sm rounded-xl mt-2 shadow-md"></div>
+                    <div id="category-filters-container" class="category-filters flex items-center space-x-2 overflow-x-auto p-2 bg-gray-900/80 backdrop-blur-sm rounded-xl mt-2 shadow-lg border border-gray-800"></div>
                 </div>
             </div>
-            <div id="map-loader" class="absolute inset-0 bg-white/50 z-30 items-center justify-center hidden"><div class="loader"></div></div>
+            <div id="map-loader" class="absolute inset-0 bg-gray-900/50 z-30 items-center justify-center hidden"><div class="loader"></div></div>
         </div>
 
         <div id="sidebar">
-            <div class="p-4 border-b">
-                <h1 class="text-2xl font-bold text-gray-900">Money Maps</h1>
+            <div class="p-4 border-b border-gray-800">
+                <h1 class="text-3xl font-bold gradient-text">Money Maps</h1>
             </div>
-            <div id="sidebar-nav" class="grid grid-cols-2 gap-2 p-2 border-b bg-gray-50">
-                <button class="nav-btn active flex items-center justify-center p-2 rounded-lg font-semibold text-sm" data-view="budget-view"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><line x1="12" x2="12" y1="20" y2="10"></line><line x1="18" x2="18" y1="20" y2="4"></line><line x1="6" x2="6" y1="20" y2="16"></line></svg>Budget</button>
-                <button class="nav-btn flex items-center justify-center p-2 rounded-lg font-semibold text-gray-600 text-sm" data-view="transactions-view"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>History</button>
+            <div id="sidebar-nav" class="grid grid-cols-2 gap-2 p-2 border-b border-gray-800">
+                <button class="nav-btn active flex items-center justify-center p-2 rounded-lg font-semibold text-sm transition-colors" data-view="budget-view"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><line x1="12" x2="12" y1="20" y2="10"></line><line x1="18" x2="18" y1="20" y2="4"></line><line x1="6" x2="6" y1="20" y2="16"></line></svg>Budget</button>
+                <button class="nav-btn flex items-center justify-center p-2 rounded-lg font-semibold text-gray-400 hover:bg-gray-800 text-sm transition-colors" data-view="transactions-view"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>History</button>
             </div>
 
             <div id="sidebar-content">
                 <!-- Budget View -->
                 <div id="budget-view" class="sidebar-view active p-4">
-                    <div id="sankey-hero-container" class="mt-2 p-2 h-48 cursor-pointer flex items-center justify-center bg-gray-50 rounded-xl"><svg id="sankey-hero" class="w-full h-full"></svg></div>
-                    <h2 class="text-xl font-bold text-gray-800 px-2 mt-6 flex justify-between items-center"><span>Fund Flows</span></h2>
+                    <div id="sankey-hero-container" class="mt-2 p-2 h-48 cursor-pointer flex items-center justify-center bg-gray-900 rounded-xl"><svg id="sankey-hero" class="w-full h-full"></svg></div>
+                    <h2 class="text-xl font-bold text-gray-100 px-2 mt-6 flex justify-between items-center"><span>Fund Flows</span></h2>
                     <div id="budget-list" class="mt-2 space-y-3 px-2"></div>
-                    <h2 class="text-xl font-bold text-gray-800 px-2 mt-8">Pure Savings</h2>
+                    <h2 class="text-xl font-bold text-gray-100 px-2 mt-8">Pure Savings</h2>
                     <div id="pure-savings-list" class="mt-2 space-y-3 px-2"></div>
-                    <h2 class="text-xl font-bold text-gray-800 px-2 mt-8 flex justify-between items-center"><span>Time Targets</span></h2>
+                    <h2 class="text-xl font-bold text-gray-100 px-2 mt-8 flex justify-between items-center"><span>Time Targets</span></h2>
                     <div id="goals-list" class="mt-2 space-y-3 px-2 pb-4"></div>
                 </div>
 
                 <!-- Transactions View -->
                 <div id="transactions-view" class="sidebar-view">
-                     <div class="p-4 bg-white border-b sticky top-0">
+                     <div class="p-4 bg-gray-900 border-b border-gray-800 sticky top-0">
                         <div class="flex justify-between items-end mt-2">
-                            <div><p class="text-sm text-gray-500">Assets</p><p id="assets-display" class="text-2xl font-bold text-green-600"></p></div>
-                             <div class="text-right"><p class="text-sm text-gray-500">Total Spent</p><p id="total-spent" class="text-2xl font-bold text-red-600"></p></div>
+                            <div><p class="text-sm text-gray-400">Assets</p><p id="assets-display" class="text-2xl font-bold text-green-400"></p></div>
+                             <div class="text-right"><p class="text-sm text-gray-400">Total Spent</p><p id="total-spent" class="text-2xl font-bold text-red-400"></p></div>
                         </div>
                     </div>
                     <div id="transactions-list" class="p-4 space-y-3"></div>
@@ -96,515 +103,113 @@
     </div>
     
     <!-- Modals -->
-    <div id="log-purchase-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 z-50 hidden items-center justify-center"></div>
-    <div id="add-category-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 z-50 hidden items-center justify-center p-4"></div>
+    <div id="log-purchase-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4"></div>
+    <div id="add-category-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4"></div>
 
     <script>
-        // --- API & DATA CONFIG ---
-        
-        // IMPORTANT: API KEY SECURITY
-        // For a public website like GitHub Pages, do not commit your real API key here.
-        // 1. Paste your key here for local testing.
-        // 2. Before deploying, go to your HERE Developer Portal.
-        // 3. Select your key and add a "Domain Restriction" (or "HTTP Referer Restriction").
-        // 4. Set the allowed domain to your GitHub Pages URL (e.g., "your-username.github.io").
-        // This makes the key usable ONLY on your website, even if someone copies it.
-        const HERE_API_KEY = '6iHV0y797UXNMW3TZlJX6gXy67xGh2uEIX77Q7tHdjU'; // <-- PASTE YOUR RESTRICTED KEY HERE BEFORE DEPLOYING
+        // =================================================================================
+        // CRITICAL API KEY INSTRUCTIONS
+        // =================================a=================================================
+        // TO FIX "401 UNAUTHORIZED" ERRORS, YOU MUST:
+        // 1. Go to your HERE Developer Portal: https://developer.here.com/
+        // 2. Generate a BRAND NEW API Key.
+        // 3. IMPORTANT: Set a "Domain Restriction" on the new key to your deployment URL 
+        //    (e.g., "your-username.github.io") to protect it.
+        // 4. Paste your new, restricted key below.
+        // =================================================================================
+        const HERE_API_KEY = 6iHV0y797UXNMW3TZlJX6gXy67xGh2uEIX77Q7tHdjU ;
 
-        let budgetData = {
-            'dining-out': { name: '🍽️ Dining Out', total: 250.00, color: 'red-500' }, 'groceries': { name: '🛒 Groceries', total: 500.00, color: 'green-500' }, 'transportation': { name: '⛽ Transportation', total: 150.00, color: 'yellow-500' }, 'shopping': { name: '🛍️ Shopping', total: 200.00, color: 'purple-500' }, 'entertainment': { name: '🎬 Entertainment', total: 150.00, color: 'pink-500' }, 'utilities': { name: '💡 Utilities', total: 200.00, color: 'amber-500' }, 'health': { name: '💊 Health', total: 100.00, color: 'teal-500' }, 'fitness': { name: '💪 Fitness', total: 50.00, color: 'emerald-500' }, 'home-improvement': { name: '🛠️ Home', total: 250.00, color: 'cyan-500' }, 'income': { name: '💰 Income', color: 'green-600' }, 'transfers': { name: '🔄 Transfers', color: 'gray-500' }
-        };
-        let goalsData = { 'emergency-fund': { name: '🏦 Emergency Fund', current: 750.00, total: 3000.00, color: 'blue-500' }, 'vacation': { name: '✈️ Vacation', current: 250.00, total: 1500.00, color: 'cyan-500' },};
-        let pureSavingsData = { 'cash-reserve': { name: '💵 Cash Reserve', current: 1200.00, total: 10000.00, color: 'lime-500' } };
-        let transactionsData = [ { id: 1, name: 'Axis Energy', amount: 2145.67, type: 'credit', date: '2025-10-10', category: 'income', source: 'Bank Sync (Payroll)', isInternalTransfer: false }, { id: 100, name: 'Check Deposit', amount: 150.00, type: 'credit', date: '2025-10-01', category: 'income', source: 'Check #8812', isInternalTransfer: false }, { id: 2, name: 'Whole Foods Market', amount: 142.33, type: 'debit', date: '2025-10-12', category: 'groceries', source: 'Bank Sync', isInternalTransfer: false }, { id: 3, name: 'Trader Joe\'s', amount: 98.22, type: 'debit', date: '2025-10-05', category: 'groceries', source: 'Bank Sync', isInternalTransfer: false }, { id: 4, name: 'Whole Foods Market', amount: 70.00, type: 'debit', date: '2025-10-01', category: 'groceries', source: 'Bank Sync', isInternalTransfer: false }, { id: 5, name: 'The Flying Squirrel', amount: 78.50, type: 'debit', date: '2025-10-11', category: 'dining-out', source: 'Bank Sync', isInternalTransfer: false }, { id: 6, name: "Rembrandt's Coffee House", amount: 18.75, type: 'debit', date: new Date().toISOString().split('T')[0], category: 'dining-out', source: 'Manual Log', isInternalTransfer: false }, { id: 7, name: 'Public House Restaurant', amount: 67.25, type: 'debit', date: '2025-10-08', category: 'dining-out', source: 'Bank Sync', isInternalTransfer: false }, { id: 8, name: 'Shell', amount: 48.12, type: 'debit', date: '2025-10-09', category: 'transportation', source: 'Bank Sync', isInternalTransfer: false }, { id: 9, name: 'Shell', amount: 46.78, type: 'debit', date: '2025-10-02', category: 'transportation', source: 'Bank Sync', isInternalTransfer: false }, { id: 10, name: 'Target', amount: 80.00, type: 'debit', date: '2025-10-04', category: 'shopping', source: 'Bank Sync', isInternalTransfer: false }, { id: 11, name: 'Target Refund', amount: 24.50, type: 'credit', date: '2025-10-06', category: 'shopping', source: 'Bank Sync', isInternalTransfer: false }, { id: 12, name: 'Regal Hamilton Place', amount: 75.00, type: 'debit', date: '2025-10-05', category: 'entertainment', source: 'Bank Sync', isInternalTransfer: false }, { id: 13, name: 'EPB Headquarters', amount: 20.00, type: 'debit', date: '2025-10-08', category: 'utilities', source: 'Check #2045', isInternalTransfer: false }, { id: 14, name: 'CVS', amount: 35.00, type: 'debit', date: '2025-10-07', category: 'health', source: 'Bank Sync', isInternalTransfer: false }, { id: 15, name: 'Erlanger Baroness Hospital', amount: 20.00, type: 'debit', date: '2025-10-03', category: 'health', source: 'Bank Sync', isInternalTransfer: false }, { id: 16, name: 'Orangetheory Fitness', amount: 15.00, type: 'debit', date: '2025-10-01', category: 'fitness', source: 'Bank Sync', isInternalTransfer: false }, { id: 17, name: 'The Home Depot', amount: 100.00, type: 'debit', date: '2025-09-30', category: 'home-improvement', source: 'Bank Sync', isInternalTransfer: false }, { id: 18, name: 'Transfer to Savings', amount: 500.00, type: 'debit', date: '2025-10-10', category: 'transfers', source: 'Checking', isInternalTransfer: true }, { id: 19, name: 'Transfer from Checking', amount: 500.00, type: 'credit', date: '2025-10-10', category: 'transfers', source: 'Savings', isInternalTransfer: true } ];
-        const tailwindColors = { 'red-500': '#ef4444', 'green-500': '#22c55e', 'yellow-500': '#eab308', 'purple-500': '#8b5cf6', 'blue-500': '#3b82f6', 'cyan-500': '#06b6d4', 'indigo-500': '#6366f1', 'pink-500': '#ec4899', 'teal-500': '#14b8a6', 'amber-500': '#f59e0b', 'emerald-500': '#10b981', 'gray-500': '#6b7280', 'green-600': '#16a34a', 'lime-500': '#84cc16' };
-        const hereCategoryMap = { 'dining-out': '100-1000', 'groceries': '100-1011-0052,700-7000-0000', 'transportation': '100-1019,400-4000-0000', 'shopping': '600-6000-0000', 'entertainment': '300-3000-0000', 'health': '500-5000-0000', 'fitness': '800-8000-0165', 'home-improvement': '600-6000-0062' };
-        
+        // --- STATE & CONFIG ---
         let map;
-        const sidebarViews = document.querySelectorAll('.sidebar-view');
-        const navBtns = document.querySelectorAll('.nav-btn');
-        let currentPlace = null, currentAmountString = "0";
+        let currentPlace = null;
+        let currentAmountString = "0";
         let mapMarkers = [];
         let searchTimeout;
         let activeCategory = 'all';
+        const todayStr = '2025-10-14';
+        const yesterdayStr = '2025-10-13';
 
-        // --- Persistent Cache with Time-To-Live (TTL) ---
+        let budgetData = { 'dining-out': { name: '🍽️ Dining Out', total: 250.00, color: 'red-500' }, 'groceries': { name: '🛒 Groceries', total: 500.00, color: 'green-500' }, 'transportation': { name: '⛽ Transportation', total: 150.00, color: 'yellow-500' }, 'shopping': { name: '🛍️ Shopping', total: 200.00, color: 'purple-500' }, 'entertainment': { name: '🎬 Entertainment', total: 150.00, color: 'pink-500' }, 'utilities': { name: '💡 Utilities', total: 200.00, color: 'amber-500' }, 'health': { name: '💊 Health', total: 100.00, color: 'teal-500' }, 'fitness': { name: '💪 Fitness', total: 50.00, color: 'emerald-500' }, 'home-improvement': { name: '🛠️ Home', total: 250.00, color: 'cyan-500' }, 'income': { name: '💰 Income', color: 'green-600' }, 'transfers': { name: '🔄 Transfers', color: 'gray-500' } };
+        let goalsData = { 'emergency-fund': { name: '🏦 Emergency Fund', current: 750.00, total: 3000.00, color: 'blue-500' }, 'vacation': { name: '✈️ Vacation', current: 250.00, total: 1500.00, color: 'cyan-500' },};
+        let pureSavingsData = { 'cash-reserve': { name: '💵 Cash Reserve', current: 1200.00, total: 10000.00, color: 'lime-500' } };
+        let transactionsData = [ { id: 1, name: 'Axis Energy', amount: 2145.67, type: 'credit', date: '2025-10-10', category: 'income', source: 'Bank Sync (Payroll)', isInternalTransfer: false }, { id: 2, name: 'Whole Foods Market', amount: 142.33, type: 'debit', date: '2025-10-12', category: 'groceries', source: 'Bank Sync', isInternalTransfer: false }, { id: 3, name: 'Trader Joe\'s', amount: 98.22, type: 'debit', date: '2025-10-05', category: 'groceries', source: 'Bank Sync', isInternalTransfer: false }, { id: 5, name: 'The Flying Squirrel', amount: 78.50, type: 'debit', date: '2025-10-11', category: 'dining-out', source: 'Bank Sync', isInternalTransfer: false }, { id: 6, name: "Starbucks", amount: 18.75, type: 'debit', date: todayStr, category: 'dining-out', source: 'Manual Log', isInternalTransfer: false }, { id: 7, name: 'Public House Restaurant', amount: 67.25, type: 'debit', date: '2025-10-08', category: 'dining-out', source: 'Bank Sync', isInternalTransfer: false }, { id: 8, name: 'Shell', amount: 48.12, type: 'debit', date: yesterdayStr, category: 'transportation', source: 'Bank Sync', isInternalTransfer: false }, { id: 10, name: 'Target', amount: 80.00, type: 'debit', date: todayStr, category: 'shopping', source: 'Bank Sync', isInternalTransfer: false }, { id: 11, name: 'Target Refund', amount: 24.50, type: 'credit', date: '2025-10-06', category: 'shopping', source: 'Bank Sync', isInternalTransfer: false }, { id: 12, name: 'Regal Hamilton Place', amount: 75.00, type: 'debit', date: '2025-10-05', category: 'entertainment', source: 'Bank Sync', isInternalTransfer: false }, { id: 13, name: 'EPB Headquarters', amount: 20.00, type: 'debit', date: '2025-10-08', category: 'utilities', source: 'Check #2045', isInternalTransfer: false }, { id: 14, name: 'CVS', amount: 35.00, type: 'debit', date: '2025-10-07', category: 'health', source: 'Bank Sync', isInternalTransfer: false }, { id: 15, name: 'Orangetheory Fitness', amount: 15.00, type: 'debit', date: '2025-10-01', category: 'fitness', source: 'Bank Sync', isInternalTransfer: false }, { id: 16, name: 'The Home Depot', amount: 100.00, type: 'debit', date: '2025-09-30', category: 'home-improvement', source: 'Bank Sync', isInternalTransfer: false }, { id: 17, name: 'Transfer to Savings', amount: 500.00, type: 'debit', date: '2025-10-10', category: 'transfers', source: 'Checking', isInternalTransfer: true }, { id: 18, name: 'Transfer from Checking', amount: 500.00, type: 'credit', date: '2025-10-10', category: 'transfers', source: 'Savings', isInternalTransfer: true } ];
+        
+        const hereCategoryMap = { 'dining-out': '100-1000', 'groceries': '100-1011-0052,700-7000-0000', 'transportation': '100-1019,400-4000-0000', 'shopping': '600-6000-0000', 'entertainment': '300-3000-0000', 'health': '500-5000-0000', 'fitness': '800-8000-0165', 'home-improvement': '600-6000-0062' };
+        const tailwindColors = { 'red-500': '#ef4444', 'green-500': '#22c55e', 'yellow-500': '#eab308', 'purple-500': '#a855f7', 'blue-500': '#3b82f6', 'cyan-500': '#06b6d4', 'indigo-500': '#6366f1', 'pink-500': '#ec4899', 'teal-500': '#14b8a6', 'amber-500': '#f59e0b', 'emerald-500': '#10b981', 'gray-500': '#6b7280', 'green-600': '#16a34a', 'lime-500': '#84cc16' };
+        
+        // --- UTILITIES ---
         const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
-        const persistentCache = {
-            get: (key) => {
-                try {
-                    const itemStr = localStorage.getItem(key);
-                    if (!itemStr) return null;
-                    const item = JSON.parse(itemStr);
-                    const now = new Date();
-                    if (now.getTime() > item.expiry) {
-                        localStorage.removeItem(key);
-                        return null;
-                    }
-                    return item.value;
-                } catch (e) {
-                    console.error("Cache read error:", e);
-                    return null;
-                }
-            },
-            set: (key, value) => {
-                try {
-                    const now = new Date();
-                    const item = { value: value, expiry: now.getTime() + CACHE_TTL };
-                    localStorage.setItem(key, JSON.stringify(item));
-                } catch (e) {
-                    console.error("Cache write error:", e);
-                }
-            }
-        };
-
-        // --- Debounce Utility Function ---
-        function debounce(func, delay) {
-            let timeout;
-            return function(...args) {
-                const context = this;
-                clearTimeout(timeout);
-                timeout = setTimeout(() => func.apply(context, args), delay);
-            };
-        }
-
+        const persistentCache = { get: (key) => { try { const i = localStorage.getItem(key); if (!i) return null; const p = JSON.parse(i); if (new Date().getTime() > p.expiry) { localStorage.removeItem(key); return null; } return p.value; } catch (e) { console.error("Cache read error:", e); return null; } }, set: (key, value) => { try { const p = { value: value, expiry: new Date().getTime() + CACHE_TTL }; localStorage.setItem(key, JSON.stringify(p)); } catch (e) { console.error("Cache write error:", e); } } };
+        const debounce = (func, delay) => { let t; return function(...a) { clearTimeout(t); t = setTimeout(() => func.apply(this, a), delay); }; };
         const formatCurrency = (amount) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-        
-        function calculateBudgetState() {
-            for (const key in budgetData) { if (budgetData[key].total) { budgetData[key].remaining = budgetData[key].total; } }
-            transactionsData.forEach(t => { if (budgetData[t.category] && budgetData[t.category].total) { if (t.type === 'debit') { budgetData[t.category].remaining -= t.amount; } else if (t.type === 'credit' && t.category !== 'income' && !t.isInternalTransfer) { budgetData[t.category].remaining += t.amount; } } });
-        }
-        
-        function clearMarkers() {
-            mapMarkers.forEach(({ marker }) => marker.removeFrom(map));
-            mapMarkers = [];
-        }
 
-        function categoryForHereResult(hereItem) {
-            if (!hereItem || !Array.isArray(hereItem.categories)) return 'uncategorized';
-            for (const category of hereItem.categories) {
-                if (category && category.id) {
-                    for (const appCat in hereCategoryMap) {
-                        if (hereCategoryMap[appCat].includes(category.id)) return appCat;
-                    }
-                }
-            }
-            return 'uncategorized';
-        }
-
-        function addPlacesToMap(items) {
-             clearMarkers();
-            items.forEach(item => {
-                if (!item || !item.categories || !item.position) return;
-                const place = { id: item.id, name: item.title, type: item.categories[0]?.name || 'Place', lat: item.position.lat, lng: item.position.lng, category: categoryForHereResult(item) };
-                const categoryData = budgetData[place.category];
-                place.icon = categoryData ? categoryData.name.match(/\p{Emoji}/u)?.[0] || '📍' : '❓';
-                const marker = L.marker([place.lat, place.lng], { icon: L.divIcon({ html: `<div class="custom-pin"><div>${place.icon}</div></div>`, className: '', iconSize: [36, 36], iconAnchor: [18, 36] }) });
-                mapMarkers.push({ marker, place });
-                marker.on('click', (e) => { L.DomEvent.stopPropagation(e); showPlaceView(place); map.flyTo([place.lat, place.lng], 15); });
-                marker.addTo(map);
-            });
-        }
+        // --- DATA LOGIC ---
+        function calculateBudgetState() { for (const k in budgetData) { if (budgetData[k].total) budgetData[k].remaining = budgetData[k].total; } transactionsData.forEach(t => { if (budgetData[t.category] && budgetData[t.category].total) { if (t.type === 'debit') budgetData[t.category].remaining -= t.amount; else if (t.type === 'credit' && t.category !== 'income' && !t.isInternalTransfer) budgetData[t.category].remaining += t.amount; } }); }
         
-        async function searchPlaces() {
-            if (HERE_API_KEY === 'YOUR_HERE_API_KEY') {
-                console.error("API Key is not set. Please replace 'YOUR_HERE_API_KEY' with your actual key.");
-                // Optionally, show a user-facing error message on the UI
+        // --- MAP & API LOGIC ---
+        function clearMarkers() { mapMarkers.forEach(({ marker }) => marker.removeFrom(map)); mapMarkers = []; }
+        function categoryForHereResult(item) { if (!item || !Array.isArray(item.categories)) return 'uncategorized'; for (const c of item.categories) { if (c && c.id) for (const appCat in hereCategoryMap) if (hereCategoryMap[appCat].includes(c.id)) return appCat; } return 'uncategorized'; }
+
+        function addPlacesToMap(items) { clearMarkers(); items.forEach(item => { if (!item || !item.categories || !item.position) return; const place = { id: item.id, name: item.title, type: item.categories[0]?.name || 'Place', lat: item.position.lat, lng: item.position.lng, category: categoryForHereResult(item) }; const categoryData = budgetData[place.category]; place.icon = categoryData ? categoryData.name.match(/\p{Emoji}/u)?.[0] || '📍' : '❓'; const marker = L.marker([place.lat, place.lng], { icon: L.divIcon({ html: `<div class="custom-pin"><div>${place.icon}</div></div>`, className: '', iconSize: [36, 36], iconAnchor: [18, 36] }) }); mapMarkers.push({ marker, place }); marker.on('click', (e) => { L.DomEvent.stopPropagation(e); showPlaceView(place); map.flyTo([place.lat, place.lng], 15); }); marker.addTo(map); }); }
+        
+        async function searchPlaces() { 
+            const mapLoader = document.getElementById('map-loader');
+            if (HERE_API_KEY === 6iHV0y797UXNMW3TZlJX6gXy67xGh2uEIX77Q7tHdjU || !HERE_API_KEY) {
+                console.error("HERE Maps API Key is not set or invalid.");
+                document.getElementById('map').innerHTML = `<div class="w-full h-full flex items-center justify-center bg-gray-800 p-4"><div class="text-center bg-gray-900 rounded-lg shadow-xl p-6 border border-red-500/50"><h3 class="text-xl font-bold text-red-400">API Key Error</h3><p class="text-gray-300 mt-2">Your HERE Maps API Key is invalid or missing.<br>Please generate a new, restricted key and add it to the HTML file.</p></div></div>`;
+                mapLoader.style.display = 'none';
                 return;
             }
-            document.getElementById('map-loader').style.display = 'flex';
-            const query = document.getElementById('search-input').value;
-            const center = map.getCenter();
-            
-            // --- Optimized cache grid key ---
-            const cacheKey = `places_${Math.round(center.lat * 10)}_${Math.round(center.lng * 10)}_${map.getZoom()}_${activeCategory}_${query}`;
+            mapLoader.style.display = 'flex'; 
+            const query = document.getElementById('search-input').value; const center = map.getCenter(); const cacheKey = `places_${Math.round(center.lat * 10)}_${Math.round(center.lng * 10)}_${map.getZoom()}_${activeCategory}_${query}`; const cachedData = persistentCache.get(cacheKey); if (cachedData) { addPlacesToMap(cachedData); mapLoader.style.display = 'none'; return; } const bounds = map.getBounds(); const inCircle = `${center.lat},${center.lng};r=${Math.round(center.distanceTo(bounds.getNorthEast()))}`; let url; if (query) { url = `https://discover.search.hereapi.com/v1/discover?q=${encodeURIComponent(query)}&in=circle:${inCircle}&limit=100&apiKey=${HERE_API_KEY}`; } else if (activeCategory !== 'all') { const categoryCodes = hereCategoryMap[activeCategory]; url = `https://browse.search.hereapi.com/v1/browse?categories=${categoryCodes}&in=circle:${inCircle}&limit=100&apiKey=${HERE_API_KEY}`; } else { mapLoader.style.display = 'none'; clearMarkers(); return; } try { const response = await fetch(url); if (!response.ok) throw new Error(`API error: ${response.status}`); const data = await response.json(); if (data.items) { persistentCache.set(cacheKey, data.items); addPlacesToMap(data.items); } } catch (error) { console.error("Error fetching places:", error); } finally { mapLoader.style.display = 'none'; } }
 
-            // --- Use persistent cache ---
-            const cachedData = persistentCache.get(cacheKey);
-            if (cachedData) {
-                addPlacesToMap(cachedData);
-                document.getElementById('map-loader').style.display = 'none';
-                return;
-            }
-
-            const bounds = map.getBounds();
-            const inCircle = `${center.lat},${center.lng};r=${Math.round(center.distanceTo(bounds.getNorthEast()))}`;
-            let url;
-            if (query) {
-                url = `https://discover.search.hereapi.com/v1/discover?q=${encodeURIComponent(query)}&in=circle:${inCircle}&limit=100&apiKey=${HERE_API_KEY}`;
-            } else if (activeCategory !== 'all') {
-                const categoryCodes = hereCategoryMap[activeCategory];
-                url = `https://browse.search.hereapi.com/v1/browse?categories=${categoryCodes}&in=circle:${inCircle}&limit=100&apiKey=${HERE_API_KEY}`;
-            } else {
-                 document.getElementById('map-loader').style.display = 'none';
-                 clearMarkers();
-                 return;
-            }
-            try {
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error(`API request failed with status ${response.status}`);
-                }
-                const data = await response.json();
-                if (data.items) {
-                    persistentCache.set(cacheKey, data.items); // Store results in cache
-                    addPlacesToMap(data.items);
-                }
-            } catch (error) { console.error("Error fetching places:", error); } 
-            finally { document.getElementById('map-loader').style.display = 'none'; }
-        }
-
-        async function getAutocompleteSuggestions() {
-            const query = document.getElementById('search-input').value;
-            const resultsContainer = document.getElementById('autocomplete-results');
-            if (query.length < 3) { resultsContainer.innerHTML = ''; resultsContainer.classList.add('hidden'); return; }
-            const center = map.getCenter();
-            const url = `https://autosuggest.search.hereapi.com/v1/autosuggest?q=${encodeURIComponent(query)}&at=${center.lat},${center.lng}&limit=7&apiKey=${HERE_API_KEY}`;
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                renderAutocomplete(data.items);
-            } catch (error) { 
-                console.error("Autocomplete error:", error); 
-                resultsContainer.classList.add('hidden');
-            }
-        }
-
-        function renderAutocomplete(items) {
-            const resultsContainer = document.getElementById('autocomplete-results');
-            if (!items || items.length === 0) { resultsContainer.innerHTML = ''; resultsContainer.classList.add('hidden'); return; }
-            resultsContainer.innerHTML = items.map(item => `
-                <div class="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0" data-id="${item.id}" data-type="${item.resultType}">
-                    <p class="font-semibold text-gray-800">${item.title}</p>
-                    <p class="text-sm text-gray-500">${item.address?.label || 'Search suggestion'}</p>
-                </div>
-            `).join('');
-            resultsContainer.classList.remove('hidden');
-        }
-
-        async function selectSuggestion(id) {
-            document.getElementById('autocomplete-results').classList.add('hidden');
-            document.getElementById('map-loader').style.display = 'flex';
-            const url = `https://lookup.search.hereapi.com/v1/lookup?id=${id}&apiKey=${HERE_API_KEY}`;
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                if (data && data.position && data.position.lat && data.position.lng) {
-                    map.flyTo([data.position.lat, data.position.lng], 15);
-                    if (data.resultType === 'place') {
-                        addPlacesToMap([data]);
-                        const place = mapMarkers[0]?.place;
-                        if (place) showPlaceView(place);
-                    }
-                } else {
-                    console.warn("Selected suggestion does not have position data:", data);
-                }
-            } catch (error) { console.error("Lookup error:", error); } 
-            finally { document.getElementById('map-loader').style.display = 'none'; }
-        }
+        async function getAutocompleteSuggestions() { const query = document.getElementById('search-input').value; const resultsContainer = document.getElementById('autocomplete-results'); if (query.length < 3) { resultsContainer.innerHTML = ''; resultsContainer.classList.add('hidden'); return; } const center = map.getCenter(); const url = `https://autosuggest.search.hereapi.com/v1/autosuggest?q=${encodeURIComponent(query)}&at=${center.lat},${center.lng}&limit=7&apiKey=${HERE_API_KEY}`; try { const response = await fetch(url); const data = await response.json(); renderAutocomplete(data.items); } catch (error) { console.error("Autocomplete error:", error); resultsContainer.classList.add('hidden'); } }
+        async function selectSuggestion(id) { document.getElementById('autocomplete-results').classList.add('hidden'); document.getElementById('map-loader').style.display = 'flex'; const url = `https://lookup.search.hereapi.com/v1/lookup?id=${id}&apiKey=${HERE_API_KEY}`; try { const response = await fetch(url); const data = await response.json(); if (data?.position?.lat && data?.position?.lng) { map.flyTo([data.position.lat, data.position.lng], 15); if (data.resultType === 'place') { addPlacesToMap([data]); const place = mapMarkers[0]?.place; if (place) showPlaceView(place); } } else { console.warn("Suggestion has no position data:", data); } } catch (error) { console.error("Lookup error:", error); } finally { document.getElementById('map-loader').style.display = 'none'; } }
         
-        function renderAll() {
-            calculateBudgetState();
-            if(document.getElementById('budget-view').classList.contains('active')) renderBudgetView();
-            if(document.getElementById('transactions-view').classList.contains('active')) renderTransactionsView();
-            if(document.getElementById('place-detail-view').classList.contains('active')) renderPlaceDetailView(currentPlace);
-        }
-
-        function createSankey(svgElement) {
-            const width = svgElement.clientWidth;
-            const height = svgElement.clientHeight;
-            svgElement.innerHTML = ''; 
-            const svg = d3.select(svgElement).attr("viewBox", `0 0 ${width} ${height}`);
-
-            const spending = Object.entries(budgetData)
-                .filter(([key, cat]) => cat.total && key !== 'income' && key !== 'transfers')
-                .map(([key, cat]) => ({ category: key, spent: Math.max(0, cat.total - cat.remaining) }))
-                .filter(d => d.spent > 0);
-
-            const totalIncome = transactionsData.filter(t => t.category === 'income').reduce((sum, t) => sum + t.amount, 0);
-
-            if (spending.length === 0 || totalIncome === 0) {
-                 svg.append("text").attr("x", width/2).attr("y", height/2).attr("text-anchor", "middle").text("Not enough data for chart.").style("fill", "#6b7280");
-                 return;
-            }
-
-            const nodes = [{ name: "Income" }, ...spending.map(d => ({ name: budgetData[d.category].name }))];
-            const links = spending.map((d, i) => ({ source: 0, target: i + 1, value: d.spent, color: tailwindColors[budgetData[d.category].color] }));
-            
-            const sankey = d3.sankey().nodeWidth(15).nodePadding(10).extent([[1, 1], [width - 1, height - 6]]);
-            const {nodes: graphNodes, links: graphLinks} = sankey({ nodes: nodes.map(d => Object.assign({}, d)), links: links.map(d => Object.assign({}, d)) });
-
-            svg.append("g").selectAll(".sankey-link").data(graphLinks).enter().append("path")
-                .attr("class", "sankey-link").attr("d", d3.sankeyLinkHorizontal())
-                .style("stroke", d => d.color).style("stroke-width", d => Math.max(1, d.width));
-            
-            const node = svg.append("g").selectAll(".sankey-node").data(graphNodes).enter().append("g").attr("class", "sankey-node").attr("transform", d => `translate(${d.x0},${d.y0})`);
-            node.append("rect").attr("height", d => d.y1 - d.y0).attr("width", sankey.nodeWidth())
-                .style("fill", (d, i) => i === 0 ? tailwindColors['green-600'] : links[i - 1].color);
-            node.append("text").attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
-                .attr("y", d => (d.y1 - d.y0) / 2).attr("dy", "0.35em")
-                .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
-                .text(d => d.name).style("font-size", "12px").style("fill", "#374151");
-        }
-
-        function renderBudgetView() {
-            const budgetList = document.getElementById('budget-list');
-            const goalsList = document.getElementById('goals-list');
-            const savingsList = document.getElementById('pure-savings-list');
-            
-            budgetList.innerHTML = Object.entries(budgetData).filter(([_, cat]) => cat.total).map(([key, cat]) => {
-                const spent = Math.max(0, cat.total - cat.remaining);
-                const percent = cat.total > 0 ? Math.min(100, (spent / cat.total) * 100) : 0;
-                return `<div class="bg-gray-50 p-3 rounded-lg"><div class="flex justify-between items-center text-sm mb-1"><span class="font-semibold text-gray-700">${cat.name}</span><span class="text-gray-500">${formatCurrency(spent)} of ${formatCurrency(cat.total)}</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-${cat.color} h-2 rounded-full" style="width: ${percent}%"></div></div></div>`;
-            }).join('');
-
-            goalsList.innerHTML = Object.values(goalsData).map(goal => {
-                const percent = goal.total > 0 ? Math.min(100, (goal.current / goal.total) * 100) : 0;
-                return `<div class="bg-gray-50 p-3 rounded-lg"><div class="flex justify-between items-center text-sm mb-1"><span class="font-semibold text-gray-700">${goal.name}</span><span class="text-gray-500">${formatCurrency(goal.current)} of ${formatCurrency(goal.total)}</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-${goal.color} h-2 rounded-full" style="width: ${percent}%"></div></div></div>`;
-            }).join('');
-
-            savingsList.innerHTML = Object.values(pureSavingsData).map(saving => {
-                 const percent = saving.total > 0 ? Math.min(100, (saving.current / saving.total) * 100) : 0;
-                 return `<div class="bg-gray-50 p-3 rounded-lg"><div class="flex justify-between items-center text-sm mb-1"><span class="font-semibold text-gray-700">${saving.name}</span><span class="text-gray-500">${formatCurrency(saving.current)} of ${formatCurrency(saving.total)}</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-${saving.color} h-2 rounded-full" style="width: ${percent}%"></div></div></div>`;
-            }).join('');
-
-            createSankey(document.getElementById('sankey-hero'));
-        }
-
-        function renderTransactionsView() {
-            const listEl = document.getElementById('transactions-list');
-            const totalSpentEl = document.getElementById('total-spent');
-            const assetsEl = document.getElementById('assets-display');
-
-            const sorted = [...transactionsData].sort((a, b) => new Date(b.date) - new Date(a.date));
-            const totalSpent = sorted.filter(t => t.type === 'debit' && !t.isInternalTransfer).reduce((sum, t) => sum + t.amount, 0);
-            const totalAssets = sorted.filter(t => t.type === 'credit' && !t.isInternalTransfer).reduce((sum, t) => sum + t.amount, 0) - totalSpent;
-            
-            totalSpentEl.textContent = formatCurrency(totalSpent);
-            assetsEl.textContent = formatCurrency(totalAssets);
-            
-            const today = new Date();
-            const yesterday = new Date(today);
-            yesterday.setDate(yesterday.getDate() - 1);
-            const todayStr = today.toISOString().split('T')[0];
-            const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-            const grouped = sorted.reduce((acc, t) => {
-                const date = t.date;
-                let groupName;
-                if (date === todayStr) groupName = 'Today';
-                else if (date === yesterdayStr) groupName = 'Yesterday';
-                else groupName = new Date(date.replace(/-/g, '/')).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-                if (!acc[groupName]) acc[groupName] = [];
-                acc[groupName].push(t);
-                return acc;
-            }, {});
-
-            listEl.innerHTML = Object.entries(grouped).map(([date, transactions]) => `
-                <div>
-                    <h3 class="font-bold text-gray-700 text-sm mb-2">${date}</h3>
-                    <div class="space-y-2">
-                        ${transactions.map(t => {
-                            const category = budgetData[t.category];
-                            const icon = category ? category.name.match(/\p{Emoji}/u)?.[0] : '❓';
-                            const amountClass = t.type === 'credit' ? 'text-green-600' : 'text-gray-800';
-                            return `<div class="flex items-center bg-gray-50 p-3 rounded-lg"><div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center mr-3 text-xl">${icon}</div><div class="flex-grow"><p class="font-semibold text-gray-900">${t.name}</p><p class="text-xs text-gray-500">${category?.name || 'Uncategorized'}</p></div><div class="font-semibold ${amountClass}">${t.type === 'credit' ? '+' : ''}${formatCurrency(t.amount)}</div></div>`
-                        }).join('')}
-                    </div>
-                </div>
-            `).join('');
-        }
+        // --- RENDERING FUNCTIONS ---
+        function renderAllViews() { calculateBudgetState(); if (document.getElementById('budget-view').classList.contains('active')) renderBudgetView(); if (document.getElementById('transactions-view').classList.contains('active')) renderTransactionsView(); if (document.getElementById('place-detail-view').classList.contains('active')) renderPlaceDetailView(currentPlace); }
+        function renderAutocomplete(items) { const resultsContainer = document.getElementById('autocomplete-results'); if (!items || items.length === 0) { resultsContainer.innerHTML = ''; resultsContainer.classList.add('hidden'); return; } resultsContainer.innerHTML = items.map(item => `<div class="p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-700 last:border-b-0" data-id="${item.id}" data-type="${item.resultType}"><p class="font-semibold text-gray-200">${item.title}</p><p class="text-sm text-gray-400">${item.address?.label || 'Search suggestion'}</p></div>`).join(''); resultsContainer.classList.remove('hidden'); }
+        function createSankey(svgEl) { const width = svgEl.clientWidth, height = svgEl.clientHeight; svgEl.innerHTML = ''; const svg = d3.select(svgEl).attr("viewBox", `0 0 ${width} ${height}`); const spending = Object.entries(budgetData).filter(([k, c]) => c.total && k !== 'income' && k !== 'transfers').map(([k, c]) => ({ category: k, spent: Math.max(0, c.total - c.remaining) })).filter(d => d.spent > 0); const totalIncome = transactionsData.filter(t => t.category === 'income').reduce((s, t) => s + t.amount, 0); if (spending.length === 0 || totalIncome === 0) { svg.append("text").attr("x", width / 2).attr("y", height / 2).attr("text-anchor", "middle").text("Not enough data for chart.").style("fill", "#9ca3af"); return; } const nodes = [{ name: "Income" }, ...spending.map(d => ({ name: budgetData[d.category].name }))]; const links = spending.map((d, i) => ({ source: 0, target: i + 1, value: d.spent, color: tailwindColors[budgetData[d.category].color] })); const sankey = d3.sankey().nodeWidth(15).nodePadding(10).extent([[1, 1], [width - 1, height - 6]]); const { nodes: graphNodes, links: graphLinks } = sankey({ nodes: nodes.map(d => ({ ...d })), links: links.map(d => ({ ...d })) }); svg.append("g").selectAll(".sankey-link").data(graphLinks).enter().append("path").attr("class", "sankey-link").attr("d", d3.sankeyLinkHorizontal()).style("stroke", d => d.color).style("stroke-width", d => Math.max(1, d.width)); const node = svg.append("g").selectAll(".sankey-node").data(graphNodes).enter().append("g").attr("class", "sankey-node").attr("transform", d => `translate(${d.x0},${d.y0})`); node.append("rect").attr("height", d => d.y1 - d.y0).attr("width", sankey.nodeWidth()).style("fill", (d, i) => i === 0 ? tailwindColors['green-600'] : links[i - 1].color); node.append("text").attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6).attr("y", d => (d.y1 - d.y0) / 2).attr("dy", "0.35em").attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end").text(d => d.name).style("font-size", "12px").style("fill", "#d1d5db"); }
+        function renderBudgetView() { const bList = document.getElementById('budget-list'), gList = document.getElementById('goals-list'), sList = document.getElementById('pure-savings-list'); bList.innerHTML = Object.entries(budgetData).filter(([_, c]) => c.total).map(([k, c]) => { const s = Math.max(0, c.total - c.remaining); const p = c.total > 0 ? Math.min(100, (s / c.total) * 100) : 0; return `<div class="bg-gray-900 p-3 rounded-lg"><div class="flex justify-between items-center text-sm mb-1"><span class="font-semibold text-gray-200">${c.name}</span><span class="text-gray-400">${formatCurrency(s)} of ${formatCurrency(c.total)}</span></div><div class="w-full bg-gray-700 rounded-full h-2"><div class="gradient-bg h-2 rounded-full" style="width: ${p}%"></div></div></div>`; }).join(''); gList.innerHTML = Object.values(goalsData).map(g => { const p = g.total > 0 ? Math.min(100, (g.current / g.total) * 100) : 0; return `<div class="bg-gray-900 p-3 rounded-lg"><div class="flex justify-between items-center text-sm mb-1"><span class="font-semibold text-gray-200">${g.name}</span><span class="text-gray-400">${formatCurrency(g.current)} of ${formatCurrency(g.total)}</span></div><div class="w-full bg-gray-700 rounded-full h-2"><div class="bg-${g.color} h-2 rounded-full" style="width: ${p}%"></div></div></div>`; }).join(''); sList.innerHTML = Object.values(pureSavingsData).map(s => { const p = s.total > 0 ? Math.min(100, (s.current / s.total) * 100) : 0; return `<div class="bg-gray-900 p-3 rounded-lg"><div class="flex justify-between items-center text-sm mb-1"><span class="font-semibold text-gray-200">${s.name}</span><span class="text-gray-400">${formatCurrency(s.current)} of ${formatCurrency(s.total)}</span></div><div class="w-full bg-gray-700 rounded-full h-2"><div class="bg-${s.color} h-2 rounded-full" style="width: ${p}%"></div></div></div>`; }).join(''); createSankey(document.getElementById('sankey-hero')); }
+        function renderTransactionsView() { const listEl = document.getElementById('transactions-list'), spentEl = document.getElementById('total-spent'), assetsEl = document.getElementById('assets-display'); const sorted = [...transactionsData].sort((a, b) => new Date(b.date) - new Date(a.date)); const totalSpent = sorted.filter(t => t.type === 'debit' && !t.isInternalTransfer).reduce((s, t) => s + t.amount, 0); assetsEl.textContent = formatCurrency(sorted.filter(t => t.type === 'credit' && !t.isInternalTransfer).reduce((s, t) => s + t.amount, 0) - totalSpent); spentEl.textContent = formatCurrency(totalSpent); const grouped = sorted.reduce((acc, t) => { const d = t.date; let g; if (d === todayStr) g = 'Today'; else if (d === yesterdayStr) g = 'Yesterday'; else g = new Date(d.replace(/-/g, '/')).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }); if (!acc[g]) acc[g] = []; acc[g].push(t); return acc; }, {}); listEl.innerHTML = Object.entries(grouped).map(([date, transactions]) => `<div><h3 class="font-bold text-gray-400 text-sm mb-2">${date}</h3><div class="space-y-2">${transactions.map(t => `<div class="flex items-center bg-gray-800 p-3 rounded-lg"><div class="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center mr-3 text-xl">${budgetData[t.category]?.name.match(/\p{Emoji}/u)?.[0] || '❓'}</div><div class="flex-grow"><p class="font-semibold text-gray-100">${t.name}</p><p class="text-xs text-gray-400">${budgetData[t.category]?.name || 'Uncategorized'}</p></div><div class="font-semibold ${t.type === 'credit' ? 'text-green-400' : 'text-gray-200'}">${t.type === 'credit' ? '+' : ''}${formatCurrency(t.amount)}</div></div>`).join('')}</div></div>`).join(''); }
+        function renderPlaceDetailView(place) { if (!place) return; calculateBudgetState(); const placeViewEl = document.getElementById('place-detail-view'); const budget = budgetData[place.category]; const merchantTransactions = transactionsData.filter(t => t.name === place.name && t.type === 'debit').sort((a, b) => new Date(b.date) - new Date(a.date)); let hintText = ''; if (merchantTransactions.length === 1) hintText = `Last spent here: ${formatCurrency(merchantTransactions[0].amount)}`; else if (merchantTransactions.length >= 2) { const avg = merchantTransactions.slice(0, 3).reduce((a, t) => a + t.amount, 0) / Math.min(3, merchantTransactions.length); hintText = `Avg. spent per visit: ${formatCurrency(avg)}`; } let categorySection = ''; if (budget) { categorySection = `<div class="bg-gray-900/50 gradient-border p-4 rounded-lg my-4"><div class="flex justify-between items-baseline"><p class="text-sm font-medium text-indigo-300">Available to Spend</p><div class="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-xs font-semibold rounded-full">${budget.name}</div></div><p class="text-4xl font-extrabold text-white mt-1">${formatCurrency(budget.remaining)}</p><p class="text-xs text-indigo-400 h-4 mt-1">${hintText}</p></div><button id="log-purchase-btn" class="w-full gradient-bg text-white font-semibold py-3 rounded-xl hover:opacity-90 transition">Log Purchase</button>`; } else { categorySection = `<div class="bg-amber-500/10 border-l-4 border-amber-500 p-4 rounded-lg my-4"><h3 class="font-bold text-amber-200">New Place Category</h3><p class="text-sm text-amber-300 mt-1">This place doesn't match any of your budgets. Add it to an existing budget or create a new one.</p><button id="add-to-budget-btn" class="w-full bg-amber-500 text-white font-semibold py-3 rounded-xl hover:bg-amber-600 transition mt-4">Add to Budget</button></div>`; } placeViewEl.innerHTML = `<div class="p-4"><button id="back-to-main-btn" class="text-sm font-semibold text-indigo-400 hover:text-indigo-300 mb-4">&larr; Back to Budget</button><div class="flex items-center mb-3"><div class="w-12 h-12 bg-gray-800 rounded-lg flex items-center justify-center text-2xl mr-4">${place.icon}</div><div><h2 class="text-xl font-bold text-gray-100">${place.name}</h2><p class="text-sm text-gray-400">${place.type}</p></div></div>${categorySection}</div><div class="border-t border-gray-800 p-4 mt-4"><h3 class="font-bold text-gray-200 mb-2">Recent Activity Here</h3><div class="space-y-2">${merchantTransactions.length === 0 ? '<p class="text-sm text-gray-500">No transactions recorded here yet.</p>' : merchantTransactions.map(t => `<div class="flex justify-between items-center text-sm"><span class="text-gray-400">${new Date(t.date.replace(/-/g, '/')).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span><span class="font-semibold text-gray-200">${formatCurrency(t.amount)}</span></div>`).join('')}</div></div>`; }
         
-        function renderPlaceDetailView(place) {
-            if (!place) return;
-            calculateBudgetState();
-            const placeViewEl = document.getElementById('place-detail-view');
-            const budget = budgetData[place.category];
-            const merchantTransactions = transactionsData.filter(t => t.name === place.name && t.type === 'debit').sort((a,b) => new Date(b.date) - new Date(a.date));
-            let hintText = '';
-            if (merchantTransactions.length === 1) hintText = `Last spent here: ${formatCurrency(merchantTransactions[0].amount)}`;
-            else if (merchantTransactions.length >= 2) { const avg = merchantTransactions.slice(0,3).reduce((a, t) => a + t.amount, 0) / Math.min(3, merchantTransactions.length); hintText = `Avg. spent per visit: ${formatCurrency(avg)}`; }
-            
-            let categorySection = '';
-            if (budget) { // Category exists
-                categorySection = `<div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg my-4"><div class="flex justify-between items-baseline"><p class="text-sm font-medium text-blue-800">Available to Spend</p><div class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">${budget.name}</div></div><p class="text-4xl font-extrabold text-blue-900">${formatCurrency(budget.remaining)}</p><p class="text-xs text-blue-600 h-4 mt-1">${hintText}</p></div><button id="log-purchase-btn" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition">Log Purchase</button>`;
-            } else { // New/Uncategorized place
-                categorySection = `<div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-lg my-4"><h3 class="font-bold text-amber-900">New Place Category</h3><p class="text-sm text-amber-800 mt-1">This place doesn't match any of your current budgets. You can add it to an existing budget or create a new one.</p><button id="add-to-budget-btn" class="w-full bg-amber-500 text-white font-semibold py-3 rounded-xl hover:bg-amber-600 transition mt-4">Add to Budget</button></div>`;
-            }
-
-            placeViewEl.innerHTML = `<div class="p-4"><button id="back-to-main-btn" class="text-sm font-semibold text-blue-600 mb-4">&larr; Back to Budget</button><div class="flex items-center mb-3"><div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-2xl mr-4">${place.icon}</div><div><h2 class="text-xl font-bold text-gray-900">${place.name}</h2><p class="text-sm text-gray-500">${place.type}</p></div></div>${categorySection}</div><div class="border-t p-4 mt-4"><h3 class="font-bold text-gray-800 mb-2">Recent Activity Here</h3><div class="space-y-2">${merchantTransactions.length === 0 ? '<p class="text-sm text-gray-500">No transactions recorded here yet.</p>' : merchantTransactions.map(t => `<div class="flex justify-between items-center text-sm"><span class="text-gray-600">${new Date(t.date.replace(/-/g, '/')).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span><span class="font-semibold text-gray-800">${formatCurrency(t.amount)}</span></div>`).join('')}</div></div>`;
-        }
-
-        function switchSidebarView(targetViewId) {
-            sidebarViews.forEach(v => v.classList.toggle('active', v.id === targetViewId));
-            navBtns.forEach(b => { b.classList.toggle('active', b.dataset.view === targetViewId); b.classList.toggle('text-gray-600', b.dataset.view !== targetViewId); });
-            if (targetViewId === 'budget-view' || targetViewId === 'transactions-view') renderAll();
-        }
-
-        function showPlaceView(place) {
-            currentPlace = place;
-            renderPlaceDetailView(place);
-            switchSidebarView('place-detail-view');
-        }
+        // --- UI LOGIC & MODALS ---
+        function switchSidebarView(targetViewId) { document.querySelectorAll('.sidebar-view').forEach(v => v.classList.toggle('active', v.id === targetViewId)); document.querySelectorAll('.nav-btn').forEach(b => { b.classList.toggle('active', b.dataset.view === targetViewId); b.classList.toggle('text-gray-400', b.dataset.view !== targetViewId); b.classList.toggle('hover:bg-gray-800', b.dataset.view !== targetViewId); }); if (targetViewId === 'budget-view' || targetViewId === 'transactions-view') renderAllViews(); }
+        function showPlaceView(place) { currentPlace = place; renderPlaceDetailView(place); switchSidebarView('place-detail-view'); }
+        function showLogPurchaseModal() { const el = document.getElementById('log-purchase-modal'); el.classList.remove('hidden'); el.classList.add('flex'); el.innerHTML = `<div class="bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl w-full max-w-sm p-6"><h2 class="text-2xl font-bold text-white text-center mb-2">Log Purchase</h2><p class="text-center text-gray-400 mb-4">${currentPlace.name}</p><div class="my-6"><p class="text-6xl font-bold text-center text-gray-100" id="log-amount-display">$0.00</p></div><div class="grid grid-cols-3 gap-2">${[1,2,3,4,5,6,7,8,9,'.',0,'del'].map(k => `<button class="keypad-btn text-2xl font-semibold rounded-xl h-16 transition-colors bg-gray-800 hover:bg-gray-700 text-gray-200">${k === 'del' ? '&larr;' : k}</button>`).join('')}</div><div class="mt-6 grid grid-cols-2 gap-3"><button id="cancel-log-btn" class="w-full bg-gray-700 text-gray-200 font-semibold py-3 rounded-xl hover:bg-gray-600 transition">Cancel</button><button id="save-log-btn" class="w-full gradient-bg text-white font-semibold py-3 rounded-xl hover:opacity-90 transition">Save</button></div></div>`; }
+        function hideLogPurchaseModal() { document.getElementById('log-purchase-modal').classList.add('hidden'); currentAmountString = "0"; }
+        function saveTransaction() { const btn = document.querySelector('#log-purchase-modal #save-log-btn'); btn.disabled = true; btn.innerHTML = '<div class="loader mx-auto" style="width:24px; height:24px; border-width: 2px;"></div>'; const amount = parseFloat(currentAmountString); if (amount > 0 && currentPlace) { transactionsData.push({ id: Date.now(), name: currentPlace.name, amount, type: 'debit', date: todayStr, category: currentPlace.category, source: 'Manual Log', isInternalTransfer: false }); hideLogPurchaseModal(); renderPlaceDetailView(currentPlace); } else { const display = document.querySelector('#log-purchase-modal #log-amount-display'); display.classList.add('shake', 'text-red-400'); setTimeout(() => { display.classList.remove('shake', 'text-red-400'); btn.disabled = false; btn.innerHTML = 'Save'; }, 500); } }
+        function showAddCategoryModal() { const el = document.getElementById('add-category-modal'); el.classList.remove('hidden'); el.classList.add('flex'); const opts = Object.entries(budgetData).filter(([k, v]) => v.total).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join(''); el.innerHTML = `<div class="bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl w-full max-w-md p-6"><h2 class="text-2xl font-bold text-white mb-4">Add to Budget</h2><div class="mb-4"><label for="existing-category-select" class="block text-sm font-medium text-gray-400">Assign to existing category:</label><select id="existing-category-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-gray-800 border-gray-600 text-white rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"><option value="">--Select One--</option>${opts}</select></div><div class="text-center my-2 text-sm text-gray-500 font-semibold">OR</div><div class="mb-4"><label for="new-category-name" class="block text-sm font-medium text-gray-400">Create a new category:</label><input type="text" id="new-category-name" class="mt-1 block w-full bg-gray-800 border-gray-600 rounded-md text-white placeholder-gray-500" placeholder="e.g. 📚 Books"></div><div class="mb-4"><label for="new-category-total" class="block text-sm font-medium text-gray-400">Monthly Budget Amount:</label><input type="number" id="new-category-total" class="mt-1 block w-full bg-gray-800 border-gray-600 rounded-md text-white placeholder-gray-500" placeholder="e.g. 50"></div><div class="mt-6 grid grid-cols-2 gap-3"><button id="cancel-add-cat-btn" class="w-full bg-gray-700 text-gray-200 font-semibold py-3 rounded-xl hover:bg-gray-600 transition">Cancel</button><button id="save-add-cat-btn" class="w-full gradient-bg text-white font-semibold py-3 rounded-xl hover:opacity-90 transition">Save</button></div></div>`; }
+        function hideAddCategoryModal() { document.getElementById('add-category-modal').classList.add('hidden'); }
+        function saveNewCategory() { const btn = document.querySelector('#add-category-modal #save-add-cat-btn'); btn.disabled = true; const nameIn = document.getElementById('new-category-name'), totalIn = document.getElementById('new-category-total'); const existing = document.getElementById('existing-category-select').value; const newName = nameIn.value.trim(), newTotal = parseFloat(totalIn.value); const fail = (inputs) => { inputs.forEach(i => i.classList.add('shake', 'border-red-500')); setTimeout(() => { inputs.forEach(i => i.classList.remove('shake', 'border-red-500')); btn.disabled = false; }, 500); }; if (existing) { currentPlace.category = existing; } else if (newName && newTotal > 0) { const newKey = newName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, ''); if (budgetData[newKey]) { nameIn.value = ''; nameIn.placeholder = "Category already exists!"; fail([nameIn]); setTimeout(() => nameIn.placeholder = "e.g. 📚 Books", 2000); return; } const colors = ['red-500', 'green-500', 'yellow-500', 'purple-500', 'blue-500', 'cyan-500', 'pink-500', 'teal-500']; budgetData[newKey] = { name: newName, total: newTotal, color: colors[Math.floor(Math.random() * colors.length)] }; currentPlace.category = newKey; renderCategoryFilters(); } else { const invalid = []; if (!newName) invalid.push(nameIn); if (!newTotal || newTotal <= 0) invalid.push(totalIn); fail(invalid); return; } hideAddCategoryModal(); renderPlaceDetailView(currentPlace); const markerData = mapMarkers.find(m => m.place.id === currentPlace.id); if (markerData) { const newIcon = budgetData[currentPlace.category].name.match(/\p{Emoji}/u)?.[0] || '📍'; markerData.marker.setIcon(L.divIcon({ html: `<div class="custom-pin"><div>${newIcon}</div></div>`, className: '', iconSize: [36, 36], iconAnchor: [18, 36] })); } }
+        function renderCategoryFilters() { const filtersContainer = document.getElementById('category-filters-container'); let filterHtml = `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full transition-colors" data-category="all">All</button>`; const spendingCats = Object.entries(budgetData).filter(([_, cat]) => cat.total); spendingCats.forEach(([key, cat]) => { filterHtml += `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full transition-colors" data-category="${key}">${cat.name}</button>`; }); filtersContainer.innerHTML = filterHtml; updateActiveFilterButton(); }
+        function updateActiveFilterButton() { document.querySelectorAll('.category-filter-btn').forEach(b => { const isActive = b.dataset.category === activeCategory; b.classList.toggle('gradient-bg', isActive); b.classList.toggle('text-white', isActive); b.classList.toggle('bg-gray-800', !isActive); b.classList.toggle('text-gray-300', !isActive); b.classList.toggle('hover:bg-gray-700', !isActive); }); }
         
-        const logPurchaseModalEl = document.getElementById('log-purchase-modal');
-        function showLogPurchaseModal() {
-            logPurchaseModalEl.classList.remove('hidden'); logPurchaseModalEl.classList.add('flex');
-            logPurchaseModalEl.innerHTML = `<div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6"><h2 class="text-2xl font-bold text-gray-900 text-center mb-2">Log Purchase</h2><p class="text-center text-gray-600 mb-4">${currentPlace.name}</p><div class="my-6"><p class="text-6xl font-bold text-center text-gray-800" id="log-amount-display">$0.00</p></div><div class="grid grid-cols-3 gap-2">${[1,2,3,4,5,6,7,8,9,'.',0,'del'].map(k => `<button class="keypad-btn text-2xl font-semibold rounded-xl h-16 transition-colors bg-gray-100 text-gray-800">${k === 'del' ? '&larr;' : k}</button>`).join('')}</div><div class="mt-6 grid grid-cols-2 gap-3"><button id="cancel-log-btn" class="w-full bg-gray-200 text-gray-800 font-semibold py-3 rounded-xl hover:bg-gray-300">Cancel</button><button id="save-log-btn" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700">Save</button></div></div>`;
-        }
-        function hideLogPurchaseModal() { logPurchaseModalEl.classList.add('hidden'); logPurchaseModalEl.classList.remove('flex'); currentAmountString = "0"; }
-        
-        function saveTransaction() {
-            const saveBtn = logPurchaseModalEl.querySelector('#save-log-btn');
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = '<div class="loader mx-auto" style="width:24px; height:24px; border-width: 2px;"></div>';
-
-            const amount = parseFloat(currentAmountString);
-            if(amount > 0 && currentPlace) {
-                const newTransaction = { id: Date.now(), name: currentPlace.name, amount, type: 'debit', date: new Date().toISOString().split('T')[0], category: currentPlace.category, source: 'Manual Log', isInternalTransfer: false };
-                transactionsData.push(newTransaction);
-                hideLogPurchaseModal();
-                renderPlaceDetailView(currentPlace);
-            } else {
-                logPurchaseModalEl.querySelector('#log-amount-display').classList.add('shake', 'text-red-500');
-                setTimeout(()=> {
-                    logPurchaseModalEl.querySelector('#log-amount-display').classList.remove('shake', 'text-red-500');
-                    saveBtn.disabled = false;
-                    saveBtn.innerHTML = 'Save';
-                }, 500);
-            }
-        }
-
-        const addCategoryModalEl = document.getElementById('add-category-modal');
-        function showAddCategoryModal() {
-            addCategoryModalEl.classList.remove('hidden'); addCategoryModalEl.classList.add('flex');
-            const options = Object.entries(budgetData).filter(([k,v])=> v.total).map(([k,v]) => `<option value="${k}">${v.name}</option>`).join('');
-            addCategoryModalEl.innerHTML = `<div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"><h2 class="text-2xl font-bold text-gray-900 mb-4">Add to Budget</h2><div class="mb-4"><label for="existing-category-select" class="block text-sm font-medium text-gray-700">Assign to existing category:</label><select id="existing-category-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"><option value="">--Select One--</option>${options}</select></div><div class="text-center my-2 text-sm text-gray-500 font-semibold">OR</div><div class="mb-4"><label for="new-category-name" class="block text-sm font-medium text-gray-700">Create a new category:</label><input type="text" id="new-category-name" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="e.g. 📚 Books"></div><div class="mb-4"><label for="new-category-total" class="block text-sm font-medium text-gray-700">Monthly Budget Amount:</label><input type="number" id="new-category-total" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="e.g. 50"></div><div class="mt-6 grid grid-cols-2 gap-3"><button id="cancel-add-cat-btn" class="w-full bg-gray-200 text-gray-800 font-semibold py-3 rounded-xl hover:bg-gray-300">Cancel</button><button id="save-add-cat-btn" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700">Save</button></div></div>`;
-        }
-        function hideAddCategoryModal() { addCategoryModalEl.classList.add('hidden'); addCategoryModalEl.classList.remove('flex'); }
-
-        function saveNewCategory() {
-            const saveBtn = addCategoryModalEl.querySelector('#save-add-cat-btn');
-            saveBtn.disabled = true;
-
-            const newCatNameInput = document.getElementById('new-category-name');
-            const newCatTotalInput = document.getElementById('new-category-total');
-            const existingCat = document.getElementById('existing-category-select').value;
-            const newCatName = newCatNameInput.value.trim();
-            const newCatTotal = parseFloat(newCatTotalInput.value);
-
-            const failValidation = (inputsToShake) => {
-                inputsToShake.forEach(input => input.classList.add('shake', 'border-red-500'));
-                setTimeout(() => {
-                    inputsToShake.forEach(input => input.classList.remove('shake', 'border-red-500'));
-                    saveBtn.disabled = false; // Re-enable button
-                }, 500);
-            };
-
-            if (existingCat) {
-                currentPlace.category = existingCat;
-            } else if (newCatName && newCatTotal > 0) {
-                const newCatKey = newCatName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '');
-                if (budgetData[newCatKey]) {
-                    newCatNameInput.value = '';
-                    newCatNameInput.placeholder = "Category already exists!";
-                    failValidation([newCatNameInput]);
-                    setTimeout(() => newCatNameInput.placeholder = "e.g. 📚 Books", 2000);
-                    return;
-                }
-                const colors = ['red-500', 'green-500', 'yellow-500', 'purple-500', 'blue-500', 'cyan-500', 'pink-500', 'teal-500'];
-                budgetData[newCatKey] = { name: newCatName, total: newCatTotal, color: colors[Math.floor(Math.random()*colors.length)] };
-                currentPlace.category = newCatKey;
-                
-                const filtersContainer = document.getElementById('category-filters-container'); 
-                let filterHtml = `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200" data-category="all">All</button>`; 
-                const spendingCats = Object.entries(budgetData).filter(([_, cat]) => cat.total); 
-                spendingCats.forEach(([key, cat]) => { filterHtml += `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200" data-category="${key}">${cat.name}</button>`; }); 
-                filtersContainer.innerHTML = filterHtml;
-            } else { 
-                const invalidInputs = [];
-                if (!newCatName) invalidInputs.push(newCatNameInput);
-                if (!newCatTotal || newCatTotal <= 0) invalidInputs.push(newCatTotalInput);
-                failValidation(invalidInputs);
-                return;
-            }
-            
-            hideAddCategoryModal();
-            renderPlaceDetailView(currentPlace);
-            const markerData = mapMarkers.find(m => m.place.id === currentPlace.id);
-            if (markerData) {
-                 const newIcon = budgetData[currentPlace.category].name.match(/\p{Emoji}/u)?.[0] || '📍';
-                 markerData.marker.setIcon(L.divIcon({ html: `<div class="custom-pin"><div>${newIcon}</div></div>`, className: '', iconSize: [36, 36], iconAnchor: [18, 36] }));
-            }
-        }
-        
-        function initializeMap() {
-            const startPos = [35.7915, -77.9153]; // Wilson, NC
-            map = L.map('map', { center: startPos, zoom: 13, zoomControl: false, attributionControl: false });
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(map);
-
-            // Removed automatic geolocation to default to Wilson, NC
-            
-            const debouncedSearch = debounce(searchPlaces, 500);
-            map.on('moveend', () => { if (!document.getElementById('search-input').value) debouncedSearch(); });
-        }
+        // --- INITIALIZATION & EVENT LISTENERS ---
+        function initializeMap() { const startPos = [35.7915, -77.9153]; map = L.map('map', { center: startPos, zoom: 13, zoomControl: false, attributionControl: false }); L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', attribution: '&copy; CARTO' }).addTo(map); const debouncedSearch = debounce(searchPlaces, 500); map.on('moveend', () => { if (!document.getElementById('search-input').value) debouncedSearch(); }); }
 
         document.addEventListener('DOMContentLoaded', () => {
             initializeMap();
-            const filtersContainer = document.getElementById('category-filters-container'); 
-            let filterHtml = `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full bg-blue-600 text-white transition-colors" data-category="all">All</button>`; 
-            const spendingCats = Object.entries(budgetData).filter(([_, cat]) => cat.total); 
-            spendingCats.forEach(([key, cat]) => { filterHtml += `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200" data-category="${key}">${cat.name}</button>`; }); 
-            filtersContainer.innerHTML = filterHtml;
-            
-            renderAll();
-            // Automatically trigger a search for the initial view
+            renderCategoryFilters();
+            renderAllViews();
             searchPlaces();
             
             document.getElementById('search-input').addEventListener('input', () => { clearTimeout(searchTimeout); searchTimeout = setTimeout(getAutocompleteSuggestions, 300); });
             document.getElementById('autocomplete-results').addEventListener('click', (e) => { const s = e.target.closest('[data-id]'); if (s) selectSuggestion(s.dataset.id); });
 
             document.body.addEventListener('click', (e) => {
-                const filterBtn = e.target.closest('.category-filter-btn');
-                if(filterBtn) { 
-                    document.querySelectorAll('.category-filter-btn').forEach(b => {
-                        b.classList.remove('bg-blue-600', 'text-white');
-                        b.classList.add('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
-                    }); 
-                    filterBtn.classList.add('bg-blue-600', 'text-white');
-                    filterBtn.classList.remove('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
-                    activeCategory = filterBtn.dataset.category; 
-                    document.getElementById('search-input').value = ''; 
-                    searchPlaces(); 
-                    return; 
-                }
-                
-                const keypadBtn = e.target.closest('.keypad-btn');
-                if (keypadBtn) {
-                    const key = keypadBtn.textContent;
-                    const display = document.getElementById('log-amount-display');
-                    if (key === '←') { currentAmountString = currentAmountString.slice(0, -1) || "0"; }
-                    else if (key === '.' && !currentAmountString.includes('.')) { currentAmountString += '.'; }
-                    else if (key !== '.') { if(currentAmountString === "0") currentAmountString = key; else currentAmountString += key; }
-                    
-                    if (currentAmountString.includes('.') && currentAmountString.split('.')[1].length > 2) currentAmountString = currentAmountString.slice(0,-1);
-                    
-                    if (currentAmountString.endsWith('.')) {
-                        display.textContent = formatCurrency(parseFloat(currentAmountString)).slice(0, -3) + '.';
-                    } else {
-                        display.textContent = formatCurrency(parseFloat(currentAmountString) || 0);
-                    }
-                    return;
-                }
-                
-                const navBtn = e.target.closest('.nav-btn'); if (navBtn) { switchSidebarView(navBtn.dataset.view); return; }
-                if (e.target.closest('#back-to-main-btn')) { switchSidebarView('budget-view'); return; }
-                if (e.target.closest('#log-purchase-btn')) { showLogPurchaseModal(); return; }
-                if (e.target.closest('#cancel-log-btn') || e.target.id === 'log-purchase-modal') { hideLogPurchaseModal(); return; }
-                if (e.target.closest('#save-log-btn')) { saveTransaction(); return; }
-                if (e.target.closest('#add-to-budget-btn')) { showAddCategoryModal(); return; }
-                if (e.target.closest('#cancel-add-cat-btn') || e.target.id === 'add-category-modal') { hideAddCategoryModal(); return; }
-                if (e.target.closest('#save-add-cat-btn')) { saveNewCategory(); return; }
+                const target = e.target;
+                const filterBtn = target.closest('.category-filter-btn'); if(filterBtn) { activeCategory = filterBtn.dataset.category; updateActiveFilterButton(); document.getElementById('search-input').value = ''; searchPlaces(); return; }
+                const keypadBtn = target.closest('.keypad-btn'); if (keypadBtn) { const key = keypadBtn.textContent; const display = document.getElementById('log-amount-display'); if (key === '←') { currentAmountString = currentAmountString.slice(0, -1) || "0"; } else if (key === '.' && !currentAmountString.includes('.')) { currentAmountString += '.'; } else if (key !== '.') { if (currentAmountString === "0") currentAmountString = key; else currentAmountString += key; } if (currentAmountString.includes('.') && currentAmountString.split('.')[1].length > 2) currentAmountString = currentAmountString.slice(0,-1); if (currentAmountString.endsWith('.')) { display.textContent = formatCurrency(parseFloat(currentAmountString)).slice(0, -3) + '.'; } else { display.textContent = formatCurrency(parseFloat(currentAmountString) || 0); } return; }
+                const navBtn = target.closest('.nav-btn'); if (navBtn) { switchSidebarView(navBtn.dataset.view); return; }
+                if (target.closest('#back-to-main-btn')) { switchSidebarView('budget-view'); return; }
+                if (target.closest('#log-purchase-btn')) { showLogPurchaseModal(); return; }
+                if (target.closest('#cancel-log-btn') || target.id === 'log-purchase-modal') { hideLogPurchaseModal(); return; }
+                if (target.closest('#save-log-btn')) { saveTransaction(); return; }
+                if (target.closest('#add-to-budget-btn')) { showAddCategoryModal(); return; }
+                if (target.closest('#cancel-add-cat-btn') || target.id === 'add-category-modal') { hideAddCategoryModal(); return; }
+                if (target.closest('#save-add-cat-btn')) { saveNewCategory(); return; }
             });
         });
     </script>
