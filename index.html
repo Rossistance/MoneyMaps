@@ -22,7 +22,7 @@
         #sidebar-content { flex-grow: 1; overflow-y: auto; }
         .sidebar-view { display: none; }
         .sidebar-view.active { display: block; }
-        #map { width: 100%; height: 100%; z-index: 10; background-color: #111827; }
+        #map { width: 100%; height: 100%; z-index: 10; background-color: #f0f0f0; }
         
         .custom-pin {
             width: 32px; height: 32px;
@@ -200,7 +200,7 @@
         function initializeMap() { 
             const fallbackPos = [35.727, -77.915];
             map = L.map('map', { center: fallbackPos, zoom: 9, zoomControl: false, attributionControl: false }); 
-            L.tileLayer(`https://2.base.maps.ls.hereapi.com/maptile/2.1/maptile/newest/normal.night/{z}/{x}/{y}/256/png8?apiKey=${HERE_API_KEY}`, { attribution: '&copy; HERE' }).addTo(map); 
+            L.tileLayer(`https://2.base.maps.ls.hereapi.com/maptile/2.1/maptile/newest/normal.day/{z}/{x}/{y}/256/png8?apiKey=${HERE_API_KEY}`, { attribution: '&copy; HERE' }).addTo(map); 
             const debouncedSearch = debounce(searchPlaces, 500); 
             map.on('moveend', () => { if (!document.getElementById('search-input').value) debouncedSearch(); }); 
             if (navigator.geolocation) { navigator.geolocation.getCurrentPosition( (pos) => { map.setView([pos.coords.latitude, pos.coords.longitude], 9); }, () => { console.warn("Geolocation failed, using fallback."); searchPlaces(); }, { timeout: 5000 } ); } else { console.warn("Geolocation not supported."); searchPlaces(); }
@@ -217,7 +217,7 @@
             document.body.addEventListener('click', (e) => {
                 const target = e.target;
                 if(target.closest('.category-filter-btn')) { activeCategory = target.closest('.category-filter-btn').dataset.category; updateActiveFilterButton(); document.getElementById('search-input').value = ''; searchPlaces(); return; }
-                if(target.closest('.keypad-btn')) { const key = target.closest('.keypad-btn').textContent; const display = document.getElementById('log-amount-display'); if (key === '←') { currentAmountString = currentAmountString.slice(0, -1) || "0"; } else if (key === '.' && !currentAmountString.includes('.')) { currentAmountString += '.'; } else if (key !== '.') { if (currentAmountString === "0") currentAmountString = key; else currentAmountString += key; } if (currentAmountString.includes('.') && currentAmountString.split('.')[1].length > 2) currentAmountString = currentAmountString.slice(0,-1); if (currentAmountString.endsWith('.')) { display.textContent = formatCurrency(parseFloat(currentAmountString)).slice(0, -3) + '.'; } else { display.textContent = formatCurrency(parseFloat(currentAmountString) || 0); } return; }
+                if(target.closest('.keypad-btn')) { const key = target.closest('.keypad-btn').textContent; const display = document.getElementById('log-amount-display'); if (key === '←') { currentAmountString = currentAmountString.slice(0, -1) || "0"; } else if (key === '.' && !currentAmountString.includes('.')) { currentAmountString += '.'; } else if (key !== '.') { if (currentAmountString === "0") currentAmountString = key; else currentAmountString += key; } if (currentAmount..split('.')[1].length > 2) currentAmountString = currentAmountString.slice(0,-1); if (currentAmountString.endsWith('.')) { display.textContent = formatCurrency(parseFloat(currentAmountString)).slice(0, -3) + '.'; } else { display.textContent = formatCurrency(parseFloat(currentAmountString) || 0); } return; }
                 if(target.closest('.nav-btn')) { switchSidebarView(target.closest('.nav-btn').dataset.view); return; }
                 if(target.closest('#back-to-main-btn')) { switchSidebarView('budget-view'); return; }
                 if(target.closest('#log-purchase-btn')) { showLogPurchaseModal(); return; }
@@ -233,4 +233,5 @@
     </script>
 </body>
 </html>
+
 
