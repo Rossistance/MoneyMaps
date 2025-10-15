@@ -117,7 +117,7 @@
         //    (e.g., "your-username.github.io") to protect it.
         // 4. Paste your new, restricted key below.
         // =================================================================================
-        const HERE_API_KEY = 6iHV0y797UXNMW3TZlJX6gXy67xGh2uEIX77Q7tHdjU ;
+        const HERE_API_KEY = '6iHV0y797UXNMW3TZlJX6gXy67xGh2uEIX77Q7tHdjU' ;
 
         // --- STATE & CONFIG ---
         let map;
@@ -154,7 +154,7 @@
         
         async function searchPlaces() { 
             const mapLoader = document.getElementById('map-loader');
-            if (HERE_API_KEY === 6iHV0y797UXNMW3TZlJX6gXy67xGh2uEIX77Q7tHdjU || !HERE_API_KEY) {
+            if (HERE_API_KEY === '6iHV0y797UXNMW3TZlJX6gXy67xGh2uEIX77Q7tHdjU' || !HERE_API_KEY) {
                 console.error("HERE Maps API Key is not set or invalid.");
                 document.getElementById('map').innerHTML = `<div class="w-full h-full flex items-center justify-center bg-gray-800 p-4"><div class="text-center bg-gray-900 rounded-lg shadow-xl p-6 border border-red-500/50"><h3 class="text-xl font-bold text-red-400">API Key Error</h3><p class="text-gray-300 mt-2">Your HERE Maps API Key is invalid or missing.<br>Please generate a new, restricted key and add it to the HTML file.</p></div></div>`;
                 mapLoader.style.display = 'none';
