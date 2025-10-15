@@ -37,7 +37,7 @@
         .custom-pin:hover { transform: rotate(-45deg) scale(1.15); box-shadow: 0 6px 12px rgba(0,0,0,0.3); }
         .custom-pin svg { transform: rotate(45deg); width: 16px; height: 16px; color: white; }
         
-        .leaflet-control-attribution { display: none !important; }
+        .leaflet-control-attribution { font-size: 10px !important; }
         .nav-btn { color: #4b5563; }
         .nav-btn.active { background-color: #e5e7eb; color: #111827; }
         .keypad-btn:active { background-color: #d1d5db; }
@@ -129,7 +129,11 @@
 
         const tailwindColors = { 'red-500': '#ef4444', 'green-500': '#22c55e', 'yellow-500': '#eab308', 'purple-500': '#a855f7', 'blue-500': '#3b82f6', 'cyan-500': '#06b6d4', 'indigo-500': '#6366f1', 'pink-500': '#ec4899', 'teal-500': '#14b8a6', 'amber-500': '#f59e0b', 'emerald-500': '#10b981', 'gray-500': '#6b7280', 'green-600': '#16a34a', 'lime-500': '#84cc16' };
         const categoryIcons = { 'dining': `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6v8h3v8h-3v-2h-2v2H6v-2H3v2H0v-8h3V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2zM6 6v8h8V6H6z"/></svg>`, 'groceries': `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2zm-1.45-5c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1.003 1.003 0 0 0 20.25 4H5.21l-.94-2H1v2h2l3.6 7.59-1.35 2.44C4.52 15.37 5.24 17 6.5 17H20v-2H7.42c-.13 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45z"/></svg>`, 'shopping': `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 6h-2c0-2.21-1.79-4-4-4S8 3.79 8 6H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6-2c1.1 0 2 .9 2 2h-4c0-1.1.9-2 2-2zm6 16H6V8h2v2c0 .55.45 1 1 1s1-.45 1-1V8h4v2c0 .55.45 1 1 1s1-.45 1-1V8h2v12z"/></svg>`, 'gas': `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C10.34 3 9 4.34 9 6H5v12h14V6h-4c0-1.66-1.34-3-3-3zm0 2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm-3 5H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/></svg>`, 'entertainment': `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 3v2h-2V3H8v2H6V3H4v18h2v-2h2v2h8v-2h2v2h2V3h-2zM8 17H6v-2h2v2zm0-4H6v-2h2v2zm0-4H6V7h2v2zm10 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2z"/></svg>`, 'health': `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4 11h-3v3h-2v-3H8v-2h3V8h2v3h3v2z"/></svg>`, 'default': `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>` };
-        const hereCategoryMap = { 'dining': '100-1000', 'groceries': '100-1011-0052,700-7000-0000', 'gas': '100-1019,400-4000-0000', 'shopping': '600-6000-0000', 'entertainment': '300-3000-0000', 'health': '500-5000-0000' };
+        const hereCategoryMap = { 'dining': '100-1000', 'groceries': '700-7000-0000', 'gas': '400-4100-0000', 'shopping': '600-6000-0000', 'entertainment': '300-3000-0000', 'health': '500-5000-0000' };
+        
+        const categoryKeywords = {
+            'mortgage-rent': ['MORTGAGE'], 'car-payment': ['CAR PAYMENT'], 'electricity-epb': ['EPB'], 'gas-chattanoogagasco': ['GASCO'], 'water-eastside-utility': ['EASTSIDE UTILITY'], 'internet-epb': ['EPB INTERNET'], 'trash-c-m-disposal': ['C&M DISPOSAL'], 'insurance-farmers': ['FARMERS', 'ALLIANZ'], 'home-warranty': ['HOME WARRANTY'], 'care-payment-hospital': ['HOSPITAL'], 'diapers': ['DIAPERS'], 'therapist': ['THERAPIST'], 'phone-payment': ['VERIZON', 'AT&T', 'T-MOBILE'], 'pet-care': ['PETCO', 'PETSMART'], 'groceries': ['KROGER', 'PUBLIX', 'WHOLE FOODS', 'TRADER JOE'], 'gasoline': ['SHELL', 'EXXON', 'BP', 'GAS', 'REFUEL', 'RDUAA'], 'dining-out-restaurant-fast-food': ['RESTAURANT', 'CAFE', 'STARBUCKS', 'MCDONALD'], 'medical-copays-pharmacy': ['CVS', 'WALGREENS', 'PHARMACY'], 'subscriptions': ['NETFLIX', 'SPOTIFY', 'AMAZON PRIME'], 'childcare-school-fees': ['CHILDCARE', 'SCHOOL'], 'entertainment-shopping-main': ['TARGET', 'WALMART', 'AMAZON', 'GOODWILL', 'REGAL', 'TURO'], 'transfers': ['VENMO', 'TRANSFER', 'ZELLE'], 'income': ['PAYROLL', 'DEPOSIT', 'AXIS ENERGY'],
+        };
 
         // --- UTILITIES ---
         const formatCurrency = (amount) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -183,10 +187,6 @@
                 'family-savings': `"Transaction ID","Posting Date","Effective Date","Transaction Type","Amount","Check Number","Reference Number","Description","Transaction Category","Type","Balance","Memo","Extended Description"\n"202510137436150000230002","10/13/2025","10/13/2025","Debit","-500.00000","","292753845","Withdrawal Home Banking Transfer To Share 0012 Work trip payback","Transfers","Retail ACH","17358.16000","",""\n"202504017436189145002","4/1/2025","4/1/2025","Credit","0.89000","","254701279","Deposit Dividend 0.300%",Investment Income,Dividends,"4299.86000","",""`,
                 'mortgage-contingency': `"Transaction ID","Posting Date","Effective Date","Transaction Type","Amount","Check Number","Reference Number","Description","Transaction Category","Type","Balance","Memo","Extended Description"\n"20251003527840287000928687","10/3/2025","10/3/2025","Credit","2870.00000","","290927726","Deposit EXTRA MORTGAGE",Deposits,"Transfer","2870.00000","",""`
             };
-
-            const categoryKeywords = {
-                'mortgage-rent': ['MORTGAGE'], 'car-payment': ['CAR PAYMENT'], 'electricity-epb': ['EPB'], 'gas-chattanoogagasco': ['GASCO'], 'water-eastside-utility': ['EASTSIDE UTILITY'], 'internet-epb': ['EPB INTERNET'], 'trash-c-m-disposal': ['C&M DISPOSAL'], 'insurance-farmers': ['FARMERS', 'ALLIANZ'], 'home-warranty': ['HOME WARRANTY'], 'care-payment-hospital': ['HOSPITAL'], 'diapers': ['DIAPERS'], 'therapist': ['THERAPIST'], 'phone-payment': ['VERIZON', 'AT&T', 'T-MOBILE'], 'pet-care': ['PETCO', 'PETSMART'], 'groceries': ['KROGER', 'PUBLIX', 'WHOLE FOODS', 'TRADER JOE'], 'gasoline': ['SHELL', 'EXXON', 'BP', 'GAS', 'REFUEL', 'RDUAA'], 'dining-out-restaurant-fast-food': ['RESTAURANT', 'CAFE', 'STARBUCKS', 'MCDONALD'], 'medical-copays-pharmacy': ['CVS', 'WALGREENS', 'PHARMACY'], 'subscriptions': ['NETFLIX', 'SPOTIFY', 'AMAZON PRIME'], 'childcare-school-fees': ['CHILDCARE', 'SCHOOL'], 'entertainment-shopping-main': ['TARGET', 'WALMART', 'AMAZON', 'GOODWILL', 'REGAL', 'TURO'], 'transfers': ['VENMO', 'TRANSFER', 'ZELLE'], 'income': ['PAYROLL', 'DEPOSIT', 'AXIS ENERGY'],
-            };
             
             function getCategoryForTransaction(description, bankCategory) {
                 const desc = description.toUpperCase();
@@ -227,11 +227,147 @@
         
         // --- MAP & API LOGIC ---
         function clearMarkers() { if(map) { mapMarkers.forEach(({ marker }) => marker.removeFrom(map)); mapMarkers = []; } }
-        function categoryForHereResult(item) { if (!item || !Array.isArray(item.categories)) return 'uncategorized'; for (const c of item.categories) { if (c && c.id) for (const appCat in hereCategoryMap) { const hereKeys = hereCategoryMap[appCat].split(','); if (hereKeys.some(key => c.id.startsWith(key))) return appCat; } } return 'uncategorized'; }
-        async function searchPlaces() { /* Unchanged */ }
-        async function getAutocompleteSuggestions() { /* Unchanged */ }
-        async function selectSuggestion(id, resultType) { /* Unchanged */ }
-        function addPlacesToMap(items) { /* Unchanged */ }
+        
+        function categoryForHereResult(item) { 
+            if (!item || !Array.isArray(item.categories)) return 'uncategorized'; 
+            for (const c of item.categories) { 
+                if (c && c.id) {
+                    for (const appCat in hereCategoryMap) { 
+                        const hereKeys = hereCategoryMap[appCat].split(','); 
+                        if (hereKeys.some(key => c.id.startsWith(key))) return appCat; 
+                    } 
+                }
+            } 
+            return 'uncategorized'; 
+        }
+        
+        async function searchPlaces() { 
+            const mapLoader = document.getElementById('map-loader');
+            mapLoader.style.display = 'flex'; 
+            const query = document.getElementById('search-input').value; 
+            const center = map.getCenter(); 
+            const at = `${center.lat},${center.lng}`;
+            let url; 
+            if (query) { 
+                url = `https://discover.search.hereapi.com/v1/discover?q=${encodeURIComponent(query)}&at=${at}&limit=100&apiKey=${HERE_API_KEY}`; 
+            } else if (activeCategory !== 'all') { 
+                const categoryCodes = hereCategoryMap[activeCategory];
+                url = `https://browse.search.hereapi.com/v1/browse?categories=${categoryCodes}&at=${at}&limit=100&apiKey=${HERE_API_KEY}`; 
+            } else { 
+                mapLoader.style.display = 'none'; 
+                clearMarkers(); 
+                return; 
+            } 
+            try { 
+                const response = await fetch(url); 
+                if (!response.ok) throw new Error(`API error: ${response.status}`); 
+                const data = await response.json(); 
+                if (data.items) { 
+                    addPlacesToMap(data.items); 
+                } 
+            } catch (error) { 
+                console.error("Error fetching places:", error); 
+            } finally { 
+                mapLoader.style.display = 'none'; 
+            } 
+        }
+        
+        async function getAutocompleteSuggestions() { 
+            const query = document.getElementById('search-input').value; 
+            const resultsContainer = document.getElementById('autocomplete-results'); 
+            if (query.length < 3) { 
+                resultsContainer.innerHTML = ''; 
+                resultsContainer.classList.add('hidden'); 
+                return; 
+            } 
+            const center = map.getCenter(); 
+            const url = `https://autosuggest.search.hereapi.com/v1/autosuggest?q=${encodeURIComponent(query)}&at=${center.lat},${center.lng}&limit=7&apiKey=${HERE_API_KEY}`; 
+            try { 
+                const response = await fetch(url); 
+                const data = await response.json(); 
+                renderAutocomplete(data.items); 
+            } catch (error) { 
+                console.error("Autocomplete error:", error); 
+                resultsContainer.classList.add('hidden'); 
+            } 
+        }
+
+        async function selectSuggestion(id, resultType) { 
+            document.getElementById('autocomplete-results').classList.add('hidden'); 
+            document.getElementById('map-loader').style.display = 'flex'; 
+            const url = `https://lookup.search.hereapi.com/v1/lookup?id=${id}&apiKey=${HERE_API_KEY}`; 
+            try { 
+                const response = await fetch(url); 
+                const data = await response.json(); 
+                if (data?.position?.lat && data?.position?.lng) { 
+                    const zoomLevel = (resultType === 'locality' || resultType === 'administrativeArea') ? 9 : 15; 
+                    map.flyTo([data.position.lat, data.position.lng], zoomLevel); 
+                    if (data.resultType === 'place') { 
+                        addPlacesToMap([data]); 
+                        const place = mapMarkers[0]?.place; 
+                        if (place) showPlaceView(place); 
+                    } 
+                } 
+            } catch (error) { 
+                console.error("Lookup error:", error); 
+            } finally { 
+                document.getElementById('map-loader').style.display = 'none'; 
+            } 
+        }
+        
+        function addPlacesToMap(items) { 
+            clearMarkers(); 
+            items.forEach(item => { 
+                if (!item || !item.position) return; 
+                const place = { 
+                    id: item.id, name: item.title, type: item.categories?.[0]?.name || 'Place', 
+                    lat: item.position.lat, lng: item.position.lng, 
+                    hereCategory: categoryForHereResult(item) 
+                };
+                place.budgetCategory = findBudgetCategoryForPlace(place);
+                
+                const iconSVG = categoryIcons[place.hereCategory] || categoryIcons['default']; 
+                let pinStyle = `background: #10B981;`; // Default green for new
+                
+                let parentCategoryKey = null;
+                for (const pKey in budgetStructure) {
+                    if (budgetStructure[pKey].items && budgetStructure[pKey].items[place.budgetCategory]) {
+                        parentCategoryKey = pKey;
+                        break;
+                    }
+                }
+
+                if (parentCategoryKey) { 
+                    const colorKey = Object.keys(tailwindColors)[Object.keys(budgetStructure).indexOf(parentCategoryKey) % 10];
+                    const colorHex = tailwindColors[colorKey];
+                    pinStyle = `background: ${colorHex};`; 
+                }
+                const marker = L.marker([place.lat, place.lng], { 
+                    icon: L.divIcon({ 
+                        html: `<div class="custom-pin" style="${pinStyle}">${iconSVG}</div>`, 
+                        className: '', iconSize: [32, 32], iconAnchor: [16, 32] 
+                    }) 
+                }); 
+                mapMarkers.push({ marker, place }); 
+                marker.on('click', (e) => { 
+                    L.DomEvent.stopPropagation(e); 
+                    showPlaceView(place); 
+                    map.flyTo([place.lat, place.lng], map.getZoom() > 14 ? map.getZoom() : 15); 
+                }); 
+                marker.addTo(map); 
+            }); 
+        }
+
+        function findBudgetCategoryForPlace(place) {
+            if (!place || !place.name) return 'uncategorized';
+            const placeNameUpper = place.name.toUpperCase();
+            for (const itemKey in categoryKeywords) {
+                for (const keyword of categoryKeywords[itemKey]) {
+                    if (placeNameUpper.includes(keyword)) return itemKey;
+                }
+            }
+            return 'uncategorized';
+        }
 
         // --- RENDERING & CALCULATION ---
         function renderAllViews() {
@@ -424,6 +560,85 @@
                     ${!onBudget ? '<button id="suggestion-btn" class="mt-3 w-full bg-yellow-400 hover:bg-yellow-500 text-yellow-800 font-bold py-2 px-4 rounded-lg text-sm">Get Actionable Suggestions</button>' : ''}
                 </div>`;
         }
+        
+        function renderAutocomplete(items) { 
+            const resultsContainer = document.getElementById('autocomplete-results'); 
+            if (!items || items.length === 0) { 
+                resultsContainer.innerHTML = ''; 
+                resultsContainer.classList.add('hidden'); 
+                return; 
+            } 
+            resultsContainer.innerHTML = items.map(item => 
+                `<div class="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-200 last:border-b-0" data-id="${item.id}" data-type="${item.resultType}">
+                    <p class="font-semibold text-gray-800">${item.title}</p>
+                    <p class="text-sm text-gray-500">${item.address?.label || item.resultType}</p>
+                </div>`
+            ).join(''); 
+            resultsContainer.classList.remove('hidden'); 
+        }
+
+        function renderPlaceDetailView(place) {
+            if (!place) return;
+            calculateAllBudgets();
+            const placeViewEl = document.getElementById('place-detail-view');
+            const budgetItemKey = place.budgetCategory;
+            let parentKey, parentBudget;
+
+            for(const pkey in budgetStructure){
+                if(budgetStructure[pkey].items && budgetStructure[pkey].items[budgetItemKey]){
+                    parentKey = pkey;
+                    parentBudget = budgetStructure[pkey];
+                    break;
+                }
+            }
+
+            const isUncategorized = !parentBudget;
+            const iconSVG = categoryIcons[place.hereCategory] || categoryIcons['default'];
+            const merchantTransactions = allTransactions.filter(t => t.name.toUpperCase().includes(place.name.toUpperCase().split(" ")[0]) && t.type === 'debit').sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            let categorySection;
+            if (isUncategorized) {
+                categorySection = `<div class="bg-gray-100 border-dashed border-2 border-gray-300 p-4 rounded-lg my-4 text-center">
+                    <h3 class="font-bold text-green-600">New Place Discovered!</h3>
+                    <p class="text-sm text-gray-500 mt-1">Add this to a budget to track spending.</p>
+                </div>`;
+            } else {
+                let hintText = '';
+                if (merchantTransactions.length === 1) hintText = `Last spent here: ${formatCurrency(merchantTransactions[0].amount)}`;
+                else if (merchantTransactions.length >= 2) {
+                    const avg = merchantTransactions.slice(0, 3).reduce((a, t) => a + t.amount, 0) / Math.min(3, merchantTransactions.length);
+                    hintText = `Avg. spent per visit: ${formatCurrency(avg)}`;
+                }
+                const remaining = parentBudget.total - parentBudget.spent;
+                categorySection = `<div class="bg-white border-2 border-indigo-500 p-4 rounded-lg my-4">
+                    <div class="flex justify-between items-baseline">
+                        <p class="text-sm font-medium text-indigo-700">Available in ${parentBudget.name}</p>
+                        <div class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-full">${parentBudget.items[budgetItemKey].name}</div>
+                    </div>
+                    <p class="text-4xl font-extrabold text-gray-900 mt-1">${formatCurrency(remaining)}</p>
+                    <p class="text-xs text-indigo-500 h-4 mt-1">${hintText}</p>
+                </div>
+                <button id="log-purchase-btn" class="w-full bg-indigo-600 text-white font-semibold py-3 rounded-xl hover:bg-indigo-700 transition">Log Purchase</button>`;
+            }
+            placeViewEl.innerHTML = `
+                <div class="p-4">
+                    <button id="back-to-main-btn" class="text-sm font-semibold text-indigo-600 hover:text-indigo-500 mb-4">&larr; Back to Budget</button>
+                    <div class="flex items-center mb-3">
+                        <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center text-2xl mr-4">${iconSVG}</div>
+                        <div><h2 class="text-xl font-bold text-gray-800">${place.name}</h2><p class="text-sm text-gray-500">${place.type}</p></div>
+                    </div>
+                    ${categorySection}
+                </div>
+                <div class="border-t border-gray-200 p-4 mt-4">
+                    <h3 class="font-bold text-gray-800 mb-2">Recent Activity Here</h3>
+                    <div class="space-y-2">${merchantTransactions.length === 0 ? '<p class="text-sm text-gray-500">No transactions recorded here yet.</p>' : merchantTransactions.map(t => `<div class="flex justify-between items-center text-sm"><span class="text-gray-500">${new Date(t.date.replace(/-/g, '/')).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span><span class="font-semibold text-gray-800">${formatCurrency(t.amount)}</span></div>`).join('')}</div>
+                </div>`;
+        }
+        
+        function showPlaceView(place) {
+            currentPlace = place;
+            switchSidebarView('place-detail-view');
+        }
 
         function showSuggestionModal() {
             const today = new Date();
@@ -432,6 +647,7 @@
             const overspentCategories = Object.entries(budgetStructure)
                 .filter(([key, parent]) => parent.total > 0)
                 .map(([key, parent]) => {
+                    if (parent.total === 0) return { name: parent.name, overage: 0, spent: parent.spent, total: parent.total };
                     const percentSpent = parent.spent / parent.total;
                     return { name: parent.name, overage: percentSpent - percentOfMonthPassed, spent: parent.spent, total: parent.total };
                 })
@@ -446,7 +662,7 @@
                         ${overspentCategories.slice(0, 3).map(c => `
                             <li class="p-3 bg-gray-100 rounded-lg">
                                 <p class="font-semibold text-red-600">${c.name}</p>
-                                <p class="text-xs text-gray-600">You've spent ${formatCurrency(c.spent)} of ${formatCurrency(c.total)} (${(c.spent/c.total*100).toFixed(0)}%), which is ahead of schedule.</p>
+                                <p class="text-xs text-gray-600">You've spent ${formatCurrency(c.spent)} of ${formatCurrency(c.total)} (${c.total > 0 ? (c.spent/c.total*100).toFixed(0) : 0}%), which is ahead of schedule.</p>
                             </li>
                         `).join('')}
                     </ul>`;
@@ -464,15 +680,42 @@
             `;
         }
         
-        // --- Remaining dummy functions ---
-        function createSankey(svgEl) {}
-        
+        function createSankey(svgEl) {
+             const width = svgEl.clientWidth, height = svgEl.clientHeight;
+            svgEl.innerHTML = '';
+            const svg = d3.select(svgEl).attr("viewBox", `0 0 ${width} ${height}`);
+            const thisMonth = new Date().getMonth();
+            const thisYear = new Date().getFullYear();
+
+            const monthTxs = allTransactions.filter(t => t.accountId === 'family-checking' && new Date(t.date).getMonth() === thisMonth && new Date(t.date).getFullYear() === thisYear);
+            
+            const spending = Object.entries(budgetStructure)
+                .filter(([k, p]) => p.total > 0 && k !== 'income' && k !== 'transfers')
+                .map(([k, p]) => ({ key: k, name: p.name, spent: p.spent }))
+                .filter(d => d.spent > 0);
+
+            const totalIncome = monthTxs.filter(t => t.category === 'income').reduce((s, t) => s + t.amount, 0);
+
+            if (spending.length === 0 || totalIncome === 0) {
+                svg.append("text").attr("x", width / 2).attr("y", height / 2).attr("text-anchor", "middle").text("Not enough data for chart.").style("fill", "#6b7280");
+                return;
+            }
+            const nodes = [{ name: "Income" }, ...spending.map(d => ({ name: d.name }))];
+            const links = spending.map((d, i) => ({ source: 0, target: i + 1, value: d.spent, color: tailwindColors[Object.keys(tailwindColors)[i % 10]] }));
+            const sankey = d3.sankey().nodeWidth(15).nodePadding(10).extent([[1, 1], [width - 1, height - 6]]);
+            const { nodes: graphNodes, links: graphLinks } = sankey({ nodes: nodes.map(d => ({ ...d })), links: links.map(d => ({ ...d })) });
+            svg.append("g").selectAll(".sankey-link").data(graphLinks).enter().append("path").attr("class", "sankey-link").attr("d", d3.sankeyLinkHorizontal()).style("stroke", d => d.color || '#6b7280').style("stroke-width", d => Math.max(1, d.width));
+            const node = svg.append("g").selectAll(".sankey-node").data(graphNodes).enter().append("g").attr("class", "sankey-node").attr("transform", d => `translate(${d.x0},${d.y0})`);
+            node.append("rect").attr("height", d => d.y1 - d.y0).attr("width", sankey.nodeWidth()).style("fill", (d, i) => i === 0 ? tailwindColors['green-600'] : links[i - 1].color);
+            node.append("text").attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6).attr("y", d => (d.y1 - d.y0) / 2).attr("dy", "0.35em").attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end").text(d => d.name).style("font-size", "12px").style("fill", "#374151");
+        }
+
         // --- INITIALIZATION & EVENT LISTENERS ---
         function initializeMap() { 
             const fallbackPos = [35.0456, -85.3097];
             if (document.getElementById('map')._leaflet_id) return;
-            map = L.map('map', { center: fallbackPos, zoom: 9, zoomControl: false, attributionControl: false }); 
-            L.tileLayer(`https://2.base.maps.ls.hereapi.com/maptile/2.1/maptile/newest/normal.day/{z}/{x}/{y}/256/png8?apiKey=${HERE_API_KEY}`, { attribution: '&copy; HERE' }).addTo(map); 
+            map = L.map('map', { center: fallbackPos, zoom: 9, zoomControl: false }); 
+            L.tileLayer(`https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png`, { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(map); 
         }
         
         function renderCategoryFilters() {
@@ -530,7 +773,16 @@
                  if(target.closest('.category-filter-btn')) { activeCategory = target.closest('.category-filter-btn').dataset.category; updateActiveFilterButton(); if(map) searchPlaces(); return; }
                  if(target.closest('#suggestion-btn')) { showSuggestionModal(); return; }
                  if(target.closest('#close-suggestion-modal') || e.target.id === 'suggestion-modal') { document.getElementById('modal-container').innerHTML = ''; return; }
+                 if(target.closest('#back-to-main-btn')) { switchSidebarView('budget-view'); return; }
              });
+
+            document.getElementById('search-input').addEventListener('input', debounce(getAutocompleteSuggestions, 300));
+            document.getElementById('autocomplete-results').addEventListener('click', (e) => {
+                const suggestionEl = e.target.closest('[data-id]');
+                if (suggestionEl) {
+                    selectSuggestion(suggestionEl.dataset.id, suggestionEl.dataset.type);
+                }
+            });
         });
     </script>
 </body>
