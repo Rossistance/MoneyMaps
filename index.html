@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -100,7 +101,7 @@
             <div id="sidebar-content" class="flex-grow overflow-y-auto">
                 <div id="budget-view" class="sidebar-view active p-4"></div>
                 <div id="transactions-view" class="sidebar-view"></div>
-                <div id="accounts-view" class="sidebar-view"></div>
+                <div id="accounts-view" class="sidebar-view p-4"></div>
                 <div id="place-detail-view" class="sidebar-view"></div>
             </div>
         </div>
@@ -130,7 +131,7 @@
                 <div id="transactions-screen" class="screen bg-gray-50 flex flex-col hidden"></div>
 
                  <!-- Accounts Screen -->
-                <div id="accounts-screen" class="screen bg-gray-50 hidden"></div>
+                <div id="accounts-screen" class="screen bg-gray-50 p-4 pt-6 hidden"></div>
             </div>
 
             <!-- Tab Bar -->
@@ -406,32 +407,15 @@
         // --- RENDERING & CALCULATION ---
         function renderAllViews() {
             calculateAllBudgets();
-            // Check if we are on mobile or desktop view
-            if (window.innerWidth < 768) {
-                // Mobile rendering logic (can render all screens as they are hidden/shown)
-                renderBudgetScreen(document.getElementById('budget-screen'));
-                renderTransactionsScreen(document.getElementById('transactions-screen'));
-                renderAccountsScreen(document.getElementById('accounts-screen'));
-            } else {
-                // Desktop rendering logic (only render the active tab)
-                const activeView = document.querySelector('#sidebar .sidebar-view.active');
-                if (!activeView) return;
-
-                switch (activeView.id) {
-                    case 'budget-view':
-                        renderBudgetView(activeView);
-                        break;
-                    case 'transactions-view':
-                        renderTransactionsView(activeView);
-                        break;
-                    case 'accounts-view':
-                        renderAccountsView(activeView);
-                        break;
-                    case 'place-detail-view':
-                        if (currentPlace) renderPlaceDetailView(activeView);
-                        break;
-                }
-            }
+            // Desktop
+            renderBudgetView(document.getElementById('budget-view'));
+            renderTransactionsView(document.getElementById('transactions-view'));
+            renderAccountsView(document.getElementById('accounts-view'));
+            if (currentPlace) renderPlaceDetailView(document.getElementById('place-detail-view'));
+            // Mobile
+            renderBudgetScreen(document.getElementById('budget-screen'));
+            renderTransactionsScreen(document.getElementById('transactions-screen'));
+            renderAccountsScreen(document.getElementById('accounts-screen'));
         }
         
         function calculateAllBudgets() {
@@ -576,7 +560,7 @@
             }).join('');
 
             const summaryHtml = `<div class="bg-white border-2 border-indigo-500 p-4 rounded-lg mb-6"><p class="text-sm font-medium text-indigo-700">Total Net Worth</p><p class="text-4xl font-extrabold text-gray-900 mt-1">${formatCurrency(totalAssets)}</p></div><h2 class="text-xl font-bold text-gray-800 mb-4">Your Accounts</h2>`;
-            container.innerHTML = `<div class="p-4 pt-6 space-y-4">${summaryHtml + accountHtml}</div>`;
+            container.innerHTML = `<div class="space-y-4">${summaryHtml + accountHtml}</div>`;
         }
 
         function renderTransactionsView(container) {
@@ -1105,5 +1089,3 @@
     </script>
 </body>
 </html>
-
-
