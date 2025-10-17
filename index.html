@@ -96,6 +96,22 @@
     </div>
     
     <!-- Modals -->
+    <div id="sankey-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden items-center justify-center px-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden">
+            <div class="flex items-center justify-between px-6 py-4 border-b">
+                <h2 class="text-lg font-semibold text-gray-900">Savings &amp; Time Targets Flow</h2>
+                <button id="sankey-modal-close" class="p-2 rounded-full text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Close Sankey details">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                </button>
+            </div>
+            <div class="flex-1 overflow-hidden p-4">
+                <div id="sankey-expanded-wrapper" class="w-full h-full min-h-[320px]">
+                    <svg id="sankey-expanded" class="w-full h-full"></svg>
+                </div>
+            </div>
+            <div id="sankey-details" class="px-6 py-4 border-t bg-gray-50 overflow-y-auto max-h-72 text-sm text-gray-700"></div>
+        </div>
+    </div>
     <div id="log-purchase-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 z-50 hidden items-center justify-center"></div>
     <div id="add-category-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 z-50 hidden items-center justify-center p-4"></div>
 
@@ -310,41 +326,287 @@
             if(document.getElementById('place-detail-view').classList.contains('active')) renderPlaceDetailView(currentPlace);
         }
 
-        function createSankey(svgElement) {
-            const width = svgElement.clientWidth;
-            const height = svgElement.clientHeight;
-            svgElement.innerHTML = ''; 
-            const svg = d3.select(svgElement).attr("viewBox", `0 0 ${width} ${height}`);
+        function getSankeyFlowData() {
+            const budgetEntries = Object.entries(budgetData || {}).filter(([_, cat]) => cat && Number(cat.total) > 0);
+            const savingsEntries = Object.entries(pureSavingsData || {});
+            const goalEntries = Object.entries(goalsData || {});
+            const nodes = [];
+            const links = [];
+            const details = [];
+            const addNode = (name, meta = {}) => {
+                nodes.push({ name, ...meta });
+                return nodes.length - 1;
+            };
 
-            const spending = Object.entries(budgetData)
-                .filter(([key, cat]) => cat.total && key !== 'income' && key !== 'transfers')
-                .map(([key, cat]) => ({ category: key, spent: Math.max(0, cat.total - cat.remaining) }))
-                .filter(d => d.spent > 0);
+            const ensureValue = (value) => {
+                const numeric = Number(value);
+                return Math.max(Number.isFinite(numeric) ? numeric : 0, 0.01);
+            };
 
-            const totalIncome = transactionsData.filter(t => t.category === 'income').reduce((sum, t) => sum + t.amount, 0);
-
-            if (spending.length === 0 || totalIncome === 0) {
-                 svg.append("text").attr("x", width/2).attr("y", height/2).attr("text-anchor", "middle").text("Not enough data for chart.").style("fill", "#6b7280");
-                 return;
+            let budgetRootIndex = null;
+            if (budgetEntries.length) {
+                budgetRootIndex = addNode('Budget Categories', { type: 'root', color: '#16a34a' });
             }
 
-            const nodes = [{ name: "Income" }, ...spending.map(d => ({ name: budgetData[d.category].name }))];
-            const links = spending.map((d, i) => ({ source: 0, target: i + 1, value: d.spent, color: tailwindColors[budgetData[d.category].color] }));
-            
-            const sankey = d3.sankey().nodeWidth(15).nodePadding(10).extent([[1, 1], [width - 1, height - 6]]);
-            const {nodes: graphNodes, links: graphLinks} = sankey({ nodes: nodes.map(d => Object.assign({}, d)), links: links.map(d => Object.assign({}, d)) });
+            budgetEntries.forEach(([key, category]) => {
+                if (!category) return;
+                const total = Number(category.total) || 0;
+                const remainingRaw = Number(category.remaining);
+                const remaining = Number.isFinite(remainingRaw) ? remainingRaw : total;
+                const spent = Math.max(total - remaining, 0);
+                const color = tailwindColors[category.color] || '#16a34a';
+                const nodeDetail = {
+                    group: 'Budget Categories',
+                    name: category.name,
+                    current: spent,
+                    total,
+                    remaining,
+                    progressLabel: 'Spent',
+                    targetLabel: 'Budgeted',
+                    remainingLabel: 'Available',
+                    color
+                };
+                const nodeIndex = addNode(category.name, {
+                    type: 'budget',
+                    color,
+                    detail: nodeDetail
+                });
+                if (budgetRootIndex !== null) {
+                    links.push({
+                        source: budgetRootIndex,
+                        target: nodeIndex,
+                        value: ensureValue(Math.max(total, spent)),
+                        color,
+                        detail: nodeDetail
+                    });
+                }
+                details.push(nodeDetail);
+            });
 
-            svg.append("g").selectAll(".sankey-link").data(graphLinks).enter().append("path")
-                .attr("class", "sankey-link").attr("d", d3.sankeyLinkHorizontal())
-                .style("stroke", d => d.color).style("stroke-width", d => Math.max(1, d.width));
-            
-            const node = svg.append("g").selectAll(".sankey-node").data(graphNodes).enter().append("g").attr("class", "sankey-node").attr("transform", d => `translate(${d.x0},${d.y0})`);
-            node.append("rect").attr("height", d => d.y1 - d.y0).attr("width", sankey.nodeWidth())
-                .style("fill", (d, i) => i === 0 ? tailwindColors['green-600'] : links[i - 1].color);
-            node.append("text").attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
-                .attr("y", d => (d.y1 - d.y0) / 2).attr("dy", "0.35em")
-                .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
-                .text(d => d.name).style("font-size", "12px").style("fill", "#374151");
+            let savingsRootIndex = null;
+            if (savingsEntries.length) {
+                savingsRootIndex = addNode('Pure Savings', { type: 'root', color: '#0ea5e9' });
+            }
+
+            let goalsRootIndex = null;
+            if (goalEntries.length) {
+                goalsRootIndex = addNode('Time Targets', { type: 'root', color: '#6366f1' });
+            }
+
+            savingsEntries.forEach(([key, saving]) => {
+                if (!saving) return;
+                const current = Number(saving.current) || 0;
+                const total = Number(saving.total) || 0;
+                const color = tailwindColors[saving.color] || '#0ea5e9';
+                const remaining = Math.max(total - current, 0);
+                const nodeDetail = {
+                    group: 'Pure Savings',
+                    name: saving.name,
+                    current,
+                    total,
+                    remaining,
+                    progressLabel: 'Funded',
+                    targetLabel: 'Target',
+                    remainingLabel: 'Remaining',
+                    color
+                };
+                const nodeIndex = addNode(saving.name, {
+                    type: 'saving',
+                    color,
+                    detail: nodeDetail
+                });
+                if (savingsRootIndex !== null) {
+                    links.push({
+                        source: savingsRootIndex,
+                        target: nodeIndex,
+                        value: ensureValue(Math.max(total, current)),
+                        color,
+                        detail: nodeDetail
+                    });
+                }
+                details.push(nodeDetail);
+            });
+
+            goalEntries.forEach(([key, goal]) => {
+                if (!goal) return;
+                const current = Number(goal.current) || 0;
+                const total = Number(goal.total) || 0;
+                const color = tailwindColors[goal.color] || '#6366f1';
+                const remaining = Math.max(total - current, 0);
+                const nodeDetail = {
+                    group: 'Time Targets',
+                    name: goal.name,
+                    current,
+                    total,
+                    remaining,
+                    progressLabel: 'Funded',
+                    targetLabel: 'Target',
+                    remainingLabel: 'Remaining',
+                    color
+                };
+                const nodeIndex = addNode(goal.name, {
+                    type: 'goal',
+                    color,
+                    detail: nodeDetail
+                });
+                if (goalsRootIndex !== null) {
+                    links.push({
+                        source: goalsRootIndex,
+                        target: nodeIndex,
+                        value: ensureValue(Math.max(total, current)),
+                        color,
+                        detail: nodeDetail
+                    });
+                }
+                details.push(nodeDetail);
+            });
+
+            return { nodes, links, details };
+        }
+
+        function createSankey(svgElement, options = {}) {
+            if (!svgElement) return;
+            const data = getSankeyFlowData();
+            const parentWidth = svgElement.clientWidth || svgElement.parentElement?.clientWidth || 0;
+            const parentHeight = svgElement.clientHeight || svgElement.parentElement?.clientHeight || 0;
+            const width = options.width || Math.max(parentWidth, 300);
+            const height = options.height || Math.max(parentHeight, 240);
+
+            svgElement.innerHTML = '';
+            const svg = d3.select(svgElement).attr('viewBox', `0 0 ${width} ${height}`);
+
+            if (!data.links.length) {
+                svg.append('text')
+                    .attr('x', width / 2)
+                    .attr('y', height / 2)
+                    .attr('text-anchor', 'middle')
+                    .style('fill', '#6b7280')
+                    .style('font-size', '13px')
+                    .text('Add budget categories, savings, or targets to view flow.');
+                return;
+            }
+
+            const sankey = d3.sankey()
+                .nodeWidth(options.nodeWidth || 18)
+                .nodePadding(options.nodePadding || 18)
+                .extent([[1, 1], [width - 1, height - 6]]);
+
+            const { nodes: graphNodes, links: graphLinks } = sankey({
+                nodes: data.nodes.map(d => ({ ...d })),
+                links: data.links.map(d => ({ ...d }))
+            });
+
+            const linkSelection = svg.append('g')
+                .selectAll('.sankey-link')
+                .data(graphLinks)
+                .enter()
+                .append('path')
+                .attr('class', 'sankey-link')
+                .attr('d', d3.sankeyLinkHorizontal())
+                .style('stroke', d => d.color || '#94a3b8')
+                .style('stroke-width', d => Math.max(1, d.width));
+
+            linkSelection.append('title')
+                .text(d => {
+                    if (!d.detail) return `${d.source.name} → ${d.target.name}`;
+                    const progressLabel = d.detail.progressLabel || 'Progress';
+                    const targetLabel = d.detail.targetLabel || 'Target';
+                    const remainingLabel = d.detail.remainingLabel || 'Remaining';
+                    const remainingVal = typeof d.detail.remaining === 'number' ? `\n${remainingLabel}: ${formatCurrency(d.detail.remaining)}` : '';
+                    return `${d.detail.group}: ${d.detail.name}\n${progressLabel}: ${formatCurrency(d.detail.current)}\n${targetLabel}: ${formatCurrency(d.detail.total)}${remainingVal}`;
+                });
+
+            svg.append('g')
+                .selectAll('.sankey-link-progress')
+                .data(graphLinks)
+                .enter()
+                .append('path')
+                .attr('class', 'sankey-link-progress')
+                .attr('d', d3.sankeyLinkHorizontal())
+                .style('fill', 'none')
+                .style('stroke', d => d.color || '#2563eb')
+                .style('stroke-opacity', 0.85)
+                .style('stroke-linecap', 'round')
+                .style('stroke-width', d => {
+                    const total = Number(d.detail?.total) || Number(d.value) || 0;
+                    const current = Number(d.detail?.current) || 0;
+                    const ratio = total > 0 ? Math.min(1, Math.max(0, current / total)) : 0;
+                    return ratio > 0 ? Math.max(1, d.width * ratio) : 0;
+                })
+                .style('pointer-events', 'none');
+
+            const node = svg.append('g')
+                .selectAll('.sankey-node')
+                .data(graphNodes)
+                .enter()
+                .append('g')
+                .attr('class', 'sankey-node')
+                .attr('transform', d => `translate(${d.x0},${d.y0})`);
+
+            node.append('rect')
+                .attr('height', d => Math.max(1, d.y1 - d.y0))
+                .attr('width', sankey.nodeWidth())
+                .style('fill', d => d.color || '#94a3b8');
+
+            node.append('title')
+                .text(d => {
+                    if (d.type === 'root') return d.name;
+                    if (!d.detail) return d.name;
+                    const progressLabel = d.detail.progressLabel || 'Progress';
+                    const targetLabel = d.detail.targetLabel || 'Target';
+                    const remainingLabel = d.detail.remainingLabel || 'Remaining';
+                    return `${d.detail.group}: ${d.detail.name}\n${progressLabel}: ${formatCurrency(d.detail.current)}\n${targetLabel}: ${formatCurrency(d.detail.total)}\n${remainingLabel}: ${formatCurrency(d.detail.remaining)}`;
+                });
+
+            const labels = node.append('text')
+                .attr('x', d => d.x0 < width / 2 ? sankey.nodeWidth() + 6 : -6)
+                .attr('y', d => (d.y1 - d.y0) / 2)
+                .attr('dy', '0.35em')
+                .attr('text-anchor', d => d.x0 < width / 2 ? 'start' : 'end')
+                .style('font-size', '12px')
+                .style('font-weight', d => d.type === 'root' ? '600' : '500')
+                .style('fill', '#1f2937')
+                .text(d => d.name);
+
+            labels.filter(d => d.type !== 'root' && d.detail)
+                .append('tspan')
+                .attr('x', d => d.x0 < width / 2 ? sankey.nodeWidth() + 6 : -6)
+                .attr('dy', '1.2em')
+                .style('fill', '#6b7280')
+                .style('font-weight', '400')
+                .text(d => {
+                    const progressLabel = d.detail.progressLabel ? `${d.detail.progressLabel} ` : '';
+                    const targetLabel = d.detail.targetLabel ? `${d.detail.targetLabel} ` : '';
+                    return `${progressLabel}${formatCurrency(d.detail.current)} → ${targetLabel}${formatCurrency(d.detail.total)}`.trim();
+                });
+        }
+
+        function renderSankeyDetails() {
+            const container = document.getElementById('sankey-details');
+            if (!container) return;
+            const { details } = getSankeyFlowData();
+            if (!details.length) {
+                container.innerHTML = '<p class="text-sm text-gray-500">No budget, savings, or target flows to display yet.</p>';
+                return;
+            }
+            const grouped = details.reduce((acc, item) => {
+                acc[item.group] = acc[item.group] || [];
+                acc[item.group].push(item);
+                return acc;
+            }, {});
+
+            container.innerHTML = Object.entries(grouped).map(([group, items]) => {
+                const sorted = items.slice().sort((a, b) => a.name.localeCompare(b.name));
+                return `<div class="mb-5"><h3 class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-2">${group}</h3><div class="grid gap-3 md:grid-cols-2">${sorted.map(item => {
+                    const percent = item.total > 0 ? Math.min(100, (item.current / item.total) * 100) : 0;
+                    const progressLabel = item.progressLabel || 'Progress';
+                    const targetLabel = item.targetLabel || 'Target';
+                    const remainingLabel = item.remainingLabel || 'Remaining';
+                    const remainingValue = typeof item.remaining === 'number' ? item.remaining : (item.total - item.current);
+                    const remainingClass = remainingValue < 0 ? 'text-red-600' : 'text-gray-500';
+                    return `<div class="bg-white border border-gray-200 rounded-xl p-3 shadow-sm"><div class="flex justify-between text-sm font-semibold text-gray-700"><span>${item.name}</span><span class="text-gray-600">${progressLabel}: ${formatCurrency(item.current)} / ${targetLabel}: ${formatCurrency(item.total)}</span></div><div class="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden"><div class="h-1.5 rounded-full" style="width:${percent}%; background-color:${item.color};"></div></div><p class="text-xs ${remainingClass} mt-2">${remainingLabel}: ${formatCurrency(remainingValue)}</p></div>`;
+                }).join('')}</div></div>`;
+            }).join('');
         }
 
         function renderBudgetView() {
@@ -369,6 +631,15 @@
             }).join('');
 
             createSankey(document.getElementById('sankey-hero'));
+
+            const sankeyModalEl = document.getElementById('sankey-modal');
+            if (sankeyModalEl && !sankeyModalEl.classList.contains('hidden')) {
+                const expandedWrapper = document.getElementById('sankey-expanded-wrapper');
+                const expandedSvg = document.getElementById('sankey-expanded');
+                const expandedHeight = expandedWrapper?.clientHeight || 360;
+                createSankey(expandedSvg, { height: expandedHeight, nodePadding: 28 });
+                renderSankeyDetails();
+            }
         }
 
         function renderTransactionsView() {
@@ -551,12 +822,49 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             initializeMap();
-            const filtersContainer = document.getElementById('category-filters-container'); 
-            let filterHtml = `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full bg-blue-600 text-white transition-colors" data-category="all">All</button>`; 
-            const spendingCats = Object.entries(budgetData).filter(([_, cat]) => cat.total); 
-            spendingCats.forEach(([key, cat]) => { filterHtml += `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200" data-category="${key}">${cat.name}</button>`; }); 
+            const filtersContainer = document.getElementById('category-filters-container');
+            let filterHtml = `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full bg-blue-600 text-white transition-colors" data-category="all">All</button>`;
+            const spendingCats = Object.entries(budgetData).filter(([_, cat]) => cat.total);
+            spendingCats.forEach(([key, cat]) => { filterHtml += `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200" data-category="${key}">${cat.name}</button>`; });
             filtersContainer.innerHTML = filterHtml;
-            
+
+            const sankeyHeroContainer = document.getElementById('sankey-hero-container');
+            const sankeyModalEl = document.getElementById('sankey-modal');
+            const sankeyModalCloseBtn = document.getElementById('sankey-modal-close');
+            const sankeyExpandedWrapper = document.getElementById('sankey-expanded-wrapper');
+            const sankeyExpandedSvg = document.getElementById('sankey-expanded');
+
+            const openSankeyModal = () => {
+                if (!sankeyModalEl) return;
+                sankeyModalEl.classList.remove('hidden');
+                sankeyModalEl.classList.add('flex');
+                const expandedHeight = sankeyExpandedWrapper?.clientHeight || 360;
+                createSankey(sankeyExpandedSvg, { height: expandedHeight, nodePadding: 28 });
+                renderSankeyDetails();
+                setTimeout(() => sankeyModalCloseBtn?.focus(), 50);
+            };
+
+            const closeSankeyModal = () => {
+                if (!sankeyModalEl) return;
+                sankeyModalEl.classList.add('hidden');
+                sankeyModalEl.classList.remove('flex');
+            };
+
+            sankeyHeroContainer?.addEventListener('click', openSankeyModal);
+            sankeyModalCloseBtn?.addEventListener('click', closeSankeyModal);
+            sankeyModalEl?.addEventListener('click', (event) => { if (event.target === sankeyModalEl) closeSankeyModal(); });
+            document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && sankeyModalEl && !sankeyModalEl.classList.contains('hidden')) closeSankeyModal(); });
+
+            window.addEventListener('resize', debounce(() => {
+                if (document.getElementById('budget-view').classList.contains('active')) {
+                    createSankey(document.getElementById('sankey-hero'));
+                }
+                if (sankeyModalEl && !sankeyModalEl.classList.contains('hidden')) {
+                    const expandedHeight = sankeyExpandedWrapper?.clientHeight || 360;
+                    createSankey(sankeyExpandedSvg, { height: expandedHeight, nodePadding: 28 });
+                }
+            }, 200));
+
             renderAll();
             // Automatically trigger a search for the initial view
             searchPlaces();
