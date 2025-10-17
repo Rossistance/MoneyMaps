@@ -327,6 +327,7 @@
         }
 
         function getSankeyFlowData() {
+            const budgetEntries = Object.entries(budgetData || {}).filter(([_, cat]) => cat && Number(cat.total) > 0);
             const savingsEntries = Object.entries(pureSavingsData || {});
             const goalEntries = Object.entries(goalsData || {});
             const nodes = [];
@@ -341,6 +342,46 @@
                 const numeric = Number(value);
                 return Math.max(Number.isFinite(numeric) ? numeric : 0, 0.01);
             };
+
+            let budgetRootIndex = null;
+            if (budgetEntries.length) {
+                budgetRootIndex = addNode('Budget Categories', { type: 'root', color: '#16a34a' });
+            }
+
+            budgetEntries.forEach(([key, category]) => {
+                if (!category) return;
+                const total = Number(category.total) || 0;
+                const remainingRaw = Number(category.remaining);
+                const remaining = Number.isFinite(remainingRaw) ? remainingRaw : total;
+                const spent = Math.max(total - remaining, 0);
+                const color = tailwindColors[category.color] || '#16a34a';
+                const nodeDetail = {
+                    group: 'Budget Categories',
+                    name: category.name,
+                    current: spent,
+                    total,
+                    remaining,
+                    progressLabel: 'Spent',
+                    targetLabel: 'Budgeted',
+                    remainingLabel: 'Available',
+                    color
+                };
+                const nodeIndex = addNode(category.name, {
+                    type: 'budget',
+                    color,
+                    detail: nodeDetail
+                });
+                if (budgetRootIndex !== null) {
+                    links.push({
+                        source: budgetRootIndex,
+                        target: nodeIndex,
+                        value: ensureValue(Math.max(total, spent)),
+                        color,
+                        detail: nodeDetail
+                    });
+                }
+                details.push(nodeDetail);
+            });
 
             let savingsRootIndex = null;
             if (savingsEntries.length) {
@@ -358,10 +399,21 @@
                 const total = Number(saving.total) || 0;
                 const color = tailwindColors[saving.color] || '#0ea5e9';
                 const remaining = Math.max(total - current, 0);
+                const nodeDetail = {
+                    group: 'Pure Savings',
+                    name: saving.name,
+                    current,
+                    total,
+                    remaining,
+                    progressLabel: 'Funded',
+                    targetLabel: 'Target',
+                    remainingLabel: 'Remaining',
+                    color
+                };
                 const nodeIndex = addNode(saving.name, {
                     type: 'saving',
                     color,
-                    detail: { group: 'Pure Savings', name: saving.name, current, total, remaining }
+                    detail: nodeDetail
                 });
                 if (savingsRootIndex !== null) {
                     links.push({
@@ -369,10 +421,10 @@
                         target: nodeIndex,
                         value: ensureValue(Math.max(total, current)),
                         color,
-                        detail: { group: 'Pure Savings', name: saving.name, current, total }
+                        detail: nodeDetail
                     });
                 }
-                details.push({ group: 'Pure Savings', name: saving.name, current, total, remaining, color });
+                details.push(nodeDetail);
             });
 
             goalEntries.forEach(([key, goal]) => {
@@ -381,10 +433,21 @@
                 const total = Number(goal.total) || 0;
                 const color = tailwindColors[goal.color] || '#6366f1';
                 const remaining = Math.max(total - current, 0);
+                const nodeDetail = {
+                    group: 'Time Targets',
+                    name: goal.name,
+                    current,
+                    total,
+                    remaining,
+                    progressLabel: 'Funded',
+                    targetLabel: 'Target',
+                    remainingLabel: 'Remaining',
+                    color
+                };
                 const nodeIndex = addNode(goal.name, {
                     type: 'goal',
                     color,
-                    detail: { group: 'Time Targets', name: goal.name, current, total, remaining }
+                    detail: nodeDetail
                 });
                 if (goalsRootIndex !== null) {
                     links.push({
@@ -392,10 +455,10 @@
                         target: nodeIndex,
                         value: ensureValue(Math.max(total, current)),
                         color,
-                        detail: { group: 'Time Targets', name: goal.name, current, total }
+                        detail: nodeDetail
                     });
                 }
-                details.push({ group: 'Time Targets', name: goal.name, current, total, remaining, color });
+                details.push(nodeDetail);
             });
 
             return { nodes, links, details };
@@ -419,7 +482,7 @@
                     .attr('text-anchor', 'middle')
                     .style('fill', '#6b7280')
                     .style('font-size', '13px')
-                    .text('Add Pure Savings or Time Targets to view flow.');
+                    .text('Add budget categories, savings, or targets to view flow.');
                 return;
             }
 
@@ -444,7 +507,14 @@
                 .style('stroke-width', d => Math.max(1, d.width));
 
             linkSelection.append('title')
-                .text(d => d.detail ? `${d.detail.group}: ${d.detail.name}\nFunded: ${formatCurrency(d.detail.current)}\nTarget: ${formatCurrency(d.detail.total)}` : `${d.source.name} → ${d.target.name}`);
+                .text(d => {
+                    if (!d.detail) return `${d.source.name} → ${d.target.name}`;
+                    const progressLabel = d.detail.progressLabel || 'Progress';
+                    const targetLabel = d.detail.targetLabel || 'Target';
+                    const remainingLabel = d.detail.remainingLabel || 'Remaining';
+                    const remainingVal = typeof d.detail.remaining === 'number' ? `\n${remainingLabel}: ${formatCurrency(d.detail.remaining)}` : '';
+                    return `${d.detail.group}: ${d.detail.name}\n${progressLabel}: ${formatCurrency(d.detail.current)}\n${targetLabel}: ${formatCurrency(d.detail.total)}${remainingVal}`;
+                });
 
             svg.append('g')
                 .selectAll('.sankey-link-progress')
@@ -482,7 +552,10 @@
                 .text(d => {
                     if (d.type === 'root') return d.name;
                     if (!d.detail) return d.name;
-                    return `${d.detail.group}: ${d.detail.name}\nFunded: ${formatCurrency(d.detail.current)}\nTarget: ${formatCurrency(d.detail.total)}\nRemaining: ${formatCurrency(d.detail.remaining)}`;
+                    const progressLabel = d.detail.progressLabel || 'Progress';
+                    const targetLabel = d.detail.targetLabel || 'Target';
+                    const remainingLabel = d.detail.remainingLabel || 'Remaining';
+                    return `${d.detail.group}: ${d.detail.name}\n${progressLabel}: ${formatCurrency(d.detail.current)}\n${targetLabel}: ${formatCurrency(d.detail.total)}\n${remainingLabel}: ${formatCurrency(d.detail.remaining)}`;
                 });
 
             const labels = node.append('text')
@@ -501,7 +574,11 @@
                 .attr('dy', '1.2em')
                 .style('fill', '#6b7280')
                 .style('font-weight', '400')
-                .text(d => `${formatCurrency(d.detail.current)} → ${formatCurrency(d.detail.total)}`);
+                .text(d => {
+                    const progressLabel = d.detail.progressLabel ? `${d.detail.progressLabel} ` : '';
+                    const targetLabel = d.detail.targetLabel ? `${d.detail.targetLabel} ` : '';
+                    return `${progressLabel}${formatCurrency(d.detail.current)} → ${targetLabel}${formatCurrency(d.detail.total)}`.trim();
+                });
         }
 
         function renderSankeyDetails() {
@@ -509,7 +586,7 @@
             if (!container) return;
             const { details } = getSankeyFlowData();
             if (!details.length) {
-                container.innerHTML = '<p class="text-sm text-gray-500">No savings or time targets to display yet.</p>';
+                container.innerHTML = '<p class="text-sm text-gray-500">No budget, savings, or target flows to display yet.</p>';
                 return;
             }
             const grouped = details.reduce((acc, item) => {
@@ -522,7 +599,12 @@
                 const sorted = items.slice().sort((a, b) => a.name.localeCompare(b.name));
                 return `<div class="mb-5"><h3 class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-2">${group}</h3><div class="grid gap-3 md:grid-cols-2">${sorted.map(item => {
                     const percent = item.total > 0 ? Math.min(100, (item.current / item.total) * 100) : 0;
-                    return `<div class="bg-white border border-gray-200 rounded-xl p-3 shadow-sm"><div class="flex justify-between text-sm font-semibold text-gray-700"><span>${item.name}</span><span class="text-gray-600">${formatCurrency(item.current)} / ${formatCurrency(item.total)}</span></div><div class="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden"><div class="h-1.5 rounded-full" style="width:${percent}%; background-color:${item.color};"></div></div><p class="text-xs text-gray-500 mt-2">Remaining: ${formatCurrency(item.remaining)}</p></div>`;
+                    const progressLabel = item.progressLabel || 'Progress';
+                    const targetLabel = item.targetLabel || 'Target';
+                    const remainingLabel = item.remainingLabel || 'Remaining';
+                    const remainingValue = typeof item.remaining === 'number' ? item.remaining : (item.total - item.current);
+                    const remainingClass = remainingValue < 0 ? 'text-red-600' : 'text-gray-500';
+                    return `<div class="bg-white border border-gray-200 rounded-xl p-3 shadow-sm"><div class="flex justify-between text-sm font-semibold text-gray-700"><span>${item.name}</span><span class="text-gray-600">${progressLabel}: ${formatCurrency(item.current)} / ${targetLabel}: ${formatCurrency(item.total)}</span></div><div class="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden"><div class="h-1.5 rounded-full" style="width:${percent}%; background-color:${item.color};"></div></div><p class="text-xs ${remainingClass} mt-2">${remainingLabel}: ${formatCurrency(remainingValue)}</p></div>`;
                 }).join('')}</div></div>`;
             }).join('');
         }
