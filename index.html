@@ -33,12 +33,19 @@
         .icon-circle.sm { padding: 0.35rem; }
         .icon-circle.lg { padding: 0.6rem; }
         .gradient-text { background: linear-gradient(135deg, #0f172a, #475569); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .place-type-btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.9rem; border-radius: 9999px; background-color: rgba(255,255,255,0.8); box-shadow: inset 0 1px 0 rgba(255,255,255,0.4); border: 1px solid rgba(15, 23, 42, 0.08); color: #334155; font-weight: 600; transition: all 0.2s ease; backdrop-filter: blur(8px); }
+        .place-type-btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.85rem; border-radius: 9999px; background-color: rgba(255,255,255,0.92); box-shadow: inset 0 1px 0 rgba(255,255,255,0.55); border: 1px solid rgba(15, 23, 42, 0.08); color: #1f2937; font-weight: 600; transition: all 0.2s ease; backdrop-filter: blur(10px); white-space: nowrap; }
         .place-type-btn svg { width: 18px; height: 18px; stroke-width: 2; }
-        .place-type-btn.active { background: linear-gradient(135deg, #e0f2fe, #60a5fa); color: #1e3a8a; border-color: rgba(59,130,246,0.35); box-shadow: 0 10px 25px rgba(59, 130, 246, 0.2); }
+        .place-type-btn:hover { transform: translateY(-1px); border-color: rgba(59,130,246,0.25); box-shadow: 0 6px 12px rgba(30, 64, 175, 0.12); }
+        .place-type-btn.active { background: linear-gradient(135deg, #dbeafe, #60a5fa); color: #1e3a8a; border-color: rgba(59,130,246,0.4); box-shadow: 0 10px 24px rgba(59, 130, 246, 0.25); }
         .place-type-scroll { overflow-x: auto; padding-bottom: 0.2rem; }
         .place-type-scroll::-webkit-scrollbar { height: 6px; }
         .place-type-scroll::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.45); border-radius: 9999px; }
+        .map-card-control { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; border: 1px solid rgba(37, 99, 235, 0.25); background: #ffffff; color: #2563eb; font-weight: 600; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08); }
+        .map-card-control svg { width: 18px; height: 18px; }
+        .map-card-control:hover { background: #eff6ff; box-shadow: 0 6px 18px rgba(37, 99, 235, 0.2); }
+        .map-card-control.primary { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; border-color: transparent; box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35); }
+        .map-card-control.primary:hover { background: linear-gradient(135deg, #1d4ed8, #1e40af); }
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
         .leaflet-control-attribution { font-size: 11px !important; }
         .nav-btn.active { background-color: #eef2ff; color: #3b82f6; }
         .keypad-btn:active { background-color: #dbeafe; }
@@ -482,10 +489,20 @@
         function renderPlaceTypeFilters() {
             const container = document.getElementById('category-filters-container');
             if (!container) return;
-            container.innerHTML = placeTypeDefinitions.map(definition => {
+            container.innerHTML = '';
+            const fragment = document.createDocumentFragment();
+            placeTypeDefinitions.forEach(definition => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'place-type-btn';
+                button.dataset.placeType = definition.key;
+                button.setAttribute('title', `Search ${definition.label}`);
+                button.setAttribute('aria-label', `Search ${definition.label}`);
                 const icon = getIconSvg(definition.icon, { size: 16, stroke: '#1f2937', strokeWidth: 2 });
-                return `<button class="place-type-btn" data-place-type="${definition.key}">${icon}<span>${definition.label}</span></button>`;
-            }).join('');
+                button.innerHTML = `${icon}<span>${definition.label}</span>`;
+                fragment.appendChild(button);
+            });
+            container.appendChild(fragment);
         }
 
         function getCategorizedPlaceMatches(query, placeTypeKey, center, radiusMeters) {
@@ -728,6 +745,8 @@
             const palette = parent?.palette || { start: '#bbf7d0', end: '#22c55e' };
             const iconName = place.iconName || subcategory?.icon || placeTypeIndex.byKey[place.placeTypeKey]?.icon || 'map-pin';
             const iconBadge = createIconBadge(iconName, palette, 'lg');
+            const addControlIcon = getIconSvg('plus', { size: 18, stroke: '#2563eb', strokeWidth: 3 });
+            const createControlIcon = getIconSvg('plus', { size: 18, stroke: '#ffffff', strokeWidth: 3 });
             const merchantTransactions = transactionsData.filter(t => t.name === place.name && t.type === 'debit').sort((a, b) => new Date(b.date) - new Date(a.date));
             let hintText = '';
             if (merchantTransactions.length === 1) {
@@ -760,9 +779,9 @@
                     </div>
                 </div>
                 ${categorySection}
-                <div class="grid grid-cols-2 gap-2">
-                    <button class="bg-gray-100 text-gray-800 font-semibold py-2 rounded-lg hover:bg-gray-200 transition" data-place-action="assign-subcategory">+ Add</button>
-                    <button class="bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 transition" data-place-action="create-subcategory">+ Create</button>
+                <div class="flex items-center gap-3 mt-4">
+                    <button type="button" class="map-card-control" data-place-action="assign-subcategory" title="Add to existing sub category">${addControlIcon}<span class="sr-only">Add to existing sub category</span></button>
+                    <button type="button" class="map-card-control primary" data-place-action="create-subcategory" title="Create new sub category">${createControlIcon}<span class="sr-only">Create new sub category</span></button>
                 </div>
             </div>
             <div class="border-t p-4 mt-4">
@@ -1032,7 +1051,23 @@
         }
 
         function handlePlaceTypeClick(target) {
+            const alreadyActive = target.classList.contains('active');
             document.querySelectorAll('.place-type-btn').forEach(btn => btn.classList.remove('active'));
+            if (alreadyActive) {
+                activePlaceType = null;
+                clearMarkers();
+                if (currentPlace) {
+                    currentPlace = null;
+                    const placeViewEl = document.getElementById('place-detail-view');
+                    if (placeViewEl) {
+                        placeViewEl.innerHTML = '';
+                        if (placeViewEl.classList.contains('active')) {
+                            switchSidebarView('budget-view');
+                        }
+                    }
+                }
+                return;
+            }
             target.classList.add('active');
             activePlaceType = target.dataset.placeType;
             searchPlaces({});
