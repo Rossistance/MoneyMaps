@@ -23,9 +23,21 @@
         .sidebar-view { display: none; }
         .sidebar-view.active { display: block; }
         #map { width: 100%; height: 100%; z-index: 10; }
-        .custom-pin { background-color: #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); width: 36px; height: 36px; display: flex; justify-content: center; align-items: center; border: 2px solid #1e40af; box-shadow: 0 2px 5px rgba(0,0,0,0.2); cursor: pointer; transition: transform 0.1s ease-in-out; }
-        .custom-pin:hover { transform: rotate(-45deg) scale(1.1); }
-        .custom-pin div { transform: rotate(45deg); font-size: 16px; }
+        .custom-pin { border-radius: 18px 18px 18px 4px; transform: rotate(-45deg); width: 42px; height: 42px; display: flex; justify-content: center; align-items: center; border: 2px solid transparent; box-shadow: 0 6px 15px rgba(15, 23, 42, 0.15); cursor: pointer; transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out; }
+        .custom-pin:hover { transform: rotate(-45deg) scale(1.05); box-shadow: 0 10px 18px rgba(15, 23, 42, 0.2); }
+        .pin-icon { transform: rotate(45deg); display: flex; align-items: center; justify-content: center; color: #ffffff; }
+        .pin-icon svg { width: 20px; height: 20px; stroke-width: 1.8; }
+        .gradient-pin { filter: drop-shadow(0 4px 6px rgba(15, 23, 42, 0.15)); }
+        .place-avatar { width: 48px; height: 48px; border-radius: 16px; border: 2px solid transparent; display: flex; align-items: center; justify-content: center; color: #ffffff; box-shadow: 0 6px 16px rgba(15, 23, 42, 0.2); }
+        .place-avatar svg { width: 22px; height: 22px; stroke-width: 1.8; }
+        .transaction-icon { width: 40px; height: 40px; border-radius: 12px; border: 2px solid transparent; display: flex; align-items: center; justify-content: center; color: #ffffff; box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15); }
+        .transaction-icon svg { width: 18px; height: 18px; stroke-width: 1.8; }
+        .category-pill { width: 40px; height: 40px; border-radius: 14px; border: 2px solid transparent; display: flex; align-items: center; justify-content: center; color: #ffffff; box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12); }
+        .category-pill svg { width: 18px; height: 18px; stroke-width: 1.8; }
+        .category-action-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 3.25rem; height: 3.25rem; border-radius: 9999px; background: #ffffff; border: 1px solid #d1d5db; color: #1f2937; font-weight: 600; font-size: 0.75rem; gap: 0.1rem; transition: all 0.15s ease-in-out; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08); }
+        .category-action-btn:hover { border-color: #3b82f6; color: #1d4ed8; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2); }
+        .category-action-icon { font-size: 1.25rem; line-height: 1; }
+        .category-action-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.05em; color: inherit; }
         .leaflet-control-attribution { font-size: 11px !important; }
         .nav-btn.active { background-color: #eef2ff; color: #3b82f6; }
         .keypad-btn:active { background-color: #dbeafe; }
@@ -70,7 +82,13 @@
                 <!-- Budget View -->
                 <div id="budget-view" class="sidebar-view active p-4">
                     <div id="sankey-hero-container" class="mt-2 p-2 h-48 cursor-pointer flex items-center justify-center bg-gray-50 rounded-xl"><svg id="sankey-hero" class="w-full h-full"></svg></div>
-                    <h2 class="text-xl font-bold text-gray-800 px-2 mt-6 flex justify-between items-center"><span>Fund Flows</span></h2>
+                    <h2 class="text-xl font-bold text-gray-800 px-2 mt-6 flex justify-between items-center">
+                        <span>Fund Flows</span>
+                        <button id="create-parent-category-btn" class="category-action-btn" aria-label="Create parent category" title="Create parent category">
+                            <span class="category-action-icon">+</span>
+                            <span class="category-action-label">New</span>
+                        </button>
+                    </h2>
                     <div id="budget-list" class="mt-2 space-y-3 px-2"></div>
                     <h2 class="text-xl font-bold text-gray-800 px-2 mt-8">Pure Savings</h2>
                     <div id="pure-savings-list" class="mt-2 space-y-3 px-2"></div>
@@ -97,7 +115,9 @@
     
     <!-- Modals -->
     <div id="log-purchase-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 z-50 hidden items-center justify-center"></div>
-    <div id="add-category-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 z-50 hidden items-center justify-center p-4"></div>
+    <div id="assign-subcategory-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 z-50 hidden items-center justify-center p-4"></div>
+    <div id="create-subcategory-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 z-50 hidden items-center justify-center p-4"></div>
+    <div id="create-parent-category-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 z-50 hidden items-center justify-center p-4"></div>
 
     <script>
         // --- API & DATA CONFIG ---
@@ -111,32 +131,187 @@
         // This makes the key usable ONLY on your website, even if someone copies it.
         const HERE_API_KEY = '6iHV0y797UXNMW3TZlJX6gXy67xGh2uEIX77Q7tHdjU'; // <-- PASTE YOUR RESTRICTED KEY HERE BEFORE DEPLOYING
 
-        let budgetData = {
-            'dining-out': { name: '🍽️ Dining Out', total: 250.00, color: 'red-500' }, 'groceries': { name: '🛒 Groceries', total: 500.00, color: 'green-500' }, 'transportation': { name: '⛽ Transportation', total: 150.00, color: 'yellow-500' }, 'shopping': { name: '🛍️ Shopping', total: 200.00, color: 'purple-500' }, 'entertainment': { name: '🎬 Entertainment', total: 150.00, color: 'pink-500' }, 'utilities': { name: '💡 Utilities', total: 200.00, color: 'amber-500' }, 'health': { name: '💊 Health', total: 100.00, color: 'teal-500' }, 'fitness': { name: '💪 Fitness', total: 50.00, color: 'emerald-500' }, 'home-improvement': { name: '🛠️ Home', total: 250.00, color: 'cyan-500' }, 'income': { name: '💰 Income', color: 'green-600' }, 'transfers': { name: '🔄 Transfers', color: 'gray-500' }
+        const placeTypeIcons = {
+            'restaurant': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h2v8a2 2 0 0 1-2 2v8"/><path d="M10 3v5a2 2 0 0 1-2 2h0"/><path d="M14 5h5v4a2 2 0 0 1-2 2v10"/><path d="M10 3v18"/></svg>',
+            'cafe': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13a3 3 0 0 1 0 6H5a1 1 0 0 1-1-1z"/><path d="M9 14v2a3 3 0 0 1-3 3h10"/><path d="M17 8v6"/></svg>',
+            'grocery_store': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2 12h11l2-8H6"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></svg>',
+            'hardware_store': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"/><path d="M5 7v13h14V7"/><path d="M9 7V4h6v3"/><path d="M10 11h4M10 15h4"/></svg>',
+            'gas_station': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h10v11H4z"/><path d="M6 6h6v4H6z"/><path d="M14 11l2-2 2 2v8"/><circle cx="16" cy="7" r="1"/></svg>',
+            'pharmacy': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v16H5z"/><path d="M9 8h6"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>',
+            'park': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l6 9H6z"/><path d="M12 12v9"/><path d="M7 21h10"/></svg>',
+            'hotel': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16v11H4z"/><path d="M7 5h10v4H7z"/><path d="M9 13h2v3H9zM13 13h2v3h-2z"/></svg>',
+            'school': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6-9 6z"/><path d="M5 12v6l7 4 7-4v-6"/></svg>',
+            'hospital': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v16H5z"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>',
+            'bank': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M4 10h16v10H4z"/><path d="M9 14h2v4H9zM13 14h2v4h-2z"/></svg>',
+            'default': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>'
         };
-        let goalsData = { 'emergency-fund': { name: '🏦 Emergency Fund', current: 750.00, total: 3000.00, color: 'blue-500' }, 'vacation': { name: '✈️ Vacation', current: 250.00, total: 1500.00, color: 'cyan-500' },};
-        let pureSavingsData = { 'cash-reserve': { name: '💵 Cash Reserve', current: 1200.00, total: 10000.00, color: 'lime-500' } };
-        let transactionsData = [ { id: 1, name: 'Axis Energy', amount: 2145.67, type: 'credit', date: '2025-10-10', category: 'income', source: 'Bank Sync (Payroll)', isInternalTransfer: false }, { id: 100, name: 'Check Deposit', amount: 150.00, type: 'credit', date: '2025-10-01', category: 'income', source: 'Check #8812', isInternalTransfer: false }, { id: 2, name: 'Whole Foods Market', amount: 142.33, type: 'debit', date: '2025-10-12', category: 'groceries', source: 'Bank Sync', isInternalTransfer: false }, { id: 3, name: 'Trader Joe\'s', amount: 98.22, type: 'debit', date: '2025-10-05', category: 'groceries', source: 'Bank Sync', isInternalTransfer: false }, { id: 4, name: 'Whole Foods Market', amount: 70.00, type: 'debit', date: '2025-10-01', category: 'groceries', source: 'Bank Sync', isInternalTransfer: false }, { id: 5, name: 'The Flying Squirrel', amount: 78.50, type: 'debit', date: '2025-10-11', category: 'dining-out', source: 'Bank Sync', isInternalTransfer: false }, { id: 6, name: "Rembrandt's Coffee House", amount: 18.75, type: 'debit', date: new Date().toISOString().split('T')[0], category: 'dining-out', source: 'Manual Log', isInternalTransfer: false }, { id: 7, name: 'Public House Restaurant', amount: 67.25, type: 'debit', date: '2025-10-08', category: 'dining-out', source: 'Bank Sync', isInternalTransfer: false }, { id: 8, name: 'Shell', amount: 48.12, type: 'debit', date: '2025-10-09', category: 'transportation', source: 'Bank Sync', isInternalTransfer: false }, { id: 9, name: 'Shell', amount: 46.78, type: 'debit', date: '2025-10-02', category: 'transportation', source: 'Bank Sync', isInternalTransfer: false }, { id: 10, name: 'Target', amount: 80.00, type: 'debit', date: '2025-10-04', category: 'shopping', source: 'Bank Sync', isInternalTransfer: false }, { id: 11, name: 'Target Refund', amount: 24.50, type: 'credit', date: '2025-10-06', category: 'shopping', source: 'Bank Sync', isInternalTransfer: false }, { id: 12, name: 'Regal Hamilton Place', amount: 75.00, type: 'debit', date: '2025-10-05', category: 'entertainment', source: 'Bank Sync', isInternalTransfer: false }, { id: 13, name: 'EPB Headquarters', amount: 20.00, type: 'debit', date: '2025-10-08', category: 'utilities', source: 'Check #2045', isInternalTransfer: false }, { id: 14, name: 'CVS', amount: 35.00, type: 'debit', date: '2025-10-07', category: 'health', source: 'Bank Sync', isInternalTransfer: false }, { id: 15, name: 'Erlanger Baroness Hospital', amount: 20.00, type: 'debit', date: '2025-10-03', category: 'health', source: 'Bank Sync', isInternalTransfer: false }, { id: 16, name: 'Orangetheory Fitness', amount: 15.00, type: 'debit', date: '2025-10-01', category: 'fitness', source: 'Bank Sync', isInternalTransfer: false }, { id: 17, name: 'The Home Depot', amount: 100.00, type: 'debit', date: '2025-09-30', category: 'home-improvement', source: 'Bank Sync', isInternalTransfer: false }, { id: 18, name: 'Transfer to Savings', amount: 500.00, type: 'debit', date: '2025-10-10', category: 'transfers', source: 'Checking', isInternalTransfer: true }, { id: 19, name: 'Transfer from Checking', amount: 500.00, type: 'credit', date: '2025-10-10', category: 'transfers', source: 'Savings', isInternalTransfer: true } ];
-        const tailwindColors = { 'red-500': '#ef4444', 'green-500': '#22c55e', 'yellow-500': '#eab308', 'purple-500': '#8b5cf6', 'blue-500': '#3b82f6', 'cyan-500': '#06b6d4', 'indigo-500': '#6366f1', 'pink-500': '#ec4899', 'teal-500': '#14b8a6', 'amber-500': '#f59e0b', 'emerald-500': '#10b981', 'gray-500': '#6b7280', 'green-600': '#16a34a', 'lime-500': '#84cc16' };
-        const hereCategoryMap = { 'dining-out': '100-1000', 'groceries': '100-1011-0052,700-7000-0000', 'transportation': '100-1019,400-4000-0000', 'shopping': '600-6000-0000', 'entertainment': '300-3000-0000', 'health': '500-5000-0000', 'fitness': '800-8000-0165', 'home-improvement': '600-6000-0062' };
-        
-        let map;
-        const sidebarViews = document.querySelectorAll('.sidebar-view');
-        const navBtns = document.querySelectorAll('.nav-btn');
-        let currentPlace = null, currentAmountString = "0";
-        let mapMarkers = [];
-        let searchTimeout;
-        let activeCategory = 'all';
 
-        // --- Persistent Cache with Time-To-Live (TTL) ---
-        const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
-        const persistentCache = {
-            get: (key) => {
-                try {
-                    const itemStr = localStorage.getItem(key);
-                    if (!itemStr) return null;
-                    const item = JSON.parse(itemStr);
-                    const now = new Date();
+        const placeTypes = [
+            { id: 'restaurant', label: 'Restaurants', hereCategories: ['100-1000-0000', '100-1000-0009'] },
+            { id: 'cafe', label: 'Cafés & Coffee', hereCategories: ['100-1000-0002'] },
+            { id: 'grocery_store', label: 'Grocery Stores', hereCategories: ['100-1011-0052', '700-7000-0000'] },
+            { id: 'hardware_store', label: 'Hardware Stores', hereCategories: ['600-6000-0062'] },
+            { id: 'gas_station', label: 'Gas Stations', hereCategories: ['400-4000-0000'] },
+            { id: 'pharmacy', label: 'Pharmacies', hereCategories: ['500-5000-0000'] },
+            { id: 'park', label: 'Parks & Recreation', hereCategories: ['300-3000-0000'] },
+            { id: 'hotel', label: 'Hotels', hereCategories: ['700-7000-0151'] },
+            { id: 'school', label: 'Schools', hereCategories: ['800-8000-0156'] },
+            { id: 'hospital', label: 'Hospitals', hereCategories: ['500-5000-0011'] }
+        ];
+        const hereCategoryToPlaceType = placeTypes.reduce((acc, type) => {
+            type.hereCategories.forEach(catId => { acc[catId] = type.id; });
+            return acc;
+        }, {});
+
+        const colorPalette = ['red-500', 'green-500', 'yellow-500', 'purple-500', 'blue-500', 'cyan-500', 'pink-500', 'teal-500', 'amber-500', 'emerald-500'];
+
+        let budgetHierarchy = {
+            'living-expenses': {
+                id: 'living-expenses',
+                name: 'Living Expenses',
+                color: 'blue-500',
+                subCategories: {
+                    'groceries': { id: 'groceries', parentId: 'living-expenses', name: 'Groceries', total: 500.00, color: 'green-500', icon: 'grocery_store', placeType: 'grocery_store' },
+                    'utilities': { id: 'utilities', parentId: 'living-expenses', name: 'Utilities', total: 200.00, color: 'amber-500', icon: 'default', placeType: 'default' },
+                    'transportation': { id: 'transportation', parentId: 'living-expenses', name: 'Transportation', total: 150.00, color: 'yellow-500', icon: 'gas_station', placeType: 'gas_station' }
+                }
+            },
+            'lifestyle': {
+                id: 'lifestyle',
+                name: 'Lifestyle',
+                color: 'purple-500',
+                subCategories: {
+                    'dining-out': { id: 'dining-out', parentId: 'lifestyle', name: 'Dining Out', total: 250.00, color: 'red-500', icon: 'restaurant', placeType: 'restaurant' },
+                    'entertainment': { id: 'entertainment', parentId: 'lifestyle', name: 'Entertainment', total: 150.00, color: 'pink-500', icon: 'park', placeType: 'park' },
+                    'fitness': { id: 'fitness', parentId: 'lifestyle', name: 'Fitness', total: 50.00, color: 'emerald-500', icon: 'default', placeType: 'default' }
+                }
+            },
+            'home-projects': {
+                id: 'home-projects',
+                name: 'Home Projects',
+                color: 'cyan-500',
+                subCategories: {
+                    'home-improvement': { id: 'home-improvement', parentId: 'home-projects', name: 'Home Improvement', total: 250.00, color: 'cyan-500', icon: 'hardware_store', placeType: 'hardware_store' },
+                    'health': { id: 'health', parentId: 'home-projects', name: 'Health', total: 100.00, color: 'teal-500', icon: 'hospital', placeType: 'hospital' }
+                }
+            }
+        };
+
+        let budgetData = {};
+
+        const goalsData = {
+            'emergency-fund': { name: 'Emergency Fund', current: 750.00, total: 3000.00, color: 'blue-500' },
+            'vacation': { name: 'Vacation', current: 250.00, total: 1500.00, color: 'cyan-500' }
+        };
+        const pureSavingsData = {
+            'cash-reserve': { name: 'Cash Reserve', current: 1200.00, total: 10000.00, color: 'lime-500' }
+        };
+        const categorizedPlaces = [
+            { id: 'place-groceries-wholefoods', source: 'budget', name: 'Whole Foods Market', lat: 35.7979, lng: -78.6444, address: 'Raleigh, NC', placeType: 'grocery_store', categoryId: 'groceries' },
+            { id: 'place-cafe-rembrandts', source: 'budget', name: "Rembrandt's Coffee House", lat: 35.0459, lng: -85.3083, address: 'Chattanooga, TN', placeType: 'cafe', categoryId: 'dining-out' },
+            { id: 'place-restaurant-flying-squirrel', source: 'budget', name: 'The Flying Squirrel', lat: 35.0354, lng: -85.3165, address: 'Chattanooga, TN', placeType: 'restaurant', categoryId: 'dining-out' },
+            { id: 'place-gas-shell', source: 'budget', name: 'Shell', lat: 35.0297, lng: -85.2478, address: 'Chattanooga, TN', placeType: 'gas_station', categoryId: 'transportation' },
+            { id: 'place-hardware-home-depot', source: 'budget', name: 'The Home Depot', lat: 35.0335, lng: -85.1892, address: 'Chattanooga, TN', placeType: 'hardware_store', categoryId: 'home-improvement' },
+            { id: 'place-pharmacy-cvs', source: 'budget', name: 'CVS', lat: 35.0501, lng: -85.3102, address: 'Chattanooga, TN', placeType: 'pharmacy', categoryId: 'health' }
+        ];
+
+        let transactionsData = [
+            { id: 1, name: 'Axis Energy', amount: 2145.67, type: 'credit', date: '2025-10-10', category: 'income', source: 'Bank Sync (Payroll)', isInternalTransfer: false },
+            { id: 100, name: 'Check Deposit', amount: 150.00, type: 'credit', date: '2025-10-01', category: 'income', source: 'Check #8812', isInternalTransfer: false },
+            { id: 2, name: 'Whole Foods Market', amount: 142.33, type: 'debit', date: '2025-10-12', category: 'groceries', source: 'Bank Sync', isInternalTransfer: false },
+            { id: 3, name: "Trader Joe's", amount: 98.22, type: 'debit', date: '2025-10-05', category: 'groceries', source: 'Bank Sync', isInternalTransfer: false },
+            { id: 4, name: 'Whole Foods Market', amount: 70.00, type: 'debit', date: '2025-10-01', category: 'groceries', source: 'Bank Sync', isInternalTransfer: false },
+            { id: 5, name: 'The Flying Squirrel', amount: 78.50, type: 'debit', date: '2025-10-11', category: 'dining-out', source: 'Bank Sync', isInternalTransfer: false },
+            { id: 6, name: "Rembrandt's Coffee House", amount: 18.75, type: 'debit', date: new Date().toISOString().split('T')[0], category: 'dining-out', source: 'Manual Log', isInternalTransfer: false },
+            { id: 7, name: 'Public House Restaurant', amount: 67.25, type: 'debit', date: '2025-10-08', category: 'dining-out', source: 'Bank Sync', isInternalTransfer: false },
+            { id: 8, name: 'Shell', amount: 48.12, type: 'debit', date: '2025-10-09', category: 'transportation', source: 'Bank Sync', isInternalTransfer: false },
+            { id: 9, name: 'Shell', amount: 46.78, type: 'debit', date: '2025-10-02', category: 'transportation', source: 'Bank Sync', isInternalTransfer: false },
+            { id: 10, name: 'Target', amount: 80.00, type: 'debit', date: '2025-10-04', category: 'home-improvement', source: 'Bank Sync', isInternalTransfer: false },
+            { id: 11, name: 'Target Refund', amount: 24.50, type: 'credit', date: '2025-10-06', category: 'home-improvement', source: 'Bank Sync', isInternalTransfer: false },
+            { id: 12, name: 'Regal Hamilton Place', amount: 75.00, type: 'debit', date: '2025-10-05', category: 'entertainment', source: 'Bank Sync', isInternalTransfer: false },
+            { id: 13, name: 'EPB Headquarters', amount: 20.00, type: 'debit', date: '2025-10-08', category: 'utilities', source: 'Check #2045', isInternalTransfer: false },
+            { id: 14, name: 'CVS', amount: 35.00, type: 'debit', date: '2025-10-07', category: 'health', source: 'Bank Sync', isInternalTransfer: false },
+            { id: 15, name: 'Erlanger Baroness Hospital', amount: 20.00, type: 'debit', date: '2025-10-03', category: 'health', source: 'Bank Sync', isInternalTransfer: false },
+            { id: 16, name: 'Orangetheory Fitness', amount: 15.00, type: 'debit', date: '2025-10-01', category: 'fitness', source: 'Bank Sync', isInternalTransfer: false },
+            { id: 17, name: 'The Home Depot', amount: 100.00, type: 'debit', date: '2025-09-30', category: 'home-improvement', source: 'Bank Sync', isInternalTransfer: false },
+            { id: 18, name: 'Transfer to Savings', amount: 500.00, type: 'debit', date: '2025-10-10', category: 'transfers', source: 'Checking', isInternalTransfer: true },
+            { id: 19, name: 'Transfer from Checking', amount: 500.00, type: 'credit', date: '2025-10-10', category: 'transfers', source: 'Savings', isInternalTransfer: true }
+        ];
+
+        const tailwindColors = { 'red-500': '#ef4444', 'green-500': '#22c55e', 'yellow-500': '#eab308', 'purple-500': '#8b5cf6', 'blue-500': '#3b82f6', 'cyan-500': '#06b6d4', 'indigo-500': '#6366f1', 'pink-500': '#ec4899', 'teal-500': '#14b8a6', 'amber-500': '#f59e0b', 'emerald-500': '#10b981', 'gray-500': '#6b7280', 'green-600': '#16a34a', 'lime-500': '#84cc16' };
+        const herePlaceTypeMap = placeTypes.reduce((acc, type) => { acc[type.id] = type.hereCategories.join(','); return acc; }, {});
+        const placeTypeLookup = Object.fromEntries(placeTypes.map(type => [type.id, type]));
+        const uncategorizedGradient = 'linear-gradient(135deg, #bbf7d0 0%, #16a34a 100%)';
+
+        function rebuildBudgetData() {
+            const flattened = {
+                'income': { id: 'income', name: 'Income', total: 0, color: 'green-600', icon: 'bank', placeType: 'bank' },
+                'transfers': { id: 'transfers', name: 'Transfers', total: 0, color: 'gray-500', icon: 'default', placeType: 'default' }
+            };
+            Object.values(budgetHierarchy).forEach(parent => {
+                Object.values(parent.subCategories).forEach(sub => {
+                    flattened[sub.id] = { ...sub };
+                    parent.subCategories[sub.id] = flattened[sub.id];
+                });
+            });
+            budgetData = flattened;
+        }
+        rebuildBudgetData();
+
+        function iconSvgForType(typeId) {
+            return placeTypeIcons[typeId] || placeTypeIcons.default;
+        }
+
+        function hexToRgb(hex) {
+            const value = hex.replace('#', '');
+            const bigint = parseInt(value, 16);
+            if (value.length === 3) {
+                const r = (bigint >> 8) & 0xf;
+                const g = (bigint >> 4) & 0xf;
+                const b = bigint & 0xf;
+                return { r: r * 17, g: g * 17, b: b * 17 };
+            }
+            const r = (bigint >> 16) & 255;
+            const g = (bigint >> 8) & 255;
+            const b = bigint & 255;
+            return { r, g, b };
+        }
+
+        function rgbToHex({ r, g, b }) {
+            const toHex = (component) => component.toString(16).padStart(2, '0');
+            return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+        }
+
+        function lightenColor(hex, factor = 0.2) {
+            const { r, g, b } = hexToRgb(hex);
+            const lighten = (component) => Math.min(255, Math.round(component + (255 - component) * factor));
+            return rgbToHex({ r: lighten(r), g: lighten(g), b: lighten(b) });
+        }
+
+        function gradientForColor(colorHex) {
+            const start = lightenColor(colorHex, 0.25);
+            return `linear-gradient(135deg, ${start} 0%, ${colorHex} 100%)`;
+        }
+
+        function gradientForCategory(categoryId) {
+            const cat = budgetData[categoryId];
+            if (!cat || !tailwindColors[cat.color]) return uncategorizedGradient;
+            return gradientForColor(tailwindColors[cat.color]);
+        }
+
+        function colorHexForCategory(categoryId) {
+            const cat = budgetData[categoryId];
+            return cat && tailwindColors[cat.color] ? tailwindColors[cat.color] : null;
+        }
+
+        function nextAvailableColor() {
+            const used = new Set(Object.values(budgetData).map(cat => cat.color));
+            return colorPalette.find(color => !used.has(color)) || colorPalette[Math.floor(Math.random() * colorPalette.length)];
+        }
+
+        function slugify(value) {
+            return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        }
                     if (now.getTime() > item.expiry) {
                         localStorage.removeItem(key);
                         return null;
@@ -158,6 +333,14 @@
             }
         };
 
+
+        let map;
+        let currentPlace = null;
+        let currentAmountString = "0";
+        let mapMarkers = [];
+        let searchTimeout;
+        let activePlaceType = 'all';
+
         // --- Debounce Utility Function ---
         function debounce(func, delay) {
             let timeout;
@@ -169,89 +352,207 @@
         }
 
         const formatCurrency = (amount) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-        
+
         function calculateBudgetState() {
-            for (const key in budgetData) { if (budgetData[key].total) { budgetData[key].remaining = budgetData[key].total; } }
-            transactionsData.forEach(t => { if (budgetData[t.category] && budgetData[t.category].total) { if (t.type === 'debit') { budgetData[t.category].remaining -= t.amount; } else if (t.type === 'credit' && t.category !== 'income' && !t.isInternalTransfer) { budgetData[t.category].remaining += t.amount; } } });
+            Object.values(budgetData).forEach(cat => {
+                if (typeof cat.total === 'number') {
+                    cat.remaining = cat.total;
+                }
+            });
+            transactionsData.forEach(t => {
+                const category = budgetData[t.category];
+                if (!category || !category.total) return;
+                if (t.type === 'debit') {
+                    category.remaining -= t.amount;
+                } else if (t.type === 'credit' && t.category !== 'income' && !t.isInternalTransfer) {
+                    category.remaining += t.amount;
+                }
+            });
+            Object.values(budgetHierarchy).forEach(parent => {
+                const subs = Object.values(parent.subCategories);
+                parent.total = subs.reduce((sum, sub) => sum + (sub.total || 0), 0);
+                parent.remaining = subs.reduce((sum, sub) => sum + (sub.remaining ?? sub.total ?? 0), 0);
+            });
         }
-        
+
         function clearMarkers() {
             mapMarkers.forEach(({ marker }) => marker.removeFrom(map));
             mapMarkers = [];
         }
 
-        function categoryForHereResult(hereItem) {
-            if (!hereItem || !Array.isArray(hereItem.categories)) return 'uncategorized';
-            for (const category of hereItem.categories) {
-                if (category && category.id) {
-                    for (const appCat in hereCategoryMap) {
-                        if (hereCategoryMap[appCat].includes(category.id)) return appCat;
-                    }
-                }
-            }
-            return 'uncategorized';
+        function resolveBudgetCategoryForPlace(place) {
+            if (!place) return null;
+            if (place.category && budgetData[place.category]) return place.category;
+            if (place.categoryId && budgetData[place.categoryId]) return place.categoryId;
+            const normalizedName = place.name?.toLowerCase();
+            const match = categorizedPlaces.find(local => local.id === place.id || local.name.toLowerCase() === normalizedName);
+            if (match && budgetData[match.categoryId]) return match.categoryId;
+            return null;
         }
 
-        function addPlacesToMap(items) {
-             clearMarkers();
-            items.forEach(item => {
-                if (!item || !item.categories || !item.position) return;
-                const place = { id: item.id, name: item.title, type: item.categories[0]?.name || 'Place', lat: item.position.lat, lng: item.position.lng, category: categoryForHereResult(item) };
-                const categoryData = budgetData[place.category];
-                place.icon = categoryData ? categoryData.name.match(/\p{Emoji}/u)?.[0] || '📍' : '❓';
-                const marker = L.marker([place.lat, place.lng], { icon: L.divIcon({ html: `<div class="custom-pin"><div>${place.icon}</div></div>`, className: '', iconSize: [36, 36], iconAnchor: [18, 36] }) });
+        function derivePlaceTypeFromHereItem(item) {
+            if (!item || !Array.isArray(item.categories)) return 'default';
+            for (const category of item.categories) {
+                if (category && hereCategoryToPlaceType[category.id]) {
+                    return hereCategoryToPlaceType[category.id];
+                }
+            }
+            return 'default';
+        }
+
+        function mapHereItemToPlace(item) {
+            if (!item || !item.position) return null;
+            const placeType = derivePlaceTypeFromHereItem(item);
+            const mapped = {
+                id: item.id,
+                name: item.title,
+                lat: item.position.lat,
+                lng: item.position.lng,
+                address: item.address?.label || '',
+                placeType,
+                source: 'here'
+            };
+            const categoryId = resolveBudgetCategoryForPlace(mapped);
+            mapped.category = categoryId || 'uncategorized';
+            return mapped;
+        }
+
+        function buildMarkerHtml(place) {
+            const categoryId = resolveBudgetCategoryForPlace(place);
+            const colorHex = categoryId ? colorHexForCategory(categoryId) : null;
+            const gradient = categoryId ? gradientForCategory(categoryId) : uncategorizedGradient;
+            const iconKey = place.placeType && placeTypeIcons[place.placeType]
+                ? place.placeType
+                : (categoryId && budgetData[categoryId]?.icon ? budgetData[categoryId].icon : 'default');
+            const borderColor = colorHex || '#16a34a';
+            return `<div class="custom-pin" style="background:${gradient}; border-color:${borderColor}"><div class="pin-icon">${iconSvgForType(iconKey)}</div></div>`;
+        }
+
+        function addPlacesToMap(places) {
+            clearMarkers();
+            places.forEach(place => {
+                if (!place || typeof place.lat !== 'number' || typeof place.lng !== 'number') return;
+                place.category = resolveBudgetCategoryForPlace(place) || 'uncategorized';
+                place.displayType = placeTypeLookup[place.placeType]?.label || 'Place';
+                const marker = L.marker([place.lat, place.lng], {
+                    icon: L.divIcon({ html: buildMarkerHtml(place), className: 'gradient-pin', iconSize: [40, 46], iconAnchor: [20, 46] })
+                });
                 mapMarkers.push({ marker, place });
-                marker.on('click', (e) => { L.DomEvent.stopPropagation(e); showPlaceView(place); map.flyTo([place.lat, place.lng], 15); });
+                marker.on('click', (e) => {
+                    L.DomEvent.stopPropagation(e);
+                    showPlaceView(place);
+                    map.flyTo([place.lat, place.lng], 13);
+                });
                 marker.addTo(map);
             });
         }
-        
+
+        function haversineDistanceMiles(lat1, lon1, lat2, lon2) {
+            const toRad = (deg) => deg * Math.PI / 180;
+            const R = 3958.8; // Earth radius in miles
+            const dLat = toRad(lat2 - lat1);
+            const dLon = toRad(lon2 - lon1);
+            const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        function localPlacesForQuery(query, center, placeTypeId) {
+            const normalizedQuery = query?.trim().toLowerCase();
+            const results = categorizedPlaces.filter(place => {
+                if (placeTypeId !== 'all' && place.placeType !== placeTypeId) return false;
+                if (normalizedQuery && !place.name.toLowerCase().includes(normalizedQuery)) return false;
+                if (center) {
+                    const distance = haversineDistanceMiles(center.lat, center.lng, place.lat, place.lng);
+                    if (distance > 40) return false;
+                }
+                return true;
+            }).map(place => ({
+                id: place.id,
+                name: place.name,
+                lat: place.lat,
+                lng: place.lng,
+                address: place.address || '',
+                placeType: place.placeType || 'default',
+                source: 'budget',
+                category: resolveBudgetCategoryForPlace(place) || 'uncategorized'
+            }));
+            return results;
+        }
+
+        function mergePlaces(localPlaces, remotePlaces) {
+            const resultMap = new Map();
+            localPlaces.forEach(place => { resultMap.set(place.id, { ...place }); });
+            remotePlaces.forEach(place => {
+                if (!place) return;
+                const existingById = resultMap.get(place.id);
+                if (existingById) {
+                    existingById.address = existingById.address || place.address;
+                    if (!existingById.placeType || existingById.placeType === 'default') existingById.placeType = place.placeType;
+                    existingById.source = existingById.source === 'budget' ? 'budget+here' : existingById.source;
+                    existingById.category = resolveBudgetCategoryForPlace(existingById) || existingById.category;
+                    return;
+                }
+                const existingByName = Array.from(resultMap.values()).find(p => p.name.toLowerCase() === place.name.toLowerCase());
+                if (existingByName) {
+                    existingByName.address = existingByName.address || place.address;
+                    if (!existingByName.placeType || existingByName.placeType === 'default') existingByName.placeType = place.placeType;
+                    existingByName.source = existingByName.source === 'budget' ? 'budget+here' : existingByName.source;
+                    existingByName.category = resolveBudgetCategoryForPlace(existingByName) || existingByName.category;
+                } else {
+                    resultMap.set(place.id, { ...place });
+                }
+            });
+            return Array.from(resultMap.values());
+        }
+
         async function searchPlaces() {
-            if (HERE_API_KEY === 'YOUR_HERE_API_KEY') {
-                console.error("API Key is not set. Please replace 'YOUR_HERE_API_KEY' with your actual key.");
-                // Optionally, show a user-facing error message on the UI
-                return;
-            }
-            document.getElementById('map-loader').style.display = 'flex';
-            const query = document.getElementById('search-input').value;
+            const loader = document.getElementById('map-loader');
+            loader.style.display = 'flex';
+            const query = document.getElementById('search-input').value.trim();
             const center = map.getCenter();
-            
-            // --- Optimized cache grid key ---
-            const cacheKey = `places_${Math.round(center.lat * 10)}_${Math.round(center.lng * 10)}_${map.getZoom()}_${activeCategory}_${query}`;
+            const localResults = localPlacesForQuery(query, center, activePlaceType);
 
-            // --- Use persistent cache ---
-            const cachedData = persistentCache.get(cacheKey);
-            if (cachedData) {
-                addPlacesToMap(cachedData);
-                document.getElementById('map-loader').style.display = 'none';
-                return;
+            let remoteItems = [];
+            const shouldQueryRemote = HERE_API_KEY && HERE_API_KEY !== 'YOUR_HERE_API_KEY' && (query || activePlaceType !== 'all');
+            const cacheKey = `places_${Math.round(center.lat * 10)}_${Math.round(center.lng * 10)}_${activePlaceType}_${query || 'all'}`;
+            if (shouldQueryRemote) {
+                const cached = persistentCache.get(cacheKey);
+                if (cached) {
+                    remoteItems = cached;
+                } else {
+                    const radiusMeters = 64374; // ~40 miles
+                    const params = new URLSearchParams({
+                        at: `${center.lat},${center.lng}`,
+                        limit: '50',
+                        apiKey: HERE_API_KEY,
+                        in: `circle:${center.lat},${center.lng};r=${radiusMeters}`
+                    });
+                    if (query) {
+                        params.set('q', query);
+                    } else {
+                        const label = placeTypeLookup[activePlaceType]?.label || 'places';
+                        params.set('q', label);
+                    }
+                    if (activePlaceType !== 'all' && herePlaceTypeMap[activePlaceType]) {
+                        params.set('categories', herePlaceTypeMap[activePlaceType]);
+                    }
+                    try {
+                        const response = await fetch(`https://discover.search.hereapi.com/v1/discover?${params.toString()}`);
+                        if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
+                        const data = await response.json();
+                        remoteItems = data.items || [];
+                        persistentCache.set(cacheKey, remoteItems);
+                    } catch (error) {
+                        console.error('Error fetching places:', error);
+                    }
+                }
             }
 
-            const bounds = map.getBounds();
-            const inCircle = `${center.lat},${center.lng};r=${Math.round(center.distanceTo(bounds.getNorthEast()))}`;
-            let url;
-            if (query) {
-                url = `https://discover.search.hereapi.com/v1/discover?q=${encodeURIComponent(query)}&in=circle:${inCircle}&limit=100&apiKey=${HERE_API_KEY}`;
-            } else if (activeCategory !== 'all') {
-                const categoryCodes = hereCategoryMap[activeCategory];
-                url = `https://browse.search.hereapi.com/v1/browse?categories=${categoryCodes}&in=circle:${inCircle}&limit=100&apiKey=${HERE_API_KEY}`;
-            } else {
-                 document.getElementById('map-loader').style.display = 'none';
-                 clearMarkers();
-                 return;
-            }
-            try {
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error(`API request failed with status ${response.status}`);
-                }
-                const data = await response.json();
-                if (data.items) {
-                    persistentCache.set(cacheKey, data.items); // Store results in cache
-                    addPlacesToMap(data.items);
-                }
-            } catch (error) { console.error("Error fetching places:", error); } 
-            finally { document.getElementById('map-loader').style.display = 'none'; }
+            const remotePlaces = remoteItems.map(mapHereItemToPlace).filter(Boolean);
+            const combined = mergePlaces(localResults, remotePlaces);
+            addPlacesToMap(combined);
+            loader.style.display = 'none';
         }
 
         async function getAutocompleteSuggestions() {
@@ -264,8 +565,8 @@
                 const response = await fetch(url);
                 const data = await response.json();
                 renderAutocomplete(data.items);
-            } catch (error) { 
-                console.error("Autocomplete error:", error); 
+            } catch (error) {
+                console.error('Autocomplete error:', error);
                 resultsContainer.classList.add('hidden');
             }
         }
@@ -281,26 +582,50 @@
             `).join('');
             resultsContainer.classList.remove('hidden');
         }
-
         async function selectSuggestion(id) {
-            document.getElementById('autocomplete-results').classList.add('hidden');
-            document.getElementById('map-loader').style.display = 'flex';
+            const resultsContainer = document.getElementById('autocomplete-results');
+            const loader = document.getElementById('map-loader');
+            resultsContainer.classList.add('hidden');
+            loader.style.display = 'flex';
             const url = `https://lookup.search.hereapi.com/v1/lookup?id=${id}&apiKey=${HERE_API_KEY}`;
             try {
                 const response = await fetch(url);
+                if (!response.ok) throw new Error(`Lookup failed with status ${response.status}`);
                 const data = await response.json();
-                if (data && data.position && data.position.lat && data.position.lng) {
-                    map.flyTo([data.position.lat, data.position.lng], 15);
+                if (data && data.position && typeof data.position.lat === 'number' && typeof data.position.lng === 'number') {
+                    const zoom = zoomForRadiusMiles(DEFAULT_RADIUS_MILES);
+                    map.flyTo([data.position.lat, data.position.lng], zoom);
+                    if (data.title) {
+                        document.getElementById('search-input').value = data.title;
+                    }
+                    let mappedPlace = null;
                     if (data.resultType === 'place') {
-                        addPlacesToMap([data]);
-                        const place = mapMarkers[0]?.place;
-                        if (place) showPlaceView(place);
+                        mappedPlace = mapHereItemToPlace(data);
+                        if (mappedPlace) {
+                            mappedPlace.displayType = placeTypeLookup[mappedPlace.placeType]?.label || 'Place';
+                        }
+                    }
+                    await searchPlaces();
+                    if (mappedPlace) {
+                        const match = mapMarkers.find(({ place }) => {
+                            if (place.id === mappedPlace.id) return true;
+                            if (!place.name || !mappedPlace.name) return false;
+                            return place.name.toLowerCase() === mappedPlace.name.toLowerCase();
+                        });
+                        if (match) {
+                            showPlaceView(match.place);
+                        } else {
+                            showPlaceView(mappedPlace);
+                        }
                     }
                 } else {
-                    console.warn("Selected suggestion does not have position data:", data);
+                    console.warn('Selected suggestion does not have position data:', data);
                 }
-            } catch (error) { console.error("Lookup error:", error); } 
-            finally { document.getElementById('map-loader').style.display = 'none'; }
+            } catch (error) {
+                console.error('Lookup error:', error);
+            } finally {
+                loader.style.display = 'none';
+            }
         }
         
         function renderAll() {
@@ -351,21 +676,80 @@
             const budgetList = document.getElementById('budget-list');
             const goalsList = document.getElementById('goals-list');
             const savingsList = document.getElementById('pure-savings-list');
-            
-            budgetList.innerHTML = Object.entries(budgetData).filter(([_, cat]) => cat.total).map(([key, cat]) => {
-                const spent = Math.max(0, cat.total - cat.remaining);
-                const percent = cat.total > 0 ? Math.min(100, (spent / cat.total) * 100) : 0;
-                return `<div class="bg-gray-50 p-3 rounded-lg"><div class="flex justify-between items-center text-sm mb-1"><span class="font-semibold text-gray-700">${cat.name}</span><span class="text-gray-500">${formatCurrency(spent)} of ${formatCurrency(cat.total)}</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-${cat.color} h-2 rounded-full" style="width: ${percent}%"></div></div></div>`;
+
+            budgetList.innerHTML = Object.values(budgetHierarchy).map(parent => {
+                const subCards = Object.values(parent.subCategories).map(sub => {
+                    const spent = Math.max(0, (sub.total || 0) - (sub.remaining || 0));
+                    const percent = sub.total ? Math.min(100, (spent / sub.total) * 100) : 0;
+                    const colorHex = colorHexForCategory(sub.id) || '#3b82f6';
+                    return `
+                        <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center space-x-3">
+                                    <div class="category-pill" style="background:${gradientForCategory(sub.id)}; border-color:${colorHex}">${iconSvgForType(sub.icon)}</div>
+                                    <div>
+                                        <p class="font-semibold text-gray-900">${sub.name}</p>
+                                        <p class="text-xs text-gray-500">${formatCurrency(spent)} of ${formatCurrency(sub.total || 0)}</p>
+                                    </div>
+                                </div>
+                                <span class="text-sm font-semibold text-gray-700">${formatCurrency(sub.remaining ?? sub.total ?? 0)}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                <div class="h-2" style="width:${percent}%; background:${colorHex};"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('') || '<p class="text-sm text-gray-500">No sub-categories yet.</p>';
+
+                return `
+                    <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <p class="text-sm font-semibold text-slate-700">${parent.name}</p>
+                                <p class="text-xs text-slate-500">Available ${formatCurrency(parent.remaining || 0)} of ${formatCurrency(parent.total || 0)}</p>
+                            </div>
+                            <button class="category-action-btn parent-add-sub-btn" data-parent="${parent.id}" aria-label="Add sub-category to ${parent.name}" title="Add sub-category">
+                                <span class="category-action-icon">+</span>
+                                <span class="category-action-label">Add</span>
+                            </button>
+                        </div>
+                        <div class="space-y-3">
+                            ${subCards}
+                        </div>
+                    </div>
+                `;
             }).join('');
 
             goalsList.innerHTML = Object.values(goalsData).map(goal => {
                 const percent = goal.total > 0 ? Math.min(100, (goal.current / goal.total) * 100) : 0;
-                return `<div class="bg-gray-50 p-3 rounded-lg"><div class="flex justify-between items-center text-sm mb-1"><span class="font-semibold text-gray-700">${goal.name}</span><span class="text-gray-500">${formatCurrency(goal.current)} of ${formatCurrency(goal.total)}</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-${goal.color} h-2 rounded-full" style="width: ${percent}%"></div></div></div>`;
+                const colorHex = tailwindColors[goal.color] || '#3b82f6';
+                return `
+                    <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
+                        <div class="flex justify-between items-center text-sm mb-2">
+                            <span class="font-semibold text-gray-700">${goal.name}</span>
+                            <span class="text-gray-500">${formatCurrency(goal.current)} of ${formatCurrency(goal.total)}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                            <div class="h-2" style="width:${percent}%; background:${colorHex};"></div>
+                        </div>
+                    </div>
+                `;
             }).join('');
 
             savingsList.innerHTML = Object.values(pureSavingsData).map(saving => {
-                 const percent = saving.total > 0 ? Math.min(100, (saving.current / saving.total) * 100) : 0;
-                 return `<div class="bg-gray-50 p-3 rounded-lg"><div class="flex justify-between items-center text-sm mb-1"><span class="font-semibold text-gray-700">${saving.name}</span><span class="text-gray-500">${formatCurrency(saving.current)} of ${formatCurrency(saving.total)}</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-${saving.color} h-2 rounded-full" style="width: ${percent}%"></div></div></div>`;
+                const percent = saving.total > 0 ? Math.min(100, (saving.current / saving.total) * 100) : 0;
+                const colorHex = tailwindColors[saving.color] || '#10b981';
+                return `
+                    <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
+                        <div class="flex justify-between items-center text-sm mb-2">
+                            <span class="font-semibold text-gray-700">${saving.name}</span>
+                            <span class="text-gray-500">${formatCurrency(saving.current)} of ${formatCurrency(saving.total)}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                            <div class="h-2" style="width:${percent}%; background:${colorHex};"></div>
+                        </div>
+                    </div>
+                `;
             }).join('');
 
             createSankey(document.getElementById('sankey-hero'));
@@ -379,10 +763,10 @@
             const sorted = [...transactionsData].sort((a, b) => new Date(b.date) - new Date(a.date));
             const totalSpent = sorted.filter(t => t.type === 'debit' && !t.isInternalTransfer).reduce((sum, t) => sum + t.amount, 0);
             const totalAssets = sorted.filter(t => t.type === 'credit' && !t.isInternalTransfer).reduce((sum, t) => sum + t.amount, 0) - totalSpent;
-            
+
             totalSpentEl.textContent = formatCurrency(totalSpent);
             assetsEl.textContent = formatCurrency(totalAssets);
-            
+
             const today = new Date();
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
@@ -406,39 +790,22 @@
                     <div class="space-y-2">
                         ${transactions.map(t => {
                             const category = budgetData[t.category];
-                            const icon = category ? category.name.match(/\p{Emoji}/u)?.[0] : '❓';
-                            const amountClass = t.type === 'credit' ? 'text-green-600' : 'text-gray-800';
-                            return `<div class="flex items-center bg-gray-50 p-3 rounded-lg"><div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center mr-3 text-xl">${icon}</div><div class="flex-grow"><p class="font-semibold text-gray-900">${t.name}</p><p class="text-xs text-gray-500">${category?.name || 'Uncategorized'}</p></div><div class="font-semibold ${amountClass}">${t.type === 'credit' ? '+' : ''}${formatCurrency(t.amount)}</div></div>`
+                            const colorHex = colorHexForCategory(t.category) || '#94a3b8';
+                            const gradient = category ? gradientForCategory(t.category) : uncategorizedGradient;
+                            const iconKey = category?.icon || 'default';
+                            const amountClass = t.type === 'credit' ? 'text-green-600' : 'text-gray-900';
+                            return `<div class="flex items-center bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                                <div class="transaction-icon mr-3" style="background:${gradient}; border-color:${colorHex}">${iconSvgForType(iconKey)}</div>
+                                <div class="flex-grow">
+                                    <p class="font-semibold text-gray-900">${t.name}</p>
+                                    <p class="text-xs text-gray-500">${category?.name || 'Uncategorized'}</p>
+                                </div>
+                                <div class="font-semibold ${amountClass}">${t.type === 'credit' ? '+' : ''}${formatCurrency(t.amount)}</div>
+                            </div>`;
                         }).join('')}
                     </div>
                 </div>
             `).join('');
-        }
-        
-        function renderPlaceDetailView(place) {
-            if (!place) return;
-            calculateBudgetState();
-            const placeViewEl = document.getElementById('place-detail-view');
-            const budget = budgetData[place.category];
-            const merchantTransactions = transactionsData.filter(t => t.name === place.name && t.type === 'debit').sort((a,b) => new Date(b.date) - new Date(a.date));
-            let hintText = '';
-            if (merchantTransactions.length === 1) hintText = `Last spent here: ${formatCurrency(merchantTransactions[0].amount)}`;
-            else if (merchantTransactions.length >= 2) { const avg = merchantTransactions.slice(0,3).reduce((a, t) => a + t.amount, 0) / Math.min(3, merchantTransactions.length); hintText = `Avg. spent per visit: ${formatCurrency(avg)}`; }
-            
-            let categorySection = '';
-            if (budget) { // Category exists
-                categorySection = `<div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg my-4"><div class="flex justify-between items-baseline"><p class="text-sm font-medium text-blue-800">Available to Spend</p><div class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">${budget.name}</div></div><p class="text-4xl font-extrabold text-blue-900">${formatCurrency(budget.remaining)}</p><p class="text-xs text-blue-600 h-4 mt-1">${hintText}</p></div><button id="log-purchase-btn" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition">Log Purchase</button>`;
-            } else { // New/Uncategorized place
-                categorySection = `<div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-lg my-4"><h3 class="font-bold text-amber-900">New Place Category</h3><p class="text-sm text-amber-800 mt-1">This place doesn't match any of your current budgets. You can add it to an existing budget or create a new one.</p><button id="add-to-budget-btn" class="w-full bg-amber-500 text-white font-semibold py-3 rounded-xl hover:bg-amber-600 transition mt-4">Add to Budget</button></div>`;
-            }
-
-            placeViewEl.innerHTML = `<div class="p-4"><button id="back-to-main-btn" class="text-sm font-semibold text-blue-600 mb-4">&larr; Back to Budget</button><div class="flex items-center mb-3"><div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-2xl mr-4">${place.icon}</div><div><h2 class="text-xl font-bold text-gray-900">${place.name}</h2><p class="text-sm text-gray-500">${place.type}</p></div></div>${categorySection}</div><div class="border-t p-4 mt-4"><h3 class="font-bold text-gray-800 mb-2">Recent Activity Here</h3><div class="space-y-2">${merchantTransactions.length === 0 ? '<p class="text-sm text-gray-500">No transactions recorded here yet.</p>' : merchantTransactions.map(t => `<div class="flex justify-between items-center text-sm"><span class="text-gray-600">${new Date(t.date.replace(/-/g, '/')).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span><span class="font-semibold text-gray-800">${formatCurrency(t.amount)}</span></div>`).join('')}</div></div>`;
-        }
-
-        function switchSidebarView(targetViewId) {
-            sidebarViews.forEach(v => v.classList.toggle('active', v.id === targetViewId));
-            navBtns.forEach(b => { b.classList.toggle('active', b.dataset.view === targetViewId); b.classList.toggle('text-gray-600', b.dataset.view !== targetViewId); });
-            if (targetViewId === 'budget-view' || targetViewId === 'transactions-view') renderAll();
         }
 
         function showPlaceView(place) {
@@ -446,14 +813,38 @@
             renderPlaceDetailView(place);
             switchSidebarView('place-detail-view');
         }
-        
+
+        function ensurePlaceTracked(place, categoryId) {
+            if (!place || !categoryId) return;
+            const normalizedName = place.name?.toLowerCase();
+            const existing = categorizedPlaces.find(p => p.id === place.id || p.name.toLowerCase() === normalizedName);
+            if (existing) {
+                existing.categoryId = categoryId;
+                existing.placeType = place.placeType || existing.placeType;
+                existing.lat = place.lat;
+                existing.lng = place.lng;
+                existing.address = place.address || existing.address;
+            } else {
+                categorizedPlaces.push({
+                    id: place.id || `local-${Date.now()}`,
+                    source: place.source || 'budget',
+                    name: place.name,
+                    lat: place.lat,
+                    lng: place.lng,
+                    address: place.address || '',
+                    placeType: place.placeType || 'default',
+                    categoryId
+                });
+            }
+        }
+
         const logPurchaseModalEl = document.getElementById('log-purchase-modal');
         function showLogPurchaseModal() {
             logPurchaseModalEl.classList.remove('hidden'); logPurchaseModalEl.classList.add('flex');
             logPurchaseModalEl.innerHTML = `<div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6"><h2 class="text-2xl font-bold text-gray-900 text-center mb-2">Log Purchase</h2><p class="text-center text-gray-600 mb-4">${currentPlace.name}</p><div class="my-6"><p class="text-6xl font-bold text-center text-gray-800" id="log-amount-display">$0.00</p></div><div class="grid grid-cols-3 gap-2">${[1,2,3,4,5,6,7,8,9,'.',0,'del'].map(k => `<button class="keypad-btn text-2xl font-semibold rounded-xl h-16 transition-colors bg-gray-100 text-gray-800">${k === 'del' ? '&larr;' : k}</button>`).join('')}</div><div class="mt-6 grid grid-cols-2 gap-3"><button id="cancel-log-btn" class="w-full bg-gray-200 text-gray-800 font-semibold py-3 rounded-xl hover:bg-gray-300">Cancel</button><button id="save-log-btn" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700">Save</button></div></div>`;
         }
         function hideLogPurchaseModal() { logPurchaseModalEl.classList.add('hidden'); logPurchaseModalEl.classList.remove('flex'); currentAmountString = "0"; }
-        
+
         function saveTransaction() {
             const saveBtn = logPurchaseModalEl.querySelector('#save-log-btn');
             saveBtn.disabled = true;
@@ -475,110 +866,316 @@
             }
         }
 
-        const addCategoryModalEl = document.getElementById('add-category-modal');
-        function showAddCategoryModal() {
-            addCategoryModalEl.classList.remove('hidden'); addCategoryModalEl.classList.add('flex');
-            const options = Object.entries(budgetData).filter(([k,v])=> v.total).map(([k,v]) => `<option value="${k}">${v.name}</option>`).join('');
-            addCategoryModalEl.innerHTML = `<div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"><h2 class="text-2xl font-bold text-gray-900 mb-4">Add to Budget</h2><div class="mb-4"><label for="existing-category-select" class="block text-sm font-medium text-gray-700">Assign to existing category:</label><select id="existing-category-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"><option value="">--Select One--</option>${options}</select></div><div class="text-center my-2 text-sm text-gray-500 font-semibold">OR</div><div class="mb-4"><label for="new-category-name" class="block text-sm font-medium text-gray-700">Create a new category:</label><input type="text" id="new-category-name" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="e.g. 📚 Books"></div><div class="mb-4"><label for="new-category-total" class="block text-sm font-medium text-gray-700">Monthly Budget Amount:</label><input type="number" id="new-category-total" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="e.g. 50"></div><div class="mt-6 grid grid-cols-2 gap-3"><button id="cancel-add-cat-btn" class="w-full bg-gray-200 text-gray-800 font-semibold py-3 rounded-xl hover:bg-gray-300">Cancel</button><button id="save-add-cat-btn" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700">Save</button></div></div>`;
+        const assignSubcategoryModalEl = document.getElementById('assign-subcategory-modal');
+        const createSubcategoryModalEl = document.getElementById('create-subcategory-modal');
+        const createParentCategoryModalEl = document.getElementById('create-parent-category-modal');
+
+        function renderPlaceDetailView(place) {
+            if (!place) return;
+            calculateBudgetState();
+            const placeViewEl = document.getElementById('place-detail-view');
+            const categoryId = resolveBudgetCategoryForPlace(place);
+            const budget = categoryId ? budgetData[categoryId] : null;
+            const colorHex = categoryId ? colorHexForCategory(categoryId) : '#16a34a';
+            const gradient = categoryId ? gradientForCategory(categoryId) : uncategorizedGradient;
+            const iconKey = place.placeType && placeTypeIcons[place.placeType] ? place.placeType : (budget?.icon || 'default');
+            const merchantTransactions = transactionsData.filter(t => t.name === place.name && t.type === 'debit').sort((a,b) => new Date(b.date) - new Date(a.date));
+            let hintText = '';
+            if (merchantTransactions.length === 1) hintText = `Last spent here: ${formatCurrency(merchantTransactions[0].amount)}`;
+            else if (merchantTransactions.length >= 2) {
+                const avg = merchantTransactions.slice(0,3).reduce((a, t) => a + t.amount, 0) / Math.min(3, merchantTransactions.length);
+                hintText = `Avg. spent per visit: ${formatCurrency(avg)}`;
+            }
+
+            const header = `
+                <div class="flex items-start mb-4">
+                    <div class="place-avatar" style="background:${gradient}; border-color:${colorHex}">${iconSvgForType(iconKey)}</div>
+                    <div class="ml-4">
+                        <h2 class="text-xl font-bold text-gray-900">${place.name}</h2>
+                        <p class="text-sm text-gray-500">${place.displayType}${place.address ? ` • ${place.address}` : ''}</p>
+                    </div>
+                </div>
+            `;
+
+            let categorySection = '';
+            if (budget) {
+                categorySection = `
+                    <div class="rounded-xl p-4 text-white" style="background:${gradient}; border:1px solid ${colorHex}">
+                        <div class="flex justify-between items-baseline">
+                            <p class="text-sm font-medium text-white/80">Available to Spend</p>
+                            <div class="px-2 py-0.5 bg-white/20 text-white text-xs font-semibold rounded-full">${budget.name}</div>
+                        </div>
+                        <p class="text-4xl font-extrabold mt-2">${formatCurrency(budget.remaining ?? budget.total ?? 0)}</p>
+                        <p class="text-xs text-white/80 h-4 mt-1">${hintText}</p>
+                    </div>
+                    <button id="log-purchase-btn" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition mt-4">Log Purchase</button>
+                `;
+            } else {
+                categorySection = `
+                    <div class="border border-emerald-400 bg-emerald-50 rounded-xl p-4">
+                        <h3 class="font-semibold text-emerald-900">New place detected</h3>
+                        <p class="text-sm text-emerald-800 mt-1">This place is not yet part of your budget. Add it to an existing sub-category or create a new one to start tracking.</p>
+                    </div>
+                `;
+            }
+
+            const actionButtons = `
+                <div class="flex space-x-4 mt-4">
+                    <button id="assign-subcategory-btn" class="category-action-btn" aria-label="Add to existing sub-category" title="Add to existing sub-category">
+                        <span class="category-action-icon">+</span>
+                        <span class="category-action-label">Add</span>
+                    </button>
+                    <button id="create-subcategory-btn" class="category-action-btn" aria-label="Create new sub-category" title="Create new sub-category">
+                        <span class="category-action-icon">+</span>
+                        <span class="category-action-label">New</span>
+                    </button>
+                </div>
+            `;
+
+            placeViewEl.innerHTML = `
+                <div class="p-4">
+                    <button id="back-to-main-btn" class="text-sm font-semibold text-blue-600 mb-4">&larr; Back to Budget</button>
+                    ${header}
+                    ${categorySection}
+                    ${actionButtons}
+                </div>
+                <div class="border-t p-4 mt-4">
+                    <h3 class="font-bold text-gray-800 mb-2">Recent Activity Here</h3>
+                    <div class="space-y-2">
+                        ${merchantTransactions.length === 0 ? '<p class="text-sm text-gray-500">No transactions recorded here yet.</p>' : merchantTransactions.map(t => `<div class="flex justify-between items-center text-sm"><span class="text-gray-600">${new Date(t.date.replace(/-/g, '/')).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span><span class="font-semibold text-gray-800">${formatCurrency(t.amount)}</span></div>`).join('')}
+                    </div>
+                </div>
+            `;
         }
-        function hideAddCategoryModal() { addCategoryModalEl.classList.add('hidden'); addCategoryModalEl.classList.remove('flex'); }
 
-        function saveNewCategory() {
-            const saveBtn = addCategoryModalEl.querySelector('#save-add-cat-btn');
-            saveBtn.disabled = true;
+        function showAssignSubcategoryModal() {
+            if (!currentPlace) return;
+            assignSubcategoryModalEl.classList.remove('hidden'); assignSubcategoryModalEl.classList.add('flex');
+            const options = Object.values(budgetHierarchy).map(parent => {
+                const subOptions = Object.values(parent.subCategories).map(sub => `<option value="${sub.id}">${parent.name} — ${sub.name}</option>`).join('');
+                return `<optgroup label="${parent.name}">${subOptions}</optgroup>`;
+            }).join('');
+            const currentCategory = resolveBudgetCategoryForPlace(currentPlace) || '';
+            assignSubcategoryModalEl.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">Add to existing sub-category</h2>
+                    <label for="assign-category-select" class="block text-sm font-medium text-gray-700 mb-1">Choose a sub-category</label>
+                    <select id="assign-category-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        ${options}
+                    </select>
+                    <div class="mt-6 grid grid-cols-2 gap-3">
+                        <button id="cancel-assign-btn" class="w-full bg-gray-200 text-gray-800 font-semibold py-3 rounded-xl hover:bg-gray-300">Cancel</button>
+                        <button id="confirm-assign-btn" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700">Assign</button>
+                    </div>
+                </div>
+            `;
+            const select = assignSubcategoryModalEl.querySelector('#assign-category-select');
+            if (currentCategory) select.value = currentCategory;
+        }
+        function hideAssignSubcategoryModal() { assignSubcategoryModalEl.classList.add('hidden'); assignSubcategoryModalEl.classList.remove('flex'); assignSubcategoryModalEl.innerHTML = ''; }
 
-            const newCatNameInput = document.getElementById('new-category-name');
-            const newCatTotalInput = document.getElementById('new-category-total');
-            const existingCat = document.getElementById('existing-category-select').value;
-            const newCatName = newCatNameInput.value.trim();
-            const newCatTotal = parseFloat(newCatTotalInput.value);
+        function showCreateSubcategoryModal(parentId = null) {
+            createSubcategoryModalEl.classList.remove('hidden'); createSubcategoryModalEl.classList.add('flex');
+            const parentOptions = Object.values(budgetHierarchy).map(parent => `<option value="${parent.id}">${parent.name}</option>`).join('');
+            const defaultParent = parentId || Object.keys(budgetHierarchy)[0];
+            const baseAmount = currentPlace?.estimatedSpend ?? 75;
+            const defaultAmount = Math.max(50, Math.round(baseAmount / 10) * 10);
+            createSubcategoryModalEl.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">Create new sub-category</h2>
+                    <div class="mb-4">
+                        <label for="new-subcategory-parent" class="block text-sm font-medium text-gray-700">Parent category</label>
+                        <select id="new-subcategory-parent" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">${parentOptions}</select>
+                    </div>
+                    <div class="mb-4">
+                        <label for="new-subcategory-name" class="block text-sm font-medium text-gray-700">Name</label>
+                        <input type="text" id="new-subcategory-name" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="e.g. Electronics" value="${currentPlace?.displayType || ''}">
+                    </div>
+                    <div class="mb-2 flex items-center justify-between">
+                        <label for="new-subcategory-slider" class="text-sm font-medium text-gray-700">Monthly budget</label>
+                        <span id="new-subcategory-amount" class="text-sm font-semibold text-gray-900">${formatCurrency(defaultAmount)}</span>
+                    </div>
+                    <input type="range" min="0" max="2000" step="10" value="${defaultAmount}" id="new-subcategory-slider" class="w-full">
+                    <div class="mt-6 grid grid-cols-2 gap-3">
+                        <button id="cancel-create-sub-btn" class="w-full bg-gray-200 text-gray-800 font-semibold py-3 rounded-xl hover:bg-gray-300">Cancel</button>
+                        <button id="confirm-create-sub-btn" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700">Create</button>
+                    </div>
+                </div>
+            `;
+            createSubcategoryModalEl.querySelector('#new-subcategory-parent').value = defaultParent;
+        }
+        function hideCreateSubcategoryModal() { createSubcategoryModalEl.classList.add('hidden'); createSubcategoryModalEl.classList.remove('flex'); createSubcategoryModalEl.innerHTML = ''; }
 
-            const failValidation = (inputsToShake) => {
-                inputsToShake.forEach(input => input.classList.add('shake', 'border-red-500'));
-                setTimeout(() => {
-                    inputsToShake.forEach(input => input.classList.remove('shake', 'border-red-500'));
-                    saveBtn.disabled = false; // Re-enable button
-                }, 500);
-            };
+        function showCreateParentCategoryModal() {
+            createParentCategoryModalEl.classList.remove('hidden'); createParentCategoryModalEl.classList.add('flex');
+            const colorOptions = colorPalette.map(color => `<option value="${color}">${color.replace('-', ' ')}</option>`).join('');
+            createParentCategoryModalEl.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">New parent category</h2>
+                    <div class="mb-4">
+                        <label for="new-parent-name" class="block text-sm font-medium text-gray-700">Name</label>
+                        <input type="text" id="new-parent-name" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="e.g. Family" />
+                    </div>
+                    <div class="mb-4">
+                        <label for="new-parent-color" class="block text-sm font-medium text-gray-700">Color</label>
+                        <select id="new-parent-color" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">${colorOptions}</select>
+                    </div>
+                    <div class="mt-6 grid grid-cols-2 gap-3">
+                        <button id="cancel-create-parent-btn" class="w-full bg-gray-200 text-gray-800 font-semibold py-3 rounded-xl hover:bg-gray-300">Cancel</button>
+                        <button id="confirm-create-parent-btn" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700">Create</button>
+                    </div>
+                </div>
+            `;
+        }
+        function hideCreateParentCategoryModal() { createParentCategoryModalEl.classList.add('hidden'); createParentCategoryModalEl.classList.remove('flex'); createParentCategoryModalEl.innerHTML = ''; }
 
-            if (existingCat) {
-                currentPlace.category = existingCat;
-            } else if (newCatName && newCatTotal > 0) {
-                const newCatKey = newCatName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '');
-                if (budgetData[newCatKey]) {
-                    newCatNameInput.value = '';
-                    newCatNameInput.placeholder = "Category already exists!";
-                    failValidation([newCatNameInput]);
-                    setTimeout(() => newCatNameInput.placeholder = "e.g. 📚 Books", 2000);
-                    return;
-                }
-                const colors = ['red-500', 'green-500', 'yellow-500', 'purple-500', 'blue-500', 'cyan-500', 'pink-500', 'teal-500'];
-                budgetData[newCatKey] = { name: newCatName, total: newCatTotal, color: colors[Math.floor(Math.random()*colors.length)] };
-                currentPlace.category = newCatKey;
-                
-                const filtersContainer = document.getElementById('category-filters-container'); 
-                let filterHtml = `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200" data-category="all">All</button>`; 
-                const spendingCats = Object.entries(budgetData).filter(([_, cat]) => cat.total); 
-                spendingCats.forEach(([key, cat]) => { filterHtml += `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200" data-category="${key}">${cat.name}</button>`; }); 
-                filtersContainer.innerHTML = filterHtml;
-            } else { 
-                const invalidInputs = [];
-                if (!newCatName) invalidInputs.push(newCatNameInput);
-                if (!newCatTotal || newCatTotal <= 0) invalidInputs.push(newCatTotalInput);
-                failValidation(invalidInputs);
+        function handleAssignSubcategory() {
+            const select = assignSubcategoryModalEl.querySelector('#assign-category-select');
+            if (!select || !select.value || !currentPlace) return;
+            const categoryId = select.value;
+            currentPlace.category = categoryId;
+            ensurePlaceTracked(currentPlace, categoryId);
+            hideAssignSubcategoryModal();
+            calculateBudgetState();
+            renderBudgetView();
+            renderPlaceDetailView(currentPlace);
+            searchPlaces();
+        }
+
+        function handleCreateSubcategory() {
+            const parentSelect = createSubcategoryModalEl.querySelector('#new-subcategory-parent');
+            const nameInput = createSubcategoryModalEl.querySelector('#new-subcategory-name');
+            const slider = createSubcategoryModalEl.querySelector('#new-subcategory-slider');
+            if (!parentSelect || !nameInput || !slider) return;
+            const parentId = parentSelect.value;
+            const name = nameInput.value.trim();
+            const amount = Math.max(0, parseFloat(slider.value));
+            if (!parentId || !name) {
+                nameInput.classList.add('border-red-500', 'shake');
+                setTimeout(() => nameInput.classList.remove('border-red-500', 'shake'), 400);
                 return;
             }
-            
-            hideAddCategoryModal();
-            renderPlaceDetailView(currentPlace);
-            const markerData = mapMarkers.find(m => m.place.id === currentPlace.id);
-            if (markerData) {
-                 const newIcon = budgetData[currentPlace.category].name.match(/\p{Emoji}/u)?.[0] || '📍';
-                 markerData.marker.setIcon(L.divIcon({ html: `<div class="custom-pin"><div>${newIcon}</div></div>`, className: '', iconSize: [36, 36], iconAnchor: [18, 36] }));
+            let newIdBase = slugify(name);
+            if (!newIdBase) newIdBase = `subcategory-${Date.now()}`;
+            let candidate = newIdBase;
+            let counter = 1;
+            while (budgetData[candidate]) {
+                candidate = `${newIdBase}-${counter++}`;
             }
+            const parent = budgetHierarchy[parentId];
+            if (!parent) return;
+            const colorToken = nextAvailableColor();
+            const iconKey = currentPlace?.placeType || 'default';
+            parent.subCategories[candidate] = { id: candidate, parentId, name, total: amount, color: colorToken, icon: iconKey, placeType: currentPlace?.placeType || 'default' };
+            rebuildBudgetData();
+            calculateBudgetState();
+            hideCreateSubcategoryModal();
+            if (currentPlace) {
+                currentPlace.category = candidate;
+                ensurePlaceTracked(currentPlace, candidate);
+                renderPlaceDetailView(currentPlace);
+            }
+            renderBudgetView();
+            renderPlaceTypeFilters();
+            searchPlaces();
         }
-        
+
+        function handleCreateParentCategory() {
+            const nameInput = createParentCategoryModalEl.querySelector('#new-parent-name');
+            const colorSelect = createParentCategoryModalEl.querySelector('#new-parent-color');
+            if (!nameInput || !colorSelect) return;
+            const name = nameInput.value.trim();
+            const color = colorSelect.value || nextAvailableColor();
+            if (!name) {
+                nameInput.classList.add('border-red-500', 'shake');
+                setTimeout(() => nameInput.classList.remove('border-red-500', 'shake'), 400);
+                return;
+            }
+            let idBase = slugify(name);
+            if (!idBase) idBase = `parent-${Date.now()}`;
+            if (budgetHierarchy[idBase]) {
+                nameInput.classList.add('border-red-500', 'shake');
+                setTimeout(() => nameInput.classList.remove('border-red-500', 'shake'), 400);
+                return;
+            }
+            budgetHierarchy[idBase] = { id: idBase, name, color, subCategories: {} };
+            rebuildBudgetData();
+            calculateBudgetState();
+            hideCreateParentCategoryModal();
+            renderBudgetView();
+            renderPlaceTypeFilters();
+        }
+
+        function updateSubcategoryBudgetLabel(value) {
+            const label = createSubcategoryModalEl.querySelector('#new-subcategory-amount');
+            if (label) label.textContent = formatCurrency(Number(value));
+        }
+
+        const DEFAULT_RADIUS_MILES = 40;
+        const DEFAULT_FALLBACK_CENTER = [35.7915, -77.9153];
+
+        function zoomForRadiusMiles(miles) {
+            if (miles >= 70) return 9;
+            if (miles >= 40) return 10;
+            if (miles >= 25) return 11;
+            return 12;
+        }
+
         function initializeMap() {
-            const startPos = [35.7915, -77.9153]; // Wilson, NC
-            map = L.map('map', { center: startPos, zoom: 13, zoomControl: false, attributionControl: false });
+            const defaultZoom = zoomForRadiusMiles(DEFAULT_RADIUS_MILES);
+            map = L.map('map', { center: DEFAULT_FALLBACK_CENTER, zoom: defaultZoom, zoomControl: false, attributionControl: false });
             L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(map);
 
-            // Removed automatic geolocation to default to Wilson, NC
-            
-            const debouncedSearch = debounce(searchPlaces, 500);
-            map.on('moveend', () => { if (!document.getElementById('search-input').value) debouncedSearch(); });
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        map.setView([position.coords.latitude, position.coords.longitude], defaultZoom);
+                    },
+                    () => {},
+                    { enableHighAccuracy: true, maximumAge: 600000, timeout: 5000 }
+                );
+            }
+        }
+
+        function renderPlaceTypeFilters() {
+            const filtersContainer = document.getElementById('category-filters-container');
+            const buttons = [{ id: 'all', label: 'All', icon: 'default' }, ...placeTypes];
+            filtersContainer.innerHTML = buttons.map(btn => {
+                const typeId = btn.id;
+                const isActive = typeId === activePlaceType;
+                const label = btn.label || placeTypeLookup[btn.id]?.label || 'All';
+                const iconKey = btn.icon || btn.id;
+                const baseClasses = 'category-filter-btn inline-flex items-center space-x-2 whitespace-nowrap px-4 py-1.5 rounded-full border transition-colors text-sm font-semibold';
+                const activeClasses = isActive ? ' bg-blue-600 text-white border-blue-600 shadow-sm' : ' bg-white text-gray-700 border-gray-200 hover:bg-gray-100';
+                return `<button class="${baseClasses}${activeClasses}" data-type="${typeId}"><span class="w-4 h-4 inline-flex items-center justify-center">${iconSvgForType(iconKey)}</span><span>${label}</span></button>`;
+            }).join('');
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             initializeMap();
-            const filtersContainer = document.getElementById('category-filters-container'); 
-            let filterHtml = `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full bg-blue-600 text-white transition-colors" data-category="all">All</button>`; 
-            const spendingCats = Object.entries(budgetData).filter(([_, cat]) => cat.total); 
-            spendingCats.forEach(([key, cat]) => { filterHtml += `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200" data-category="${key}">${cat.name}</button>`; }); 
-            filtersContainer.innerHTML = filterHtml;
-            
+            renderPlaceTypeFilters();
             renderAll();
-            // Automatically trigger a search for the initial view
-            searchPlaces();
-            
-            document.getElementById('search-input').addEventListener('input', () => { clearTimeout(searchTimeout); searchTimeout = setTimeout(getAutocompleteSuggestions, 300); });
-            document.getElementById('autocomplete-results').addEventListener('click', (e) => { const s = e.target.closest('[data-id]'); if (s) selectSuggestion(s.dataset.id); });
+
+            document.getElementById('search-input').addEventListener('input', () => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(getAutocompleteSuggestions, 300);
+            });
+
+            document.getElementById('autocomplete-results').addEventListener('click', (e) => {
+                const suggestion = e.target.closest('[data-id]');
+                if (suggestion) selectSuggestion(suggestion.dataset.id);
+            });
 
             document.body.addEventListener('click', (e) => {
                 const filterBtn = e.target.closest('.category-filter-btn');
-                if(filterBtn) { 
-                    document.querySelectorAll('.category-filter-btn').forEach(b => {
-                        b.classList.remove('bg-blue-600', 'text-white');
-                        b.classList.add('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
-                    }); 
-                    filterBtn.classList.add('bg-blue-600', 'text-white');
-                    filterBtn.classList.remove('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
-                    activeCategory = filterBtn.dataset.category; 
-                    document.getElementById('search-input').value = ''; 
-                    searchPlaces(); 
-                    return; 
+                if (filterBtn) {
+                    activePlaceType = filterBtn.dataset.type;
+                    renderPlaceTypeFilters();
+                    document.getElementById('search-input').value = '';
+                    searchPlaces();
+                    return;
                 }
-                
+
                 const keypadBtn = e.target.closest('.keypad-btn');
                 if (keypadBtn) {
                     const key = keypadBtn.textContent;
@@ -586,26 +1183,44 @@
                     if (key === '←') { currentAmountString = currentAmountString.slice(0, -1) || "0"; }
                     else if (key === '.' && !currentAmountString.includes('.')) { currentAmountString += '.'; }
                     else if (key !== '.') { if(currentAmountString === "0") currentAmountString = key; else currentAmountString += key; }
-                    
                     if (currentAmountString.includes('.') && currentAmountString.split('.')[1].length > 2) currentAmountString = currentAmountString.slice(0,-1);
-                    
-                    if (currentAmountString.endsWith('.')) {
-                        display.textContent = formatCurrency(parseFloat(currentAmountString)).slice(0, -3) + '.';
-                    } else {
-                        display.textContent = formatCurrency(parseFloat(currentAmountString) || 0);
-                    }
+                    display.textContent = formatCurrency(parseFloat(currentAmountString) || 0);
                     return;
                 }
-                
-                const navBtn = e.target.closest('.nav-btn'); if (navBtn) { switchSidebarView(navBtn.dataset.view); return; }
+
+                const navBtn = e.target.closest('.nav-btn');
+                if (navBtn) { switchSidebarView(navBtn.dataset.view); return; }
                 if (e.target.closest('#back-to-main-btn')) { switchSidebarView('budget-view'); return; }
                 if (e.target.closest('#log-purchase-btn')) { showLogPurchaseModal(); return; }
                 if (e.target.closest('#cancel-log-btn') || e.target.id === 'log-purchase-modal') { hideLogPurchaseModal(); return; }
                 if (e.target.closest('#save-log-btn')) { saveTransaction(); return; }
-                if (e.target.closest('#add-to-budget-btn')) { showAddCategoryModal(); return; }
-                if (e.target.closest('#cancel-add-cat-btn') || e.target.id === 'add-category-modal') { hideAddCategoryModal(); return; }
-                if (e.target.closest('#save-add-cat-btn')) { saveNewCategory(); return; }
+                if (e.target.closest('#assign-subcategory-btn')) { showAssignSubcategoryModal(); return; }
+                if (e.target.closest('#create-subcategory-btn')) {
+                    const parentId = currentPlace && resolveBudgetCategoryForPlace(currentPlace) ? budgetData[currentPlace.category].parentId : null;
+                    showCreateSubcategoryModal(parentId);
+                    return;
+                }
+                if (e.target.closest('.parent-add-sub-btn')) {
+                    const parentId = e.target.closest('.parent-add-sub-btn').dataset.parent;
+                    showCreateSubcategoryModal(parentId);
+                    return;
+                }
+                if (e.target.closest('#confirm-assign-btn')) { handleAssignSubcategory(); return; }
+                if (e.target.closest('#cancel-assign-btn') || e.target.id === 'assign-subcategory-modal') { hideAssignSubcategoryModal(); return; }
+                if (e.target.closest('#confirm-create-sub-btn')) { handleCreateSubcategory(); return; }
+                if (e.target.closest('#cancel-create-sub-btn') || e.target.id === 'create-subcategory-modal') { hideCreateSubcategoryModal(); return; }
+                if (e.target.closest('#create-parent-category-btn')) { showCreateParentCategoryModal(); return; }
+                if (e.target.closest('#confirm-create-parent-btn')) { handleCreateParentCategory(); return; }
+                if (e.target.closest('#cancel-create-parent-btn') || e.target.id === 'create-parent-category-modal') { hideCreateParentCategoryModal(); return; }
             });
+
+            document.body.addEventListener('input', (e) => {
+                if (e.target.id === 'new-subcategory-slider') {
+                    updateSubcategoryBudgetLabel(e.target.value);
+                }
+            });
+
+            searchPlaces();
         });
     </script>
 </body>
