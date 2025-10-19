@@ -1728,6 +1728,114 @@ function setupTimelineFocusTrap() {
     });
 }
 
+function focusableElementsWithin(container) {
+    if (!container) return [];
+    const selectors = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    return Array.from(container.querySelectorAll(selectors)).filter(
+        (element) => element.offsetParent !== null && !element.classList.contains('timeline-focus-sentinel')
+    );
+}
+
+function showSidebarView(viewId) {
+    const navButton = document.querySelector(`.nav-btn[data-view="${viewId}"]`);
+    if (navButton && !navButton.classList.contains('active')) {
+        navButton.click();
+    }
+}
+
+function navigateFromTimeline(target, id) {
+    if (target === 'budget') {
+        showSidebarView('budget-view');
+    } else if (target === 'transactions') {
+        showSidebarView('transactions-view');
+    } else if (target === 'accounts') {
+        showSidebarView('accounts-view');
+    }
+    if (target && target !== 'budget') {
+        closeBudgetTimeline();
+    }
+}
+
+function ensureBudgetTimelineController(initialState) {
+    const host = document.getElementById('budget-timeline-host');
+    if (!host) return;
+    if (!budgetTimelineController) {
+        budgetTimelineController = createBudgetTimeline(host, {
+            initialSnapshot: computeBudgetTimelineSnapshot(initialState),
+            onDayChange: (date) => appStore.setTimelineSelectedDate(date),
+            onPeriodChange: (start, end) => appStore.setTimelinePeriod(start, end),
+            onCategoryFocus: (categoryId) => appStore.setTimelineFocusCategory(categoryId),
+            onRequestCreateSubcategory: (categoryId) => openCreateSubcategoryModal({ type: 'timeline', parentId: categoryId }),
+            onNavigate: (target, categoryId) => navigateFromTimeline(target, categoryId)
+        });
+    }
+}
+
+function handleTimelineKeydown(event) {
+    if (!budgetTimelineOverlayOpen) return;
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        closeBudgetTimeline();
+    }
+}
+
+function handleTimelineBackdrop(event) {
+    if (event.target.id === 'budget-timeline-overlay') {
+        closeBudgetTimeline();
+    }
+}
+
+function openBudgetTimeline() {
+    const overlay = document.getElementById('budget-timeline-overlay');
+    const host = document.getElementById('budget-timeline-host');
+    if (!overlay || !host) return;
+    const state = appStore.getState();
+    ensureBudgetTimelineController(state);
+    budgetTimelineController?.update(computeBudgetTimelineSnapshot(state));
+    overlay.classList.add('active');
+    budgetTimelineOverlayOpen = true;
+    renderBudgetOverviewEntry(state);
+    budgetTimelineFocusReturn = document.activeElement;
+    document.addEventListener('keydown', handleTimelineKeydown);
+    overlay.addEventListener('click', handleTimelineBackdrop);
+    const focusables = focusableElementsWithin(overlay);
+    if (focusables.length) {
+        focusables[0].focus();
+    }
+}
+
+function closeBudgetTimeline() {
+    const overlay = document.getElementById('budget-timeline-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('active');
+    budgetTimelineOverlayOpen = false;
+    overlay.removeEventListener('click', handleTimelineBackdrop);
+    document.removeEventListener('keydown', handleTimelineKeydown);
+    renderBudgetOverviewEntry(appStore.getState());
+    if (budgetTimelineFocusReturn && typeof budgetTimelineFocusReturn.focus === 'function') {
+        budgetTimelineFocusReturn.focus();
+    }
+    budgetTimelineFocusReturn = null;
+}
+
+function setupTimelineFocusTrap() {
+    const overlay = document.getElementById('budget-timeline-overlay');
+    if (!overlay) return;
+    const sentinels = overlay.querySelectorAll('.timeline-focus-sentinel');
+    sentinels.forEach((sentinel, index) => {
+        sentinel.addEventListener('focus', () => {
+            if (!budgetTimelineOverlayOpen) return;
+            const focusables = focusableElementsWithin(overlay);
+            if (!focusables.length) return;
+            if (index === 0) {
+                focusables[focusables.length - 1].focus();
+            } else {
+                focusables[0].focus();
+            }
+        });
+    });
+}
+
 function updateTransactionChips(transactionId, searchTerm) {
     const state = appStore.getState();
     const grid = document.querySelector(`[data-chip-grid][data-transaction-id="${transactionId}"]`);
