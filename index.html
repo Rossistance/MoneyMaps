@@ -1307,78 +1307,113 @@ function computeBudgetTimelineSnapshot(state) {
     };
 }
 
+const TIMELINE_STYLE_ID = 'budget-timeline-style-block';
+let timelineStylesInjected = false;
+
+function ensureBudgetTimelineStyles() {
+    if (timelineStylesInjected) return;
+    if (document.getElementById(TIMELINE_STYLE_ID)) {
+        timelineStylesInjected = true;
+        return;
+    }
+    const style = document.createElement('style');
+    style.id = TIMELINE_STYLE_ID;
+    style.textContent = `:root{--bg:#0b1220;--panel:#111827;--panel-2:#0f172a;--ink:#e5e7eb;--ink-dim:#9ca3af;--accent:#60a5fa;--accent-2:#34d399;--grid:#1f2937;--warn:#f59e0b;--alert:#ef4444;} .timeline-root{font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol','Noto Color Emoji','Inter var',Inter,sans-serif;background-color:#111827;color:var(--ink);} .timeline-root .panel{background:linear-gradient(180deg,var(--panel),var(--panel-2));box-shadow:0 6px 24px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.03);} .timeline-root .grid-bg{background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px,24px 24px;background-position:-1px -1px,-1px -1px;} .timeline-root .chip{background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.25);color:#cfe6ff;} .timeline-root .bar{border-radius:10px;height:18px;background:linear-gradient(90deg,rgba(96,165,250,.35),rgba(52,211,153,.35));box-shadow:inset 0 1px 0 rgba(255,255,255,.08);} .timeline-root .bar-fill{height:100%;border-radius:10px;background:linear-gradient(90deg,#60a5fa,#34d399);box-shadow:0 3px 16px rgba(52,211,153,.25);} .timeline-root .flow{height:6px;border-radius:999px;background:linear-gradient(90deg,rgba(99,102,241,.45),rgba(34,197,94,.45));} .timeline-root .mini-badge{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);border-radius:8px;padding:2px 6px;font-size:12px;color:var(--ink-dim);} .timeline-root .legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;} .timeline-root .legend{display:flex;gap:12px;flex-wrap:wrap;color:#d1d5db;font-size:12px;} .timeline-root .slider{-webkit-appearance:none;height:4px;border-radius:999px;background:#1f2937;outline:none;width:100%;} .timeline-root .slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:linear-gradient(180deg,#93c5fd,#3b82f6);border:2px solid #0b1220;box-shadow:0 6px 12px rgba(59,130,246,.45);cursor:pointer;} .timeline-root .kpi{border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));border-radius:14px;padding:10px 12px;} .timeline-root .scroll-shadow{-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%);} .timeline-root .btn{background:linear-gradient(180deg,#1f2937,#0b1220);border:1px solid rgba(255,255,255,.08);color:#e5e7eb;border-radius:12px;padding:8px 12px;} .timeline-root .btn:hover{border-color:rgba(255,255,255,.14);} .timeline-root .btn-primary{background:linear-gradient(180deg,#3b82f6,#2563eb);border:1px solid rgba(59,130,246,.3);color:white;box-shadow:0 12px 24px rgba(37,99,235,.35),inset 0 1px 0 rgba(255,255,255,.2);} .timeline-root .kbd{background:#0b1220;border:1px solid rgba(255,255,255,.12);padding:2px 6px;border-radius:8px;font-size:11px;color:#cbd5e1;}`;
+    document.head.appendChild(style);
+    timelineStylesInjected = true;
+}
+
 function createBudgetTimeline(root, options) {
     if (!root) return null;
+    ensureBudgetTimelineStyles();
+    root.classList.add('timeline-root');
     root.innerHTML = `
-        <div class="space-y-4 text-slate-100">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3" data-role="kpi-grid">
-                <div class="rounded-2xl border border-white/10 bg-slate-900/40 p-3" aria-live="polite">
-                    <p class="text-[11px] uppercase tracking-wide text-slate-400">Inflow</p>
-                    <p class="text-lg font-semibold text-white" data-role="kpi-inflow">$0</p>
-                </div>
-                <div class="rounded-2xl border border-white/10 bg-slate-900/40 p-3" aria-live="polite">
-                    <p class="text-[11px] uppercase tracking-wide text-slate-400">Budgeted</p>
-                    <p class="text-lg font-semibold text-white" data-role="kpi-budgeted">$0</p>
-                </div>
-                <div class="rounded-2xl border border-white/10 bg-slate-900/40 p-3" aria-live="polite">
-                    <p class="text-[11px] uppercase tracking-wide text-slate-400">Unallocated</p>
-                    <p class="text-lg font-semibold text-white" data-role="kpi-unallocated">$0</p>
-                </div>
-            </div>
-            <div class="rounded-2xl border border-white/10 bg-slate-900/50 p-3 sm:p-4 space-y-3">
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex flex-wrap items-center gap-3 text-[11px] uppercase tracking-wide text-slate-400">
-                        <span>Day control</span>
-                        <span class="inline-flex items-center gap-1 rounded-full border border-white/10 px-2 py-1 text-xs text-slate-300">Pan with drag</span>
-                        <span class="inline-flex items-center gap-1 rounded-full border border-white/10 px-2 py-1 text-xs text-slate-300">Zoom with wheel</span>
+        <div class="min-h-full p-4 sm:p-6">
+            <div class="max-w-7xl mx-auto space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="space-y-1">
+                        <h1 class="text-2xl sm:text-3xl font-semibold text-gray-100 tracking-tight">Modular Budget Timeline</h1>
+                        <p class="text-gray-400">Visualize income, allocations, and spend across the month. Pan, zoom, and inspect trends.</p>
                     </div>
-                    <div class="flex items-center gap-2 text-xs">
-                        <button type="button" class="timeline-close-btn" data-action="prev-period">Prev</button>
-                        <button type="button" class="timeline-close-btn" data-action="next-period">Next</button>
-                        <button type="button" class="timeline-close-btn" data-action="reset-day">Reset</button>
+                    <div class="flex items-center gap-2">
+                        <button class="btn hidden md:inline-flex items-center gap-2" id="btnResetView" type="button">
+                            Reset View <span class="kbd">R</span>
+                        </button>
+                        <button class="btn-primary inline-flex items-center gap-2" id="btnExport" type="button">
+                            Export Snapshot
+                        </button>
                     </div>
                 </div>
-                <div class="space-y-1">
-                    <input type="range" min="1" max="1" step="1" value="1" data-role="day-slider" class="w-full" />
-                    <div class="flex justify-between text-[11px] text-slate-400">
-                        <span data-role="slider-start">Day 1</span>
-                        <span data-role="slider-end">Day 1</span>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="kpi">
+                        <div class="text-xs text-gray-400">Month Inflow</div>
+                        <div class="text-lg font-semibold text-gray-100" id="lblInflow">$0</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="text-xs text-gray-400">Budgeted</div>
+                        <div class="text-lg font-semibold text-gray-100" id="lblBudgeted">$0</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="text-xs text-gray-400">Unallocated</div>
+                        <div class="text-lg font-semibold text-gray-100" id="lblUnallocated">$0</div>
                     </div>
                 </div>
-            </div>
-            <div class="rounded-2xl border border-white/10 bg-slate-900/60 p-3 sm:p-4 space-y-3">
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <span class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-300">
-                        <span class="inline-flex h-7 items-center justify-center rounded-full bg-blue-500/10 px-3 text-blue-200">Overview</span>
-                        <span data-role="period-label">Month</span>
-                    </span>
-                    <span class="text-sm text-slate-300" data-role="selected-day-label"></span>
+                <div class="panel rounded-2xl p-3 sm:p-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div class="legend">
+                            <span><span class="legend-dot" style="background:#60a5fa"></span>Budget</span>
+                            <span><span class="legend-dot" style="background:#34d399"></span>Spent</span>
+                            <span><span class="legend-dot" style="background:#f59e0b"></span>Upcoming</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="mini-badge">Pan: <span class="kbd">Drag</span></div>
+                            <div class="mini-badge">Zoom: <span class="kbd">Ctrl + Wheel</span></div>
+                            <div class="mini-badge">Reset: <span class="kbd">R</span></div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <input id="daySlider" class="slider" type="range" min="1" max="31" step="1" value="1" aria-label="Select day in period" />
+                        <div class="flex justify-between text-[12px] text-gray-500 mt-1">
+                            <span data-role="slider-start">Day 1</span><span data-role="slider-end">Day 31</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="relative">
-                    <canvas data-role="timeline-canvas" class="w-full rounded-xl bg-slate-950/40" height="420"></canvas>
+                <div class="panel rounded-2xl p-3 sm:p-4 grid-bg">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="chip px-2 py-1 rounded-lg text-sm">Overview</div>
+                        <div class="text-sm text-gray-400" id="lblPeriod" aria-live="polite">&nbsp;</div>
+                    </div>
+                    <div class="relative">
+                        <canvas id="timelineCanvas" class="w-full rounded-xl" height="520"></canvas>
+                        <div id="hoverTip" class="hidden absolute text-xs bg-gray-800/95 border border-white/10 px-2 py-1 rounded-md pointer-events-none"></div>
+                    </div>
+                    <div class="mt-3 overflow-auto max-h-56 scroll-shadow">
+                        <div id="categoryList" class="space-y-3"></div>
+                    </div>
                 </div>
-                <div class="max-h-56 overflow-auto space-y-3" data-role="category-list" aria-live="polite"></div>
+                <div class="text-center text-xs text-gray-500">
+                    Prototype timeline module. Replace simulated data with live app store before production.
+                </div>
             </div>
         </div>
     `;
 
-    const slider = root.querySelector('[data-role="day-slider"]');
+    const slider = root.querySelector('#daySlider');
     const sliderStartLabel = root.querySelector('[data-role="slider-start"]');
     const sliderEndLabel = root.querySelector('[data-role="slider-end"]');
-    const periodLabel = root.querySelector('[data-role="period-label"]');
-    const selectedDayLabel = root.querySelector('[data-role="selected-day-label"]');
-    const inflowLabel = root.querySelector('[data-role="kpi-inflow"]');
-    const budgetedLabel = root.querySelector('[data-role="kpi-budgeted"]');
-    const unallocatedLabel = root.querySelector('[data-role="kpi-unallocated"]');
-    const canvas = root.querySelector('[data-role="timeline-canvas"]');
-    const categoryList = root.querySelector('[data-role="category-list"]');
-    const controlButtons = root.querySelectorAll('[data-action]');
+    const inflowLabel = root.querySelector('#lblInflow');
+    const budgetedLabel = root.querySelector('#lblBudgeted');
+    const unallocatedLabel = root.querySelector('#lblUnallocated');
+    const periodLabel = root.querySelector('#lblPeriod');
+    const canvas = root.querySelector('#timelineCanvas');
+    const categoryList = root.querySelector('#categoryList');
+    const resetButton = root.querySelector('#btnResetView');
 
-    let state = options.initialSnapshot || null;
-    let localSelectedIndex = null;
-    let localSelectedDate = null;
+    let state = options?.initialSnapshot || null;
     let frameRef = null;
     let resizeObserver = null;
+    let localSelectedIndex = null;
+    let localSelectedDate = null;
 
     function getSelectedIndex() {
         if (!state) return 0;
@@ -1395,11 +1430,14 @@ function createBudgetTimeline(root, options) {
     function renderSlider() {
         if (!state || !slider) return;
         const limitIndex = differenceInDays(state.period.start, state.period.limit);
-        slider.max = Math.max(1, limitIndex + 1);
-        slider.value = Math.min(Number(slider.max), getSelectedIndex() + 1);
-        slider.disabled = Number(slider.max) <= 1;
-        sliderStartLabel.textContent = `Day 1`;
-        sliderEndLabel.textContent = `Day ${slider.max}`;
+        const maxValue = Math.max(0, limitIndex) + 1;
+        slider.max = String(maxValue);
+        slider.min = '1';
+        const nextValue = Math.min(maxValue, getSelectedIndex() + 1);
+        slider.value = String(nextValue);
+        slider.disabled = maxValue <= 1;
+        if (sliderStartLabel) sliderStartLabel.textContent = 'Day 1';
+        if (sliderEndLabel) sliderEndLabel.textContent = `Day ${maxValue}`;
     }
 
     function renderKpis() {
@@ -1412,46 +1450,36 @@ function createBudgetTimeline(root, options) {
     function renderMeta() {
         if (!state) return;
         const periodTitle = formatMonthTitle(state.period.start);
-        periodLabel.textContent = `${periodTitle} (${formatISODate(state.period.start)} → ${formatISODate(state.period.end)})`;
-        const selectedDate = getSelectedDate();
-        selectedDayLabel.textContent = `Day ${getSelectedIndex() + 1} • ${selectedDate.toLocaleDateString()}`;
+        const label = `${periodTitle} • Day ${getSelectedIndex() + 1}`;
+        periodLabel.textContent = label;
+        periodLabel.setAttribute('data-selected-date', getSelectedDate().toISOString());
     }
 
     function renderCategoryList() {
         if (!state || !categoryList) return;
-        const selectedIndex = getSelectedIndex();
-        const focusId = state.focusCategoryId;
         if (!state.categories.length) {
-            categoryList.innerHTML = '<p class="text-sm text-slate-400">No categories yet. Create one to begin tracking.</p>';
+            categoryList.innerHTML = '<p class="text-sm text-gray-400">No categories yet. Create one to begin tracking.</p>';
+            categoryList.removeAttribute('data-selected-day');
             return;
         }
+        const day = getSelectedIndex() + 1;
+        const focusId = state.focusCategoryId;
         categoryList.innerHTML = state.categories
             .map((category) => {
                 const pct = category.budget > 0 ? Math.min(100, Math.round((category.spentToSelected / category.budget) * 100)) : 0;
-                const focusClass = category.id === focusId ? 'ring-2 ring-blue-400 ring-offset-2 ring-offset-slate-900' : '';
+                const focused = category.id === focusId ? 'true' : 'false';
                 return `
-                    <div class="rounded-2xl border border-white/10 bg-slate-900/70 p-3 space-y-2 ${focusClass}" data-category-row data-category-id="${category.id}">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-semibold text-white">${category.name}</p>
-                                <p class="text-[11px] text-slate-400">Day ${selectedIndex + 1} • ${formatCurrency(category.spentToSelected)} of ${formatCurrency(category.budget)}</p>
-                            </div>
-                            <div class="text-xs font-semibold text-slate-300">${pct}%</div>
+                    <div class="flex items-center gap-3" data-category-id="${category.id}" data-role="category-row" data-focused="${focused}">
+                        <div class="min-w-[140px] text-sm text-gray-300">${category.name}</div>
+                        <div class="flex-1 bar">
+                            <div class="bar-fill" style="width:${pct}%; background: linear-gradient(90deg, ${category.color}, rgba(255,255,255,.35));"></div>
                         </div>
-                        <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-800">
-                            <div class="h-full" style="width:${pct}%;background:${category.gradient}"></div>
-                        </div>
-                        <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
-                            <div class="flex items-center gap-2">
-                                <button type="button" class="timeline-close-btn !px-3 !py-1" data-action="focus-category" data-category-id="${category.id}">Focus</button>
-                                <button type="button" class="timeline-close-btn !px-3 !py-1" data-action="view-transactions" data-category-id="${category.id}">Transactions</button>
-                            </div>
-                            <button type="button" class="timeline-close-btn !px-3 !py-1" data-action="create-sub" data-category-id="${category.id}">+ Sub-category</button>
-                        </div>
+                        <div class="text-xs text-gray-400 min-w-[160px] text-right">${formatCurrency(category.spentToSelected)} / ${formatCurrency(category.budget)} (${pct}%)</div>
                     </div>
                 `;
             })
             .join('');
+        categoryList.setAttribute('data-selected-day', String(day));
     }
 
     function drawCanvas() {
@@ -1459,89 +1487,95 @@ function createBudgetTimeline(root, options) {
         const ctx = canvas.getContext('2d');
         const dpr = window.devicePixelRatio || 1;
         const width = canvas.clientWidth;
-        const rowHeight = 32;
-        const topPadding = 40;
-        const bottomPadding = 80;
-        const height = topPadding + state.categories.length * rowHeight + bottomPadding;
-        if (canvas.width !== Math.floor(width * dpr) || canvas.height !== Math.floor(height * dpr)) {
-            canvas.width = Math.floor(width * dpr);
+        const barHeight = 18;
+        const barGap = 18;
+        const topPad = 48;
+        const bottomPad = 96;
+        const height = Math.max(320, topPad + state.categories.length * (barHeight + barGap) + bottomPad);
+        if (canvas.height !== Math.floor(height * dpr)) {
             canvas.height = Math.floor(height * dpr);
+        }
+        if (canvas.width !== Math.floor(width * dpr)) {
+            canvas.width = Math.floor(width * dpr);
         }
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, width, height);
 
-        const leftPad = 160;
-        const rightPad = 180;
-        const availableWidth = Math.max(200, width - leftPad - rightPad);
-        const daySegments = Math.max(1, state.period.dayCount - 1);
-        const dayWidth = availableWidth / daySegments;
-        const selectedIndex = getSelectedIndex();
+        const leftPad = 92;
+        const rightPad = 24;
+        const usableWidth = Math.max(120, width - leftPad - rightPad);
+        const dayCount = Math.max(1, state.period.dayCount);
         const limitIndex = differenceInDays(state.period.start, state.period.limit);
-        const maxBudget = Math.max(1, ...state.categories.map((category) => Math.max(category.budget, category.totalSpent || 0)));
-        const budgetScale = maxBudget / availableWidth;
+        const dayWidth = usableWidth / Math.max(1, dayCount - 1);
+        const selectedIndex = Math.min(limitIndex, getSelectedIndex());
+        const maxValue = Math.max(1, ...state.categories.map((category) => Math.max(category.budget || 0, category.totalSpent || 0)));
+        const pxPerValue = usableWidth / maxValue;
 
-        ctx.fillStyle = 'rgba(148, 163, 184, 0.12)';
+        ctx.fillStyle = 'rgba(255,255,255,.02)';
+        for (let x = 0; x < usableWidth; x += 24) {
+            ctx.fillRect(leftPad + x, topPad - 24, 1, height - topPad - bottomPad + 48);
+        }
+
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '12px ui-sans-serif, system-ui';
+        ctx.textBaseline = 'middle';
         for (let i = 0; i <= limitIndex; i++) {
             const x = leftPad + i * dayWidth;
-            ctx.fillRect(x, topPadding - 20, 1, height - topPadding - bottomPadding + 40);
+            if (i % 2 === 1) {
+                ctx.fillStyle = 'rgba(255,255,255,.05)';
+                ctx.fillRect(x, topPad - 16, 1, height - topPad - bottomPad + 32);
+                ctx.fillStyle = '#6b7280';
+            }
+            if (i % 5 === 0) {
+                ctx.fillText(`Day ${i + 1}`, x, height - bottomPad + 56);
+            }
         }
 
-        ctx.fillStyle = 'rgba(148, 163, 184, 0.35)';
-        ctx.font = '12px "Inter", system-ui';
-        ctx.textAlign = 'center';
-        for (let i = 0; i <= limitIndex; i += Math.max(1, Math.floor(limitIndex / 10))) {
-            const x = leftPad + i * dayWidth;
-            ctx.fillText(`Day ${i + 1}`, x, height - bottomPadding + 36);
-        }
-
-        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
         state.categories.forEach((category, index) => {
-            const y = topPadding + index * rowHeight;
-            const budgetWidth = (category.budget || 0) / budgetScale;
-            const spentWidth = (category.spentToSelected || 0) / budgetScale;
+            const baseY = topPad + index * (barHeight + barGap);
+            const budgetWidth = Math.min(usableWidth, (category.budget || 0) * pxPerValue);
+            const spentWidth = Math.min(usableWidth, (category.spentToSelected || 0) * pxPerValue);
 
-            ctx.fillStyle = 'rgba(59, 130, 246, 0.25)';
-            ctx.fillRect(leftPad, y, Math.min(budgetWidth, availableWidth), 18);
+            ctx.fillStyle = 'rgba(59,130,246,.35)';
+            ctx.fillRect(leftPad, baseY, budgetWidth, barHeight);
 
-            ctx.fillStyle = category.color;
-            ctx.fillRect(leftPad, y, Math.min(spentWidth, availableWidth), 18);
+            ctx.fillStyle = category.color || '#34d399';
+            ctx.fillRect(leftPad, baseY, spentWidth, barHeight);
 
-            ctx.fillStyle = '#e2e8f0';
-            ctx.fillText(category.name, 16, y + 14);
+            ctx.fillStyle = '#d1d5db';
+            ctx.font = '13px ui-sans-serif, system-ui';
+            ctx.fillText(category.name, 12, baseY + barHeight - 4);
 
+            ctx.fillStyle = '#9ca3af';
             ctx.textAlign = 'right';
-            ctx.fillStyle = '#94a3b8';
-            ctx.fillText(`${formatCurrency(category.spentToSelected)} / ${formatCurrency(category.budget)}`, width - 24, y + 14);
+            ctx.fillText(`${formatCurrency(category.spentToSelected)} / ${formatCurrency(category.budget)}`, width - 36, baseY + barHeight - 4);
             ctx.textAlign = 'left';
         });
 
         const markerX = leftPad + Math.min(selectedIndex, limitIndex) * dayWidth;
-        ctx.fillStyle = 'rgba(96, 165, 250, 0.8)';
-        ctx.fillRect(markerX, topPadding - 24, 2, height - topPadding - bottomPadding + 48);
+        ctx.fillStyle = 'rgba(59,130,246,.7)';
+        ctx.fillRect(markerX, topPad - 20, 2, height - topPad - bottomPad + 40);
     }
 
     function scheduleDraw() {
         if (frameRef) cancelAnimationFrame(frameRef);
-        frameRef = requestAnimationFrame(() => {
-            drawCanvas();
-        });
+        frameRef = requestAnimationFrame(() => drawCanvas());
     }
 
     function update(snapshot) {
         state = snapshot;
+        localSelectedIndex = null;
+        localSelectedDate = null;
         renderSlider();
         renderKpis();
         renderMeta();
         renderCategoryList();
         scheduleDraw();
-        localSelectedIndex = null;
-        localSelectedDate = null;
     }
 
-    function handleSliderInput(event) {
+    function commitSelectedDate(index) {
         if (!state) return;
-        const value = Number(event.target.value) || 1;
-        const index = value - 1;
         const limitIndex = differenceInDays(state.period.start, state.period.limit);
         const clampedIndex = Math.min(limitIndex, Math.max(0, index));
         localSelectedIndex = clampedIndex;
@@ -1551,47 +1585,39 @@ function createBudgetTimeline(root, options) {
         options.onDayChange?.(localSelectedDate);
     }
 
-    function handleControlClick(event) {
-        const button = event.target.closest('[data-action]');
-        if (!button || !state) return;
-        const action = button.dataset.action;
-        if (action === 'reset-day') {
-            options.onDayChange?.(state.period.limit);
-        } else if (action === 'prev-period') {
-            const prev = new Date(state.period.start);
-            prev.setMonth(prev.getMonth() - 1);
-            options.onPeriodChange?.(startOfMonth(prev), endOfMonth(prev));
-        } else if (action === 'next-period') {
-            const next = new Date(state.period.start);
-            next.setMonth(next.getMonth() + 1);
-            options.onPeriodChange?.(startOfMonth(next), endOfMonth(next));
+    function handleSliderInput(event) {
+        if (!state) return;
+        const value = Number(event.target.value) || 1;
+        commitSelectedDate(value - 1);
+    }
+
+    function handleReset() {
+        if (!state) return;
+        commitSelectedDate(differenceInDays(state.period.start, state.period.limit));
+        if (slider) {
+            slider.value = String(getSelectedIndex() + 1);
         }
     }
 
-    function handleCategoryInteractions(event) {
-        const actionButton = event.target.closest('[data-action]');
-        const row = event.target.closest('[data-category-row]');
+    function handleCategoryClick(event) {
+        const row = event.target.closest('[data-role="category-row"]');
         if (!row || !state) return;
         const categoryId = row.dataset.categoryId;
-        if (actionButton) {
-            const action = actionButton.dataset.action;
-            if (action === 'focus-category') {
-                options.onCategoryFocus?.(categoryId);
-                options.onNavigate?.('budget', categoryId);
-            } else if (action === 'view-transactions') {
-                options.onCategoryFocus?.(categoryId);
-                options.onNavigate?.('transactions', categoryId);
-            } else if (action === 'create-sub') {
-                options.onRequestCreateSubcategory?.(categoryId);
-            }
-            return;
-        }
+        if (!categoryId) return;
         options.onCategoryFocus?.(categoryId);
+        options.onNavigate?.('budget', categoryId);
+    }
+
+    function handleKeydown(event) {
+        if (event.key?.toLowerCase() === 'r') {
+            handleReset();
+        }
     }
 
     slider?.addEventListener('input', handleSliderInput);
-    controlButtons.forEach((button) => button.addEventListener('click', handleControlClick));
-    categoryList?.addEventListener('click', handleCategoryInteractions);
+    resetButton?.addEventListener('click', handleReset);
+    categoryList?.addEventListener('click', handleCategoryClick);
+    window.addEventListener('keydown', handleKeydown);
 
     resizeObserver = new ResizeObserver(() => scheduleDraw());
     if (canvas) resizeObserver.observe(canvas);
@@ -1604,8 +1630,9 @@ function createBudgetTimeline(root, options) {
         update,
         destroy() {
             slider?.removeEventListener('input', handleSliderInput);
-            controlButtons.forEach((button) => button.removeEventListener('click', handleControlClick));
-            categoryList?.removeEventListener('click', handleCategoryInteractions);
+            resetButton?.removeEventListener('click', handleReset);
+            categoryList?.removeEventListener('click', handleCategoryClick);
+            window.removeEventListener('keydown', handleKeydown);
             if (resizeObserver) {
                 resizeObserver.disconnect();
                 resizeObserver = null;
@@ -1614,1547 +1641,91 @@ function createBudgetTimeline(root, options) {
                 cancelAnimationFrame(frameRef);
                 frameRef = null;
             }
+            root.classList.remove('timeline-root');
             root.innerHTML = '';
         }
     };
 }
 
-function createStore() {
-    const listeners = new Set();
 
-    function loadState() {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-            try {
-                const parsed = JSON.parse(raw);
-                if (!parsed.sources) {
-                    parsed.sources = {
-                        demo: { accounts: parsed.accounts || [], transactions: parsed.transactions || [], seeded: !!(parsed.transactions && parsed.transactions.length) },
-                        plaid: { accounts: [], transactions: [], seeded: false }
-                    };
-                    delete parsed.accounts;
-                    delete parsed.transactions;
-                }
-                parsed.plaidConnected = Boolean(parsed.plaidConnected);
-                parsed.dataSource = parsed.plaidConnected ? 'plaid' : parsed.dataSource || 'demo';
-                parsed.activeAccountId = parsed.activeAccountId || null;
-                parsed.placeLinks = parsed.placeLinks || {};
-                parsed.paletteIndex = parsed.paletteIndex || (parsed.categories ? parsed.categories.length : 0);
-                parsed.sources.demo = parsed.sources.demo || { accounts: [], transactions: [], seeded: false };
-                parsed.sources.plaid = parsed.sources.plaid || { accounts: [], transactions: [], seeded: false };
-                parsed.categories = parsed.categories || [];
-                parsed.subCategories = parsed.subCategories || [];
-                parsed.categories.forEach((category, index) => {
-                    if (!category.colorStops) {
-                        category.colorStops = COLOR_PALETTE[index % COLOR_PALETTE.length];
-                    }
-                });
-                parsed.subCategories.forEach((sub) => {
-                    if (!sub.colorStops) {
-                        const parent = parsed.categories.find((cat) => cat.id === sub.parentId);
-                        sub.colorStops = deriveSubGradient(parent ? parent.colorStops : COLOR_PALETTE[0], 0);
-                    }
-                    if (typeof sub.budget !== 'number') {
-                        sub.budget = 0;
-                    }
-                });
-                parsed.collapsedCategories = parsed.collapsedCategories || {};
-                parsed.timeline = normalizeTimelineState(parsed.timeline);
-                const persistedOverrides = loadPoiOverrideTable();
-                parsed.poiCategoryOverrides = Object.assign({}, persistedOverrides, parsed.poiCategoryOverrides || {});
-                persistPoiOverrideTable(parsed.poiCategoryOverrides);
-                return parsed;
-            } catch (error) {
-                console.error('Failed to parse saved state, using defaults', error);
-            }
-        }
-        const defaults = buildDefaultCategories();
-        return {
-            plaidConnected: false,
-            dataSource: 'demo',
-            activeAccountId: null,
-            paletteIndex: defaults.paletteIndex,
-            categories: defaults.categories,
-            subCategories: defaults.subCategories,
-            placeLinks: {},
-            collapsedCategories: {},
-            timeline: normalizeTimelineState(null),
-            poiCategoryOverrides: loadPoiOverrideTable(),
-            sources: {
-                demo: { accounts: [], transactions: [], seeded: false },
-                plaid: { accounts: [], transactions: [], seeded: false }
-            }
-        };
-    }
-
-    let state = loadState();
-
-    function persist() {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-            persistPoiOverrideTable(state.poiCategoryOverrides || {});
-        } catch (error) {
-            console.warn('Unable to persist state', error);
-        }
-    }
-
-    function notify() {
-        const snapshot = clone(state);
-        listeners.forEach((listener) => listener(snapshot));
-    }
-
-    function mutate(updater) {
-        const draft = clone(state);
-        updater(draft);
-        state = draft;
-        persist();
-        notify();
-    }
-
-    function subscribe(listener) {
-        listeners.add(listener);
-        return () => listeners.delete(listener);
-    }
-
-    function getState() {
-        return clone(state);
-    }
-
-    function createParentCategory(name) {
-        let created = null;
-        mutate((draft) => {
-            const baseId = slugify(name);
-            let id = baseId;
-            let attempt = 1;
-            while (draft.categories.some((cat) => cat.id === id)) {
-                id = `${baseId}-${attempt++}`;
-            }
-            const colorStops = COLOR_PALETTE[draft.paletteIndex % COLOR_PALETTE.length];
-            const parent = { id, name, colorStops };
-            draft.categories.push(parent);
-            draft.paletteIndex = (draft.paletteIndex + 1) % COLOR_PALETTE.length;
-            created = parent;
+function ensureBudgetTimelineController(initialState) {
+    const host = document.getElementById('budget-timeline-host');
+    if (!host) return;
+    if (!budgetTimelineController) {
+        budgetTimelineController = createBudgetTimeline(host, {
+            initialSnapshot: computeBudgetTimelineSnapshot(initialState),
+            onDayChange: (date) => appStore.setTimelineSelectedDate(date),
+            onPeriodChange: (start, end) => appStore.setTimelinePeriod(start, end),
+            onCategoryFocus: (categoryId) => appStore.setTimelineFocusCategory(categoryId),
+            onRequestCreateSubcategory: (categoryId) => openCreateSubcategoryModal({ type: 'timeline', parentId: categoryId }),
+            onNavigate: (target, categoryId) => navigateFromTimeline(target, categoryId)
         });
-        return created;
-    }
-
-    function createSubCategory(parentId, name, budget) {
-        let created = null;
-        mutate((draft) => {
-            const parent = draft.categories.find((cat) => cat.id === parentId);
-            if (!parent) return;
-            const baseId = slugify(name);
-            let id = baseId;
-            let attempt = 1;
-            while (draft.subCategories.some((sub) => sub.id === id)) {
-                id = `${baseId}-${attempt++}`;
-            }
-            const siblingCount = draft.subCategories.filter((sub) => sub.parentId === parentId).length;
-            const colorStops = deriveSubGradient(parent.colorStops, siblingCount);
-            const subCategory = {
-                id,
-                parentId,
-                name,
-                budget: Number(budget) || 0,
-                colorStops
-            };
-            draft.subCategories.push(subCategory);
-            created = subCategory;
-        });
-        return created;
-    }
-
-    function assignTransactionToSubCategory(transactionId, subCategoryId) {
-        mutate((draft) => {
-            const source = draft.sources[draft.dataSource];
-            const transaction = source.transactions.find((txn) => txn.id === transactionId);
-            if (transaction) {
-                transaction.subCategoryId = subCategoryId;
-            }
-        });
-    }
-
-    function linkPlaceToSubCategory(place, subCategoryId) {
-        mutate((draft) => {
-            draft.placeLinks[place.id] = {
-                place: { ...place },
-                subCategoryId
-            };
-        });
-    }
-
-    function removePlaceLink(placeId) {
-        mutate((draft) => {
-            delete draft.placeLinks[placeId];
-        });
-    }
-
-    function getCategorizationForPlace(placeId) {
-        const record = state.placeLinks[placeId];
-        if (!record) return null;
-        const subCategory = state.subCategories.find((sub) => sub.id === record.subCategoryId);
-        if (!subCategory) return null;
-        const category = state.categories.find((cat) => cat.id === subCategory.parentId);
-        if (!category) return null;
-        return {
-            subCategoryId: subCategory.id,
-            categoryId: category.id,
-            categoryName: category.name,
-            subCategoryName: subCategory.name,
-            colorStops: subCategory.colorStops || category.colorStops
-        };
-    }
-
-    function setAccountFilter(accountId) {
-        mutate((draft) => {
-            draft.activeAccountId = accountId;
-        });
-    }
-
-    function clearAccountFilter() {
-        mutate((draft) => {
-            draft.activeAccountId = null;
-        });
-    }
-
-    function setTimelinePeriod(startDate, endDate) {
-        if (!(startDate instanceof Date)) return;
-        const safeEnd = endDate instanceof Date ? endDate : endOfMonth(startDate);
-        mutate((draft) => {
-            const existing = draft.timeline || normalizeTimelineState(null);
-            draft.timeline = normalizeTimelineState({
-                periodStart: formatISODate(startDate),
-                periodEnd: formatISODate(safeEnd),
-                selectedDate: existing.selectedDate,
-                granularity: existing.granularity,
-                focusCategoryId: existing.focusCategoryId
-            });
-        });
-    }
-
-    function setTimelineSelectedDate(date) {
-        if (!(date instanceof Date)) return;
-        mutate((draft) => {
-            const timeline = normalizeTimelineState(draft.timeline);
-            const start = parseISODate(timeline.periodStart);
-            const end = parseISODate(timeline.periodEnd);
-            const today = new Date();
-            const limit = today < end ? today : end;
-            const selected = clampDate(date, start, limit);
-            draft.timeline = {
-                ...timeline,
-                selectedDate: formatISODate(selected)
-            };
-        });
-    }
-
-    function setTimelineFocusCategory(categoryId) {
-        mutate((draft) => {
-            const timeline = normalizeTimelineState(draft.timeline);
-            draft.timeline = {
-                ...timeline,
-                focusCategoryId: categoryId || null
-            };
-        });
-    }
-
-    function toggleCategoryCollapse(categoryId) {
-        if (!categoryId) return;
-        mutate((draft) => {
-            draft.collapsedCategories = draft.collapsedCategories || {};
-            draft.collapsedCategories[categoryId] = !draft.collapsedCategories[categoryId];
-        });
-    }
-
-    function setPoiCategoryOverride(poiType, override) {
-        const normalized = normalizePoiLabel(poiType);
-        if (!normalized) return;
-        mutate((draft) => {
-            draft.poiCategoryOverrides = { ...(draft.poiCategoryOverrides || {}) };
-            if (override === null || typeof override === 'undefined') {
-                delete draft.poiCategoryOverrides[normalized];
-            } else {
-                draft.poiCategoryOverrides[normalized] = override;
-            }
-            persistPoiOverrideTable(draft.poiCategoryOverrides);
-        });
-    }
-
-    function clearPoiCategoryOverride(poiType) {
-        setPoiCategoryOverride(poiType, null);
-    }
-
-    function seedDemoData(generator) {
-        mutate((draft) => {
-            const demoData = generator ? generator(draft) : generateDemoData(draft);
-            draft.sources.demo.accounts = demoData.accounts;
-            draft.sources.demo.transactions = demoData.transactions;
-            draft.sources.demo.seeded = true;
-            draft.dataSource = 'demo';
-            draft.activeAccountId = null;
-        });
-    }
-
-    function resetDemoData() {
-        seedDemoData(generateDemoData);
-    }
-
-    function connectPlaid(generator) {
-        mutate((draft) => {
-            const plaidData = generator ? generator(draft) : generatePlaidData(draft);
-            draft.sources.plaid.accounts = plaidData.accounts;
-            draft.sources.plaid.transactions = plaidData.transactions;
-            draft.sources.plaid.seeded = true;
-            draft.plaidConnected = true;
-            draft.dataSource = 'plaid';
-            if (draft.activeAccountId && !plaidData.accounts.some((acc) => acc.id === draft.activeAccountId)) {
-                draft.activeAccountId = null;
-            }
-        });
-    }
-
-    function disconnectPlaid() {
-        mutate((draft) => {
-            draft.plaidConnected = false;
-            draft.dataSource = 'demo';
-            draft.activeAccountId = null;
-        });
-    }
-
-    function setDataSource(source) {
-        mutate((draft) => {
-            if (source === 'plaid' && !draft.plaidConnected) return;
-            draft.dataSource = source;
-            draft.activeAccountId = null;
-        });
-    }
-
-    return {
-        subscribe,
-        getState,
-        createParentCategory,
-        createSubCategory,
-        assignTransactionToSubCategory,
-        linkPlaceToSubCategory,
-        removePlaceLink,
-        getCategorizationForPlace,
-        setAccountFilter,
-        clearAccountFilter,
-        seedDemoData,
-        resetDemoData,
-        connectPlaid,
-        disconnectPlaid,
-        setDataSource,
-        toggleCategoryCollapse,
-        setPoiCategoryOverride,
-        clearPoiCategoryOverride,
-        setTimelinePeriod,
-        setTimelineSelectedDate,
-        setTimelineFocusCategory
-    };
-}
-
-function randomBetween(min, max) {
-    return Math.random() * (max - min) + min;
-}
-
-function randomChoice(list) {
-    return list[Math.floor(Math.random() * list.length)];
-}
-
-function randomDateWithin(daysBack) {
-    const now = new Date();
-    const offset = Math.floor(Math.random() * daysBack);
-    const date = new Date(now.getTime() - offset * 24 * 60 * 60 * 1000);
-    return date.toISOString().slice(0, 10);
-}
-
-const DEMO_MERCHANTS = [
-    { name: 'Bluegrass Grill', subCategoryId: 'restaurants', mcc: '5812', poiType: 'restaurant', amountRange: [-28, -12], account: 'demo-checking-1', lat: 35.0408, lng: -85.3097 },
-    { name: 'Clumpies Ice Cream Co.', subCategoryId: 'restaurants', mcc: '5814', poiType: 'dessert shop', amountRange: [-14, -6], account: 'demo-checking-1', lat: 35.0569, lng: -85.3102 },
-    { name: 'Publix Hixson Pike', subCategoryId: 'groceries', mcc: '5411', poiType: 'supermarket', amountRange: [-95, -45], account: 'demo-checking-1', lat: 35.1189, lng: -85.2453 },
-    { name: 'Food City Red Bank', subCategoryId: 'groceries', mcc: '5411', poiType: 'supermarket', amountRange: [-130, -60], account: 'demo-checking-1', lat: 35.1256, lng: -85.3187 },
-    { name: 'The Daily Ration', subCategoryId: 'coffee', mcc: '5814', poiType: 'coffee shop', amountRange: [-18, -8], account: 'demo-checking-1', lat: 35.0461, lng: -85.2905 },
-    { name: "Mean Mug Coffeehouse", subCategoryId: 'coffee', mcc: '5814', poiType: 'coffee shop', amountRange: [-12, -5], account: 'demo-checking-1', lat: 35.0401, lng: -85.3006 },
-    { name: 'EPB Energy', subCategoryId: 'utilities', mcc: '4900', poiType: 'utility service', amountRange: [-130, -95], account: 'demo-checking-1' },
-    { name: 'Chattanooga Water Co.', subCategoryId: 'utilities', mcc: '4900', poiType: 'utility service', amountRange: [-70, -45], account: 'demo-checking-1' },
-    { name: 'Scenic City Rideshare', subCategoryId: 'rideshare', mcc: '4121', poiType: 'taxi stand', amountRange: [-28, -12], account: 'demo-checking-1' },
-    { name: 'Nooga Transit', subCategoryId: 'rideshare', mcc: '4121', poiType: 'transportation', amountRange: [-34, -16], account: 'demo-checking-1' },
-    { name: 'Volks Fuel Station', subCategoryId: 'fuel', mcc: '5541', poiType: 'gas station', amountRange: [-58, -32], account: 'demo-checking-1', lat: 35.0468, lng: -85.3043 },
-    { name: 'Chatt Trail Outfitters', subCategoryId: 'outdoors', mcc: '5941', poiType: 'outdoor shop', amountRange: [-125, -60], account: 'demo-credit-1' },
-    { name: 'High Point Climbing', subCategoryId: 'fitness', mcc: '7991', poiType: 'gym', amountRange: [-75, -55], account: 'demo-credit-1', lat: 35.0556, lng: -85.3113 },
-    { name: 'Orange Grove Pharmacy', subCategoryId: 'pharmacy', mcc: '5912', poiType: 'pharmacy', amountRange: [-35, -12], account: 'demo-credit-1' },
-    { name: 'Songbirds Museum', subCategoryId: 'events', mcc: '7999', poiType: 'museum', amountRange: [-48, -20], account: 'demo-credit-1', lat: 35.042, lng: -85.3079 },
-    { name: 'Riverfront Parking Garage', subCategoryId: 'parking', mcc: '7523', poiType: 'parking', amountRange: [-16, -8], account: 'demo-credit-1', lat: 35.0521, lng: -85.3091 },
-    { name: 'Spotify', subCategoryId: 'streaming', mcc: '4899', poiType: 'streaming service', amountRange: [-16, -11], account: 'demo-credit-1' },
-    { name: 'Netflix', subCategoryId: 'streaming', mcc: '4899', poiType: 'streaming service', amountRange: [-20, -15], account: 'demo-credit-1' },
-    { name: 'Chatta Outdoor Rentals', subCategoryId: 'outdoors', mcc: '7999', poiType: 'outdoor recreation', amountRange: [-140, -90], account: 'demo-credit-1' },
-    { name: 'Gig City Payroll', subCategoryId: null, mcc: '6011', poiType: 'direct deposit', amountRange: [1800, 2300], account: 'demo-checking-1' },
-    { name: 'Tennessee River Arts Fest', subCategoryId: 'events', mcc: '7922', poiType: 'event', amountRange: [-95, -45], account: 'demo-credit-1' },
-    { name: 'Whole Body Health', subCategoryId: 'fitness', mcc: '7298', poiType: 'fitness center', amountRange: [-65, -45], account: 'demo-credit-1' },
-    { name: 'Greenway Run Club', subCategoryId: 'fitness', mcc: '7997', poiType: 'sports club', amountRange: [-55, -30], account: 'demo-credit-1' },
-    { name: 'Lookouts Tickets', subCategoryId: 'events', mcc: '7941', poiType: 'stadium', amountRange: [-48, -22], account: 'demo-credit-1' },
-    { name: 'Barking Legs Theater', subCategoryId: 'events', mcc: '7922', poiType: 'theater', amountRange: [-40, -20], account: 'demo-credit-1' },
-    { name: 'BlueCross Premium', subCategoryId: null, mcc: '6300', poiType: 'insurance', amountRange: [-340, -260], account: 'demo-checking-1' },
-    { name: 'Prime Video', subCategoryId: 'streaming', mcc: '4899', poiType: 'streaming service', amountRange: [-15, -9], account: 'demo-credit-1' },
-    { name: 'Chattanooga Library', subCategoryId: null, mcc: '8231', poiType: 'library', amountRange: [0, 0], account: 'demo-checking-1' },
-    { name: 'Public House Chattanooga', subCategoryId: 'restaurants', mcc: '5812', poiType: 'restaurant', amountRange: [-90, -45], account: 'demo-checking-1', lat: 35.0425, lng: -85.3109 },
-    { name: 'Stir Chattanooga', subCategoryId: 'restaurants', mcc: '5812', poiType: 'restaurant', amountRange: [-80, -38], account: 'demo-checking-1', lat: 35.0437, lng: -85.3085 },
-    { name: 'Fleet Feet Sports', subCategoryId: 'outdoors', mcc: '5651', poiType: 'sporting goods', amountRange: [-145, -70], account: 'demo-credit-1' }
-];
-
-function generateDemoAccounts() {
-    return [
-        { id: 'demo-checking-1', source: 'demo', name: 'Nooga Checking', type: 'checking', balance: 4125.42 },
-        { id: 'demo-savings-1', source: 'demo', name: 'Riverwalk Savings', type: 'savings', balance: 8200.73 },
-        { id: 'demo-credit-1', source: 'demo', name: 'Scenic Rewards Visa', type: 'credit', balance: -1285.12 }
-    ];
-}
-
-function generateDemoData(stateDraft) {
-    const workingState = stateDraft || appStore.getState?.() || {};
-    const accounts = generateDemoAccounts();
-    const defaultSetup = buildDefaultCategories();
-    const sourceSubCategories = (workingState.subCategories && workingState.subCategories.length)
-        ? workingState.subCategories
-        : defaultSetup.subCategories;
-    const budgets = new Map(sourceSubCategories.map((sub) => [sub.id, Number(sub.budget) || 0]));
-    const spentTracker = new Map();
-    const transactions = [];
-    let counter = 0;
-
-    const merchantsBySub = new Map();
-    DEMO_MERCHANTS.forEach((merchant) => {
-        if (!merchant.subCategoryId) return;
-        if (!merchantsBySub.has(merchant.subCategoryId)) {
-            merchantsBySub.set(merchant.subCategoryId, []);
-        }
-        merchantsBySub.get(merchant.subCategoryId).push(merchant);
-    });
-
-    function buildTransaction(merchant, overrideAmount, overrides = {}) {
-        const [min, max] = merchant.amountRange;
-        const amount = overrideAmount !== undefined ? overrideAmount : Number(randomBetween(min, max).toFixed(2));
-        return {
-            accountId: merchant.account,
-            date: randomDateWithin(120),
-            merchant: merchant.name,
-            amount,
-            mcc: merchant.mcc,
-            poiType: merchant.poiType,
-            lat: merchant.lat ? merchant.lat + randomBetween(-0.01, 0.01) : undefined,
-            lng: merchant.lng ? merchant.lng + randomBetween(-0.01, 0.01) : undefined,
-            subCategoryId: merchant.subCategoryId || null,
-            source: 'demo',
-            ...overrides
-        };
-    }
-
-    function applyDemoGuard(txn) {
-        if (!txn.subCategoryId || txn.amount >= 0) {
-            return true;
-        }
-        const budget = budgets.get(txn.subCategoryId) || 0;
-        if (budget <= 0) {
-            if (STRICT_DEMO_MODE) {
-                console.info('Skipping demo transaction with no budget allocation', txn);
-                return false;
-            }
-            return true;
-        }
-        const spent = spentTracker.get(txn.subCategoryId) || 0;
-        const remaining = Math.max(0, budget - spent);
-        if (remaining <= 0) {
-            console.info('Skipping demo transaction due to exhausted budget', txn);
-            return false;
-        }
-        const spendAmount = Math.abs(txn.amount);
-        if (spendAmount > remaining) {
-            if (remaining < 5 && STRICT_DEMO_MODE) {
-                console.info('Strict mode prevented overspend adjustment', txn);
-                return false;
-            }
-            txn.amount = Number((-remaining).toFixed(2));
-        }
-        if (Math.abs(txn.amount) < 0.5) {
-            return false;
-        }
-        spentTracker.set(txn.subCategoryId, Math.min(budget, spent + Math.abs(txn.amount)));
-        return true;
-    }
-
-    function pushTransaction(merchant, amountOverride, overrides = {}) {
-        const txn = buildTransaction(merchant, amountOverride, overrides);
-        if (!applyDemoGuard(txn)) {
-            return false;
-        }
-        txn.id = `demo-${counter++}`;
-        transactions.push(txn);
-        return true;
-    }
-
-    sourceSubCategories.forEach((sub) => {
-        const merchants = merchantsBySub.get(sub.id);
-        const budget = budgets.get(sub.id) || 0;
-        if (!merchants || !merchants.length || budget <= 0) return;
-        const plannedCount = Math.max(3, Math.ceil(budget / 20));
-        for (let i = 0; i < plannedCount; i++) {
-            const remaining = Math.max(0, (budgets.get(sub.id) || 0) - (spentTracker.get(sub.id) || 0));
-            if (remaining <= 0) break;
-            const merchant = merchants[i % merchants.length];
-            const [min, max] = merchant.amountRange;
-            const absMin = Math.abs(min);
-            const absMax = Math.abs(max);
-            const ideal = remaining / (plannedCount - i);
-            let spend = Math.min(absMax, Math.max(absMin, randomBetween(ideal * 0.7, ideal * 1.15)));
-            spend = Math.min(spend, remaining);
-            spend = Number(spend.toFixed(2));
-            if (spend <= 0) break;
-            if (!pushTransaction(merchant, -spend)) {
-                break;
-            }
-        }
-    });
-
-    const incomeMerchants = DEMO_MERCHANTS.filter((merchant) => merchant.amountRange[0] > 0);
-    incomeMerchants.slice(0, 4).forEach((merchant) => {
-        pushTransaction(merchant);
-    });
-
-    const explorationMerchants = DEMO_MERCHANTS.filter((merchant) => merchant.subCategoryId).slice(0, 12);
-    explorationMerchants.forEach((merchant, index) => {
-        if (index % 4 === 0) {
-            const explorationTxn = buildTransaction(merchant, -Math.abs(Number(randomBetween(12, 35).toFixed(2))), {
-                subCategoryId: null
-            });
-            explorationTxn.id = `demo-${counter++}`;
-            transactions.push(explorationTxn);
-        }
-    });
-
-    transactions.sort((a, b) => (a.date < b.date ? 1 : -1));
-    return { accounts, transactions };
-}
-
-function generatePlaidData() {
-    const accounts = [
-        { id: 'plaid-checking-1', source: 'plaid', name: 'Plaid Checking', type: 'checking', balance: 5240.31 },
-        { id: 'plaid-credit-1', source: 'plaid', name: 'Plaid Rewards', type: 'credit', balance: -980.44 }
-    ];
-    const merchants = [
-        { name: 'Trader Joe\'s Atlanta', subCategoryId: 'groceries', mcc: '5411', poiType: 'supermarket', amountRange: [-110, -60], account: 'plaid-checking-1' },
-        { name: 'Whole Foods Market', subCategoryId: 'groceries', mcc: '5411', poiType: 'supermarket', amountRange: [-140, -65], account: 'plaid-checking-1' },
-        { name: 'Delta Airlines', subCategoryId: 'events', mcc: '4511', poiType: 'travel agency', amountRange: [-420, -210], account: 'plaid-credit-1' },
-        { name: 'Uber Trip', subCategoryId: 'rideshare', mcc: '4121', poiType: 'transportation', amountRange: [-32, -12], account: 'plaid-credit-1' },
-        { name: 'Spotify', subCategoryId: 'streaming', mcc: '4899', poiType: 'streaming service', amountRange: [-18, -11], account: 'plaid-credit-1' },
-        { name: 'Gympass', subCategoryId: 'fitness', mcc: '7997', poiType: 'fitness', amountRange: [-58, -34], account: 'plaid-credit-1' },
-        { name: 'Downtown Parking', subCategoryId: 'parking', mcc: '7523', poiType: 'parking', amountRange: [-22, -12], account: 'plaid-credit-1' },
-        { name: 'Payroll Deposit', subCategoryId: null, mcc: '6011', poiType: 'direct deposit', amountRange: [2400, 3200], account: 'plaid-checking-1' }
-    ];
-    const transactions = [];
-    let counter = 0;
-    for (let i = 0; i < 120; i++) {
-        const merchant = randomChoice(merchants);
-        const [min, max] = merchant.amountRange;
-        const amount = Number(randomBetween(min, max).toFixed(2));
-        transactions.push({
-            id: `plaid-${counter++}`,
-            accountId: merchant.account,
-            date: randomDateWithin(90),
-            merchant: merchant.name,
-            amount,
-            mcc: merchant.mcc,
-            poiType: merchant.poiType,
-            subCategoryId: merchant.subCategoryId && Math.random() > 0.35 ? merchant.subCategoryId : null,
-            source: 'plaid'
-        });
-    }
-    transactions.sort((a, b) => (a.date < b.date ? 1 : -1));
-    return { accounts, transactions };
-}
-
-let map;
-let mapMarkers = [];
-let activePoiType = '';
-let latestResults = [];
-let linkModalContext = null;
-let openTransactionPanels = new Set();
-let transactionSearchTerms = new Map();
-let pendingCreateContext = null;
-let activeMapPlaceId = null;
-let plaidLinkHandler = null;
-let plaidLinkToken = null;
-let plaidLinkReady = false;
-let plaidLinkError = null;
-let plaidLaunchButton = null;
-
-const appStore = createStore();
-
-window.moneyMapsAdmin = Object.assign({}, window.moneyMapsAdmin, {
-    setPoiOverride: (poiType, override) => appStore.setPoiCategoryOverride(poiType, override),
-    clearPoiOverride: (poiType) => appStore.clearPoiCategoryOverride(poiType),
-    toggleCategory: (categoryId) => appStore.toggleCategoryCollapse(categoryId)
-});
-
-function setLoaderVisible(isVisible) {
-    const loader = document.getElementById('map-loader');
-    if (loader) {
-        loader.classList.toggle('active', isVisible);
     }
 }
 
-function initializeMap() {
-    map = L.map('map', {
-        center: [35.0456, -85.3097],
-        zoom: ZOOM_FOR_40_MILES,
-        zoomControl: true,
-        attributionControl: false
-    });
-
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; CARTO'
-    }).addTo(map);
-
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const { latitude, longitude } = position.coords;
-                map.setView([latitude, longitude], ZOOM_FOR_40_MILES);
-            },
-            () => {},
-            { enableHighAccuracy: true, timeout: 5000 }
-        );
+function handleTimelineKeydown(event) {
+    if (!budgetTimelineOverlayOpen) return;
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        closeBudgetTimeline();
     }
 }
 
-function clearMarkers() {
-    mapMarkers.forEach((entry) => entry.marker.remove());
-    mapMarkers = [];
-}
-
-function createMarker(place, colorStops, isSelected) {
-    const icon = L.divIcon({
-        className: 'gradient-pin-wrapper',
-        iconSize: [38, 38],
-        iconAnchor: [19, 36],
-        html: `
-            <div class="gradient-pin ${isSelected ? 'selected' : ''}" style="background:${gradientStyle(colorStops)}">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0z"></path>
-                    <circle cx="12" cy="10" r="3"></circle>
-                </svg>
-            </div>
-        `
-    });
-    const marker = L.marker([place.lat, place.lng], { icon });
-    marker.on('click', () => {
-        handlePlaceSelection(place.id);
-    });
-    marker.addTo(map);
-    mapMarkers.push({ marker, placeId: place.id });
-}
-
-function renderMarkers(results) {
-    clearMarkers();
-    results.forEach((result) => {
-        const colorStops = result.status === 'categorized' ? result.colorStops : GREEN_GRADIENT;
-        if (result.lat && result.lng) {
-            const isSelected = activeMapPlaceId === result.id;
-            createMarker(result, colorStops, isSelected);
-        }
-    });
-}
-
-function renderMapCard(placeId) {
-    const container = document.getElementById('map-card-container');
-    if (!container) return;
-    if (!placeId) {
-        container.classList.add('hidden');
-        container.innerHTML = '';
-        return;
+function handleTimelineBackdrop(event) {
+    if (event.target.id === 'budget-timeline-overlay') {
+        closeBudgetTimeline();
     }
-    const place = latestResults.find((item) => item.id === placeId);
-    if (!place) {
-        container.classList.add('hidden');
-        container.innerHTML = '';
-        return;
-    }
+}
 
+function openBudgetTimeline() {
+    const overlay = document.getElementById('budget-timeline-overlay');
+    const host = document.getElementById('budget-timeline-host');
+    if (!overlay || !host) return;
     const state = appStore.getState();
-    const categorization = appStore.getCategorizationForPlace(place.id);
-    const spentMap = computeSpentBySubCategoryAll(state);
-    let summary = { budget: 0, spent: 0, available: 0 };
-    let badgeLabel = 'Uncategorized';
-    let badgeClass = 'bg-amber-50 text-amber-700';
-    let confidenceLabel = '';
-    let guidanceLabel = 'Assign a budget category to unlock guidance.';
-    let suggestedMapping = null;
+    ensureBudgetTimelineController(state);
+    budgetTimelineController?.update(computeBudgetTimelineSnapshot(state));
+    overlay.classList.add('active');
+    budgetTimelineOverlayOpen = true;
+    renderBudgetOverviewEntry(state);
+    budgetTimelineFocusReturn = document.activeElement;
+    document.addEventListener('keydown', handleTimelineKeydown);
+    overlay.addEventListener('click', handleTimelineBackdrop);
+    const focusables = focusableElementsWithin(overlay);
+    if (focusables.length) {
+        focusables[0].focus();
+    }
+}
 
-    if (categorization) {
-        summary = summarizeCategorySpend(categorization.categoryId, categorization.subCategoryId, state, spentMap);
-        badgeLabel = `${categorization.categoryName} • ${categorization.subCategoryName}`;
-        badgeClass = 'bg-blue-50 text-blue-700';
-        guidanceLabel = 'Linked to your budget.';
-    } else {
-        suggestedMapping = getBudgetCategoryForPOI(place.poiType, state);
-        if (suggestedMapping && (suggestedMapping.subCategoryId || suggestedMapping.categoryId)) {
-            summary = summarizeCategorySpend(suggestedMapping.categoryId, suggestedMapping.subCategoryId, state, spentMap);
-            const parent = state.categories.find((cat) => cat.id === suggestedMapping.categoryId);
-            const sub = state.subCategories.find((item) => item.id === suggestedMapping.subCategoryId);
-            const baseLabel = sub ? `${parent ? parent.name : ''} • ${sub.name}`.trim() : parent?.name || suggestedMapping.matchedName || place.poiType;
-            badgeLabel = baseLabel.replace(/^ • /, '') || 'Suggested match';
-            const confidence = Math.round((suggestedMapping.confidence || 0) * 100);
-            const confident = suggestedMapping.confidence >= 0.5;
-            badgeClass = confident ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700';
-            if (confidence > 0) {
-                confidenceLabel = `${confidence}% match`;
-            }
-            if (!confident) {
-                guidanceLabel = 'Low-confidence suggestion. Assign a category to confirm.';
-                summary = { budget: 0, spent: 0, available: 0 };
-                badgeLabel = 'Uncategorized';
+function closeBudgetTimeline() {
+    const overlay = document.getElementById('budget-timeline-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('active');
+    budgetTimelineOverlayOpen = false;
+    overlay.removeEventListener('click', handleTimelineBackdrop);
+    document.removeEventListener('keydown', handleTimelineKeydown);
+    renderBudgetOverviewEntry(appStore.getState());
+    if (budgetTimelineFocusReturn && typeof budgetTimelineFocusReturn.focus === 'function') {
+        budgetTimelineFocusReturn.focus();
+    }
+    budgetTimelineFocusReturn = null;
+}
+
+function setupTimelineFocusTrap() {
+    const overlay = document.getElementById('budget-timeline-overlay');
+    if (!overlay) return;
+    const sentinels = overlay.querySelectorAll('.timeline-focus-sentinel');
+    sentinels.forEach((sentinel, index) => {
+        sentinel.addEventListener('focus', () => {
+            if (!budgetTimelineOverlayOpen) return;
+            const focusables = focusableElementsWithin(overlay);
+            if (!focusables.length) return;
+            if (index === 0) {
+                focusables[focusables.length - 1].focus();
             } else {
-                guidanceLabel = 'Suggested match based on similar spend.';
+                focusables[0].focus();
             }
-        }
-    }
-
-    const available = Math.max(0, summary.available || 0);
-    const budgetValue = Number(summary.budget || 0);
-    const spentValue = Number(summary.spent || 0);
-    const hasBudget = budgetValue > 0;
-    const poiLabel = place.poiType || 'Point of interest';
-    const availableLabel = formatCurrency(available);
-    const budgetLabel = formatCurrency(budgetValue);
-    const spentLabel = formatCurrency(spentValue);
-    const availabilityFooter = hasBudget
-        ? `${spentLabel} spent of ${budgetLabel}`
-        : 'No budget set yet. Create or edit a budget to track this spend.';
-
-    container.innerHTML = `
-        <article class="map-card space-y-4" data-place-id="${place.id}">
-            <div class="flex items-start justify-between gap-3">
-                <div>
-                    <h3 class="text-lg font-semibold text-slate-900">${place.name}</h3>
-                    <p class="text-xs uppercase tracking-wide text-slate-400">${poiLabel}</p>
-                    ${place.address ? `<p class="text-sm text-slate-500 mt-1">${place.address}</p>` : ''}
-                </div>
-                <button type="button" class="map-card-close" data-action="close-map-card" aria-label="Close card">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-            </div>
-            <div class="flex flex-wrap items-center gap-2">
-                <span class="badge ${badgeClass}">${badgeLabel}</span>
-                ${confidenceLabel ? `<span class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">${confidenceLabel}</span>` : ''}
-            </div>
-            <p class="text-xs text-slate-500">${guidanceLabel}</p>
-            <div class="rounded-2xl bg-slate-50 p-4 space-y-1">
-                <p class="text-xs uppercase tracking-wide text-slate-400">Available to spend</p>
-                <p class="text-2xl font-semibold ${available > 0 ? 'text-emerald-600' : 'text-slate-700'}">${availableLabel}</p>
-                <p class="text-xs text-slate-500">${availabilityFooter}</p>
-            </div>
-            <div class="map-card-actions flex gap-2">
-                <button class="primary" data-action="card-link" data-place-id="${place.id}">Add to Sub-Category</button>
-                <button data-action="card-create" data-place-id="${place.id}">+ Create Sub-Category</button>
-            </div>
-        </article>
-    `;
-    container.classList.remove('hidden');
-}
-
-function renderActiveMapCard() {
-    if (!activeMapPlaceId) {
-        renderMapCard(null);
-        return;
-    }
-    renderMapCard(activeMapPlaceId);
-}
-
-function handlePlaceSelection(placeId) {
-    if (!placeId) return;
-    const place = latestResults.find((item) => item.id === placeId);
-    if (!place) return;
-    activeMapPlaceId = placeId;
-    if (place.lat && place.lng) {
-        map.panTo([place.lat, place.lng]);
-    }
-    renderActiveMapCard();
-    renderMarkers(latestResults);
-    renderSearchResults(latestResults);
-    hideSearchControlsAfterSelection();
-}
-
-function closeMapCard() {
-    activeMapPlaceId = null;
-    renderActiveMapCard();
-    renderMarkers(latestResults);
-    renderSearchResults(latestResults);
-}
-
-function showPlaidFeedback(message, isError = false) {
-    const element = document.getElementById('plaid-feedback');
-    if (!element) return;
-    if (!message) {
-        element.textContent = '';
-        element.classList.add('hidden');
-        element.classList.remove('text-rose-500');
-        element.classList.add('text-emerald-600');
-        return;
-    }
-    element.textContent = message;
-    element.classList.remove('hidden');
-    element.classList.toggle('text-rose-500', isError);
-    element.classList.toggle('text-emerald-600', !isError);
-}
-
-async function fetchPlaidLinkToken() {
-    if (plaidLinkToken) {
-        return plaidLinkToken;
-    }
-    try {
-        const response = await fetch(PLAID_LINK_TOKEN_ENDPOINT, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ environment: DEFAULT_PLAID_ENV })
-        });
-        if (!response.ok) {
-            throw new Error(`Failed to fetch Plaid link token (${response.status})`);
-        }
-        const data = await response.json();
-        const token = data.link_token || data.linkToken;
-        if (!token) {
-            throw new Error('Missing link token in response');
-        }
-        plaidLinkToken = token;
-        return token;
-    } catch (error) {
-        plaidLinkError = error.message || 'Unable to fetch Plaid link token.';
-        showPlaidFeedback(plaidLinkError, true);
-        throw error;
-    }
-}
-
-function handlePlaidExit(err) {
-    if (err) {
-        const message = err.display_message || err.error_message || 'Plaid Link was closed.';
-        showPlaidFeedback(message, true);
-    } else if (!appStore.getState().plaidConnected) {
-        showPlaidFeedback('Plaid Link closed before connecting.', true);
-    }
-    if (!appStore.getState().plaidConnected && plaidLaunchButton) {
-        plaidLaunchButton.disabled = false;
-        plaidLaunchButton.textContent = 'Connect Bank (Plaid)';
-    }
-}
-
-async function handlePlaidSuccess(publicToken, metadata) {
-    showPlaidFeedback('Bank connected. Finalizing sync…', false);
-    try {
-        if (PLAID_TOKEN_EXCHANGE_ENDPOINT) {
-            const response = await fetch(PLAID_TOKEN_EXCHANGE_ENDPOINT, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ public_token: publicToken, metadata })
-            });
-            if (!response.ok) {
-                throw new Error(`Exchange failed (${response.status})`);
-            }
-            const payload = await response.json();
-            if (payload && (payload.accounts || payload.transactions)) {
-                appStore.connectPlaid(() => ({
-                    accounts: payload.accounts || [],
-                    transactions: payload.transactions || []
-                }));
-                plaidLinkHandler = null;
-                plaidLinkToken = null;
-                plaidLaunchButton = null;
-                showPlaidFeedback('Plaid connected.', false);
-                return;
-            }
-        }
-        throw new Error('Plaid exchange endpoint did not return account data.');
-    } catch (error) {
-        console.warn('Plaid exchange failed, using sandbox data instead.', error);
-        showPlaidFeedback('Using Plaid sandbox data.', false);
-        const fallbackData = await simulatePlaidConnection();
-        appStore.connectPlaid(() => fallbackData);
-    } finally {
-        plaidLinkHandler = null;
-        plaidLinkToken = null;
-        if (plaidLaunchButton) {
-            plaidLaunchButton.disabled = false;
-            plaidLaunchButton = null;
-        }
-    }
-}
-
-async function initializePlaidLink() {
-    if (plaidLinkHandler) {
-        return plaidLinkHandler;
-    }
-    if (!window.Plaid || typeof window.Plaid.create !== 'function') {
-        throw new Error('Plaid Link SDK unavailable.');
-    }
-    const token = await fetchPlaidLinkToken();
-    plaidLinkHandler = window.Plaid.create({
-        token,
-        onLoad: () => {
-            plaidLinkReady = true;
-        },
-        onExit: handlePlaidExit,
-        onSuccess: handlePlaidSuccess
-    });
-    return plaidLinkHandler;
-}
-
-async function openPlaidLink(button) {
-    plaidLaunchButton = button;
-    try {
-        const handler = await initializePlaidLink();
-        showPlaidFeedback('Opening Plaid…', false);
-        handler.open();
-    } catch (error) {
-        console.error('Unable to initialize Plaid Link, falling back to sandbox.', error);
-        showPlaidFeedback('Plaid Link unavailable. Loading sandbox data.', true);
-        button.disabled = false;
-        button.textContent = 'Connect Bank (Plaid)';
-        plaidLaunchButton = null;
-        const fallbackData = await simulatePlaidConnection();
-        appStore.connectPlaid(() => fallbackData);
-    }
-}
-
-function renderPoiButtons() {
-    const container = document.getElementById('poi-type-strip');
-    if (!container) return;
-    container.innerHTML = POI_TYPES.map((type) => `<button class="poi-button" data-poi-type="${type}">${type}</button>`).join('');
-}
-
-function formatAddress(item) {
-    if (!item.address) return '';
-    return item.address.label || '';
-}
-
-function selectBestPoiType(categories = []) {
-    if (!categories || categories.length === 0) return 'point of interest';
-    const sorted = [...categories].sort((a, b) => (b.name?.length || 0) - (a.name?.length || 0));
-    return sorted[0]?.name?.toLowerCase() || 'point of interest';
-}
-
-function decorateResults(results) {
-    return results.map((place) => {
-        const categorization = appStore.getCategorizationForPlace(place.id);
-        if (categorization) {
-            return {
-                ...place,
-                status: 'categorized',
-                categoryId: categorization.categoryId,
-                subCategoryId: categorization.subCategoryId,
-                colorStops: categorization.colorStops,
-                categoryName: categorization.categoryName,
-                subCategoryName: categorization.subCategoryName
-            };
-        }
-        return { ...place, status: 'uncategorized', colorStops: GREEN_GRADIENT };
-    });
-}
-
-function syncSearchUiVisibility() {
-    const dropdown = document.getElementById('search-results');
-    if (dropdown) {
-        const hasContent = dropdown.innerHTML.trim().length > 0;
-        const shouldShow = searchUIState.isDropdownVisible && hasContent;
-        dropdown.classList.toggle('hidden', !shouldShow);
-    }
-    const poiStrip = document.getElementById('poi-type-strip');
-    if (poiStrip) {
-        poiStrip.classList.toggle('hidden', !searchUIState.isPOIButtonsVisible);
-    }
-}
-
-function setSearchDropdownVisibility(isVisible) {
-    searchUIState.isDropdownVisible = Boolean(isVisible);
-    syncSearchUiVisibility();
-}
-
-function setPoiButtonsVisibility(isVisible) {
-    searchUIState.isPOIButtonsVisible = Boolean(isVisible);
-    syncSearchUiVisibility();
-}
-
-function hideSearchControlsAfterSelection() {
-    setSearchDropdownVisibility(false);
-    setPoiButtonsVisibility(false);
-}
-
-function renderSearchResults(results) {
-    const container = document.getElementById('search-results');
-    if (!container) return;
-    if (!results || results.length === 0) {
-        container.innerHTML = `<div class="bg-white/90 backdrop-blur-sm rounded-2xl p-6 text-center text-sm text-slate-500 shadow-lg">No places found. Try a different search or tap a place type.</div>`;
-        syncSearchUiVisibility();
-        return;
-    }
-
-    container.innerHTML = results
-        .map((result) => {
-            const gradient = gradientStyle(result.status === 'categorized' ? result.colorStops : GREEN_GRADIENT);
-            const badgeClass =
-                result.status === 'categorized'
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'bg-emerald-50 text-emerald-700';
-            const badgeLabel =
-                result.status === 'categorized'
-                    ? `Categorized • ${result.subCategoryName || 'Sub-category'}`
-                    : 'Uncategorized';
-            const isSelected = activeMapPlaceId === result.id;
-
-            return `
-                <div class="search-result-card ${isSelected ? 'selected' : ''} bg-white/90 backdrop-blur-sm rounded-2xl p-4 flex gap-3 items-start" data-place-id="${result.id}">
-                    <div class="search-result-icon" style="background:${gradient}">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0z"></path>
-                            <circle cx="12" cy="10" r="3"></circle>
-                        </svg>
-                    </div>
-                    <div class="flex-1 space-y-3">
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="space-y-1">
-                                <h3 class="font-semibold text-slate-900">${result.name}</h3>
-                                <p class="text-xs uppercase tracking-wide text-slate-400">${result.poiType}</p>
-                                ${result.address ? `<p class="text-xs text-slate-500">${result.address}</p>` : ''}
-                            </div>
-                            <span class="badge ${badgeClass}">${badgeLabel}</span>
-                        </div>
-                        <div class="search-result-actions flex flex-wrap gap-2">
-                            <button data-action="map-link" data-place-id="${result.id}">
-                                <span>🗂</span>
-                                <span>Add to sub-category</span>
-                            </button>
-                            <button data-action="map-create" data-place-id="${result.id}">
-                                <span>+</span>
-                                <span>Create sub-category</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        })
-        .join('');
-
-    syncSearchUiVisibility();
-}
-
-function computeDistanceMeters(lat1, lng1, lat2, lng2) {
-    const R = 6371e3;
-    const rad = (deg) => (deg * Math.PI) / 180;
-    const dLat = rad(lat2 - lat1);
-    const dLng = rad(lng2 - lng1);
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-}
-
-function mergeWithCategorized(results, center) {
-    const mergedMap = new Map();
-    results.forEach((result) => mergedMap.set(result.id, result));
-    const state = appStore.getState();
-    Object.values(state.placeLinks).forEach((entry) => {
-        const categorization = appStore.getCategorizationForPlace(entry.place.id);
-        if (!categorization) return;
-        const withinRadius = !center
-            ? true
-            : computeDistanceMeters(center.lat, center.lng, entry.place.lat, entry.place.lng) <= RADIUS_40_MILES_METERS * 1.5;
-        if (!withinRadius) return;
-        mergedMap.set(entry.place.id, {
-            ...entry.place,
-            status: 'categorized',
-            categoryId: categorization.categoryId,
-            subCategoryId: categorization.subCategoryId,
-            colorStops: categorization.colorStops,
-            categoryName: categorization.categoryName,
-            subCategoryName: categorization.subCategoryName
         });
     });
-    return Array.from(mergedMap.values());
-}
-
-async function geocodeIfLocation(query) {
-    if (!query) return null;
-    const locationRegex = /(chattanooga|tennessee|tn|\d{5})/i;
-    if (!locationRegex.test(query)) {
-        return null;
-    }
-    try {
-        const url = `https://geocode.search.hereapi.com/v1/geocode?q=${encodeURIComponent(query)}&limit=1&apiKey=${HERE_API_KEY}`;
-        const response = await fetch(url);
-        if (!response.ok) return null;
-        const data = await response.json();
-        const item = data.items?.[0];
-        if (!item) return null;
-        const type = item.resultType;
-        if (['locality', 'administrativeArea', 'county', 'state', 'postalCode'].includes(type)) {
-            return {
-                lat: item.position.lat,
-                lng: item.position.lng
-            };
-        }
-    } catch (error) {
-        console.error('Geocode error', error);
-    }
-    return null;
-}
-
-async function fetchHereResults(query, center, poiType) {
-    const circle = `${center.lat},${center.lng};r=${RADIUS_40_MILES_METERS}`;
-    let url;
-    if (poiType && query) {
-        url = `https://discover.search.hereapi.com/v1/discover?q=${encodeURIComponent(`${query} ${poiType}`)}&in=circle:${circle}&limit=80&apiKey=${HERE_API_KEY}`;
-    } else if (poiType) {
-        url = `https://discover.search.hereapi.com/v1/discover?q=${encodeURIComponent(poiType)}&in=circle:${circle}&limit=80&apiKey=${HERE_API_KEY}`;
-    } else if (query) {
-        url = `https://discover.search.hereapi.com/v1/discover?q=${encodeURIComponent(query)}&in=circle:${circle}&limit=80&apiKey=${HERE_API_KEY}`;
-    } else {
-        return [];
-    }
-
-    const response = await fetch(url);
-    if (!response.ok) {
-        console.error('HERE API error', await response.text());
-        return [];
-    }
-
-    const data = await response.json();
-    if (!data.items) return [];
-
-    return data.items
-        .filter((item) => item.position?.lat && item.position?.lng)
-        .map((item) => ({
-            id: item.id,
-            name: item.title,
-            lat: item.position.lat,
-            lng: item.position.lng,
-            poiType: selectBestPoiType(item.categories),
-            address: formatAddress(item),
-            status: 'uncategorized'
-        }));
-}
-
-async function runSearch(query) {
-    if (HERE_API_KEY === 'YOUR_HERE_API_KEY') {
-        console.error('HERE API key missing');
-        return;
-    }
-
-    if (!query && !activePoiType) {
-        latestResults = [];
-        clearMarkers();
-        const container = document.getElementById('search-results');
-        if (container) {
-            container.innerHTML = '';
-        }
-        renderActiveMapCard();
-        syncSearchUiVisibility();
-        return;
-    }
-
-    setLoaderVisible(true);
-    let center = map.getCenter();
-    const geocoded = await geocodeIfLocation(query);
-    if (geocoded) {
-        center = geocoded;
-        map.setView([geocoded.lat, geocoded.lng], ZOOM_FOR_40_MILES);
-    }
-
-    try {
-        const hereResults = await fetchHereResults(query, center, activePoiType);
-        const merged = mergeWithCategorized(hereResults, center);
-        latestResults = decorateResults(merged);
-        renderMarkers(latestResults);
-        renderSearchResults(latestResults);
-        renderActiveMapCard();
-    } catch (error) {
-        console.error('Search error', error);
-    } finally {
-        setLoaderVisible(false);
-    }
-}
-
-function refreshResults() {
-    if (latestResults.length === 0) {
-        clearMarkers();
-        const container = document.getElementById('search-results');
-        if (container) {
-            container.innerHTML = '';
-        }
-        syncSearchUiVisibility();
-        renderActiveMapCard();
-        return;
-    }
-    latestResults = decorateResults(latestResults);
-    renderMarkers(latestResults);
-    renderSearchResults(latestResults);
-    renderActiveMapCard();
-}
-
-function getSubCategoriesWithParents(state) {
-    const parentMap = new Map(state.categories.map((cat) => [cat.id, cat]));
-    return state.subCategories.map((sub) => ({
-        ...sub,
-        parentName: parentMap.get(sub.parentId)?.name || 'Category'
-    }));
-}
-
-function renderBudgetView(state) {
-    const container = document.getElementById('budget-list');
-    if (!container) return;
-    const dataSourceLabel = document.getElementById('active-data-source');
-    if (dataSourceLabel) {
-        const sourceText = state.dataSource === 'plaid' ? 'Plaid accounts' : 'Demo data';
-        dataSourceLabel.textContent = sourceText;
-    }
-    const timeline = getTimelineState(state);
-    const filterBadge = document.getElementById('active-account-filter');
-    const clearFilterBtn = document.getElementById('clear-account-filter');
-    if (state.activeAccountId) {
-        const account = getActiveSource(state).accounts.find((acc) => acc.id === state.activeAccountId);
-        if (account) {
-            filterBadge.textContent = `Account · ${account.name}`;
-            filterBadge.classList.remove('hidden');
-            if (clearFilterBtn) clearFilterBtn.classList.remove('hidden');
-        }
-    } else {
-        filterBadge?.classList.add('hidden');
-        clearFilterBtn?.classList.add('hidden');
-    }
-
-    if (!state.categories.length) {
-        container.innerHTML = '<p class="text-sm text-slate-500">No parent categories yet. Create one to begin tracking.</p>';
-        return;
-    }
-
-    const spentBySub = computeSpentBySubCategory(state);
-    const collapsedMap = state.collapsedCategories || {};
-    const subByParent = new Map();
-    state.subCategories.forEach((sub) => {
-        if (!subByParent.has(sub.parentId)) {
-            subByParent.set(sub.parentId, []);
-        }
-        subByParent.get(sub.parentId).push(sub);
-    });
-
-    container.innerHTML = state.categories
-        .map((parent) => {
-            const subCategories = subByParent.get(parent.id) || [];
-            const totalBudget = subCategories.reduce((sum, sub) => sum + (sub.budget || 0), 0);
-            const subMarkup = subCategories
-                .map((sub) => {
-                    const spent = spentBySub.get(sub.id) || 0;
-                    const ratio = sub.budget > 0 ? Math.min(1, spent / sub.budget) : spent > 0 ? 1 : 0;
-                    const overspent = sub.budget > 0 && spent > sub.budget;
-                    return `
-                        <div class="space-y-2 rounded-2xl border border-slate-200 bg-white p-3" aria-label="${sub.name} ${formatCurrency(spent)} spent of ${formatCurrency(sub.budget)}">
-                            <div class="flex items-center justify-between">
-                                <p class="text-sm font-semibold text-slate-800">${sub.name}</p>
-                                <span class="text-xs font-semibold ${overspent ? 'text-rose-600' : 'text-slate-500'}">
-                                    ${formatCurrency(spent)} / ${formatCurrency(sub.budget)}
-                                </span>
-                            </div>
-                            <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuenow="${Math.min(100, Math.round((spent / (sub.budget || 1)) * 100))}" aria-valuemin="0" aria-valuemax="100">
-                                <div class="h-full rounded-full ${overspent ? 'bg-rose-500' : ''}" style="width:${Math.min(100, ratio * 100)}%;background:${gradientStyle(sub.colorStops)}"></div>
-                            </div>
-                            <div class="flex items-center justify-between text-xs">
-                                <span class="text-slate-400">Budgeted ${formatCurrency(sub.budget)}</span>
-                                <span class="font-semibold ${overspent ? 'text-rose-600' : 'text-slate-500'}">${formatPercent(sub.budget > 0 ? Math.min(spent / sub.budget, 1) : spent > 0 ? 1 : 0)}</span>
-                            </div>
-                        </div>
-                    `;
-                })
-                .join('');
-
-            const categorySpent = subCategories.reduce((sum, sub) => sum + (spentBySub.get(sub.id) || 0), 0);
-            const categoryRatio = totalBudget > 0 ? Math.min(1, categorySpent / totalBudget) : categorySpent > 0 ? 1 : 0;
-            const categoryOverspent = totalBudget > 0 && categorySpent > totalBudget;
-            const isCollapsed = Boolean(collapsedMap[parent.id]);
-            const subListId = `sub-list-${parent.id}`;
-            const collapseTitle = isCollapsed ? 'Expand category' : 'Collapse category';
-            const collapsedSummary = isCollapsed && subCategories.length
-                ? `<p class="text-xs text-slate-400">${subCategories.length} sub-categories hidden.</p>`
-                : '';
-            const emptyCollapsedSummary = isCollapsed && !subCategories.length ? '<p class="text-xs text-slate-400">No sub-categories yet.</p>' : '';
-            const subSectionClass = `space-y-2 ${isCollapsed ? 'hidden' : ''}`;
-            const subCountLabel = subCategories.length ? ` • ${subCategories.length} sub-categories` : '';
-
-            const focusClass = timeline.focusCategoryId === parent.id ? 'ring-2 ring-blue-400 ring-offset-2 ring-offset-white' : '';
-            return `
-                <article class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm space-y-4 ${focusClass}" data-category-id="${parent.id}" aria-label="${parent.name} ${formatCurrency(categorySpent)} spent of ${formatCurrency(totalBudget)}">
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="flex items-center gap-3">
-                            <div class="h-10 w-10 rounded-2xl" style="background:${gradientStyle(parent.colorStops)}"></div>
-                            <div>
-                                <h3 class="font-semibold text-lg text-slate-900">${parent.name}</h3>
-                                <p class="text-xs uppercase tracking-wide text-slate-400">${formatCurrency(totalBudget)} budgeted${subCountLabel}</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <button class="collapse-toggle" data-action="toggle-category" data-category-id="${parent.id}" aria-expanded="${!isCollapsed}" aria-controls="${subListId}" title="${collapseTitle}">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="6 9 12 15 18 9"></polyline>
-                                </svg>
-                            </button>
-                            <button class="add-subcategory-btn flex h-9 items-center justify-center rounded-full bg-slate-100 px-3 text-xs font-semibold text-slate-600 hover:bg-slate-200" data-parent-id="${parent.id}">
-                                + Sub-category
-                            </button>
-                        </div>
-                    </div>
-                    <div class="space-y-2">
-                        <div class="space-y-2">
-                            <div class="h-3 w-full overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuenow="${Math.min(100, Math.round((categorySpent / (totalBudget || 1)) * 100))}" aria-valuemin="0" aria-valuemax="100">
-                                <div class="h-full rounded-full ${categoryOverspent ? 'bg-rose-500' : ''}" style="width:${Math.min(100, categoryRatio * 100)}%;background:${gradientStyle(parent.colorStops)}"></div>
-                            </div>
-                            <div class="flex items-center justify-between text-xs">
-                                <span class="font-semibold ${categoryOverspent ? 'text-rose-600' : 'text-slate-600'}">${formatCurrency(categorySpent)} spent</span>
-                                <span class="text-slate-400">${formatPercent(totalBudget > 0 ? Math.min(categorySpent / totalBudget, 1) : categorySpent > 0 ? 1 : 0)} used</span>
-                            </div>
-                        </div>
-                        ${collapsedSummary || emptyCollapsedSummary}
-                        <div id="${subListId}" class="${subSectionClass}">
-                            ${subMarkup || '<p class="text-xs text-slate-400">No sub-categories yet.</p>'}
-                        </div>
-                    </div>
-                </article>
-            `;
-        })
-        .join('');
-}
-
-function renderBudgetOverviewEntry(state) {
-    const entryButton = document.getElementById('budget-overview-entry');
-    if (!entryButton) return;
-    const periodSpan = document.getElementById('budget-overview-period-label');
-    const daySpan = document.getElementById('budget-overview-day');
-    const inflowSpan = document.getElementById('budget-overview-inflow');
-    const labelSpan = document.getElementById('budget-overview-entry-label');
-    const snapshot = computeBudgetTimelineSnapshot(state);
-    const periodTitle = formatMonthTitle(snapshot.period.start);
-    if (periodSpan) periodSpan.textContent = periodTitle;
-    if (daySpan) daySpan.textContent = snapshot.period.selectedIndex + 1;
-    if (inflowSpan) inflowSpan.textContent = formatCurrency(snapshot.inflow);
-    if (labelSpan) {
-        const categoryCount = snapshot.categories.length;
-        labelSpan.textContent = categoryCount === 1 ? '1 category connected' : `${categoryCount} categories connected`;
-    }
-    entryButton.setAttribute('aria-expanded', budgetTimelineOverlayOpen ? 'true' : 'false');
-}
-
-function renderAccounts(state) {
-    const accountsList = document.getElementById('accounts-list');
-    const accountsSummary = document.getElementById('accounts-summary');
-    const accountsTotal = document.getElementById('accounts-total');
-    const dataSourceLabel = document.getElementById('accounts-data-source');
-    const disconnectButton = document.getElementById('disconnect-plaid');
-    if (!accountsList) return;
-
-    const source = getActiveSource(state);
-    dataSourceLabel.textContent = state.dataSource === 'plaid' ? 'Plaid' : 'Demo';
-    const timeline = getTimelineState(state);
-    const periodStartDate = parseISODate(timeline.periodStart);
-    const selectedDate = parseISODate(timeline.selectedDate);
-    const dayNumber = differenceInDays(periodStartDate, selectedDate) + 1;
-
-    if (state.plaidConnected) {
-        disconnectButton?.classList.remove('hidden');
-    } else {
-        disconnectButton?.classList.add('hidden');
-    }
-
-    if (!source.accounts.length) {
-        accountsList.innerHTML = '<p class="text-sm text-slate-500">No accounts yet. Connect Plaid or load demo data.</p>';
-        accountsSummary?.classList.add('hidden');
-        return;
-    }
-
-    const total = source.accounts.reduce((sum, acc) => sum + acc.balance, 0);
-    if (accountsSummary && accountsTotal) {
-        accountsTotal.textContent = formatCurrency(total);
-        accountsSummary.classList.remove('hidden');
-        let timelineLabel = accountsSummary.querySelector('.timeline-label');
-        if (!timelineLabel) {
-            timelineLabel = document.createElement('p');
-            timelineLabel.className = 'timeline-label text-[11px] uppercase tracking-wide text-slate-400';
-            accountsSummary.appendChild(timelineLabel);
-        }
-        timelineLabel.textContent = `${formatMonthTitle(periodStartDate)} • Day ${Math.max(1, dayNumber)}`;
-    }
-
-    const accountTotals = computeAccountTotals(state);
-    accountsList.innerHTML = source.accounts
-        .map((account) => {
-            const isActive = state.activeAccountId === account.id;
-            const balanceClass = account.balance < 0 ? 'text-rose-500' : 'text-emerald-500';
-            const periodChange = accountTotals.get(account.id) || 0;
-            const changeClass = periodChange >= 0 ? 'text-emerald-600' : 'text-rose-500';
-            const changeLabel = Math.abs(periodChange) > 0.009
-                ? `<p class="text-[11px] font-semibold ${changeClass}">Net ${formatCurrency(periodChange)}</p>`
-                : '<p class="text-[11px] text-slate-400">No transactions in period</p>';
-            return `
-                <button class="w-full rounded-3xl border ${isActive ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white'} px-4 py-3 text-left shadow-sm hover:border-blue-400" data-account-id="${account.id}">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-semibold text-slate-900">${account.name}</p>
-                            <p class="text-xs uppercase tracking-wide text-slate-400">${account.type}</p>
-                            ${changeLabel}
-                        </div>
-                        <div class="text-right">
-                            <p class="text-sm font-semibold ${balanceClass}">${formatCurrency(account.balance)}</p>
-                            ${isActive ? '<p class="text-[10px] text-blue-600 font-semibold uppercase">Filtered</p>' : ''}
-                        </div>
-                    </div>
-                </button>
-            `;
-        })
-        .join('');
-}
-
-function renderSubcategoryChipsMarkup(state, searchTerm, activeId) {
-    const normalized = (searchTerm || '').toLowerCase();
-    const subCategories = getSubCategoriesWithParents(state).filter((sub) => {
-        if (!normalized) return true;
-        return sub.name.toLowerCase().includes(normalized) || sub.parentName.toLowerCase().includes(normalized);
-    });
-    if (!subCategories.length) {
-        return '<p class="text-xs text-slate-500">No matches. Create a new sub-category.</p>';
-    }
-    return subCategories
-        .map((sub) => {
-            const active = sub.id === activeId;
-            return `
-                <button class="subcategory-chip inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold text-white shadow-sm" style="background:${gradientStyle(sub.colorStops)};${active ? 'box-shadow:0 0 0 2px rgba(37,99,235,0.5);' : ''}" data-subcategory-id="${sub.id}">
-                    <span>${sub.name}</span>
-                    <span class="text-[10px] uppercase tracking-wide text-white/70">${sub.parentName}</span>
-                </button>
-            `;
-        })
-        .join('');
-}
-
-function renderTransactions(state) {
-    const list = document.getElementById('transactions-list');
-    const sourcePill = document.getElementById('transactions-source-pill');
-    const accountPill = document.getElementById('transactions-account-pill');
-    const demoBtn = document.getElementById('demo-data-btn');
-    const resetDemoBtn = document.getElementById('reset-demo-btn');
-    const connectBtn = document.getElementById('connect-plaid-btn');
-
-    const source = getActiveSource(state);
-    const timeline = getTimelineState(state);
-    const periodStartDate = parseISODate(timeline.periodStart);
-    const selectedDate = parseISODate(timeline.selectedDate);
-    const dayNumber = differenceInDays(periodStartDate, selectedDate) + 1;
-    if (sourcePill) {
-        const sourceLabel = state.dataSource === 'plaid' ? 'Using Plaid data' : 'Using demo data';
-        sourcePill.textContent = `${sourceLabel} • ${formatMonthTitle(periodStartDate)} · Day ${Math.max(1, dayNumber)}`;
-    }
-    if (accountPill) {
-        if (state.activeAccountId) {
-            const account = source.accounts.find((acc) => acc.id === state.activeAccountId);
-            if (account) {
-                accountPill.textContent = `Filtered: ${account.name}`;
-                accountPill.classList.remove('hidden');
-            }
-        } else {
-            accountPill.classList.add('hidden');
-        }
-    }
-
-    if (demoBtn) {
-        if (state.plaidConnected) {
-            demoBtn.classList.add('hidden');
-        } else if (state.sources.demo.seeded) {
-            demoBtn.textContent = 'Demo data loaded';
-            demoBtn.classList.add('pointer-events-none', 'text-slate-400');
-            demoBtn.classList.remove('hidden');
-        } else {
-            demoBtn.textContent = 'Use Demo Data (200)';
-            demoBtn.classList.remove('pointer-events-none', 'text-slate-400');
-            demoBtn.classList.remove('hidden');
-        }
-    }
-    if (resetDemoBtn) {
-        if (!state.plaidConnected && state.sources.demo.seeded) {
-            resetDemoBtn.classList.remove('hidden');
-        } else {
-            resetDemoBtn.classList.add('hidden');
-        }
-    }
-    if (connectBtn) {
-        if (state.plaidConnected) {
-            connectBtn.textContent = 'Plaid Connected';
-            connectBtn.classList.add('bg-emerald-600');
-            connectBtn.classList.remove('bg-blue-600');
-            connectBtn.disabled = true;
-        } else {
-            connectBtn.textContent = 'Connect Bank (Plaid)';
-            connectBtn.classList.remove('bg-emerald-600');
-            connectBtn.classList.add('bg-blue-600');
-            connectBtn.disabled = false;
-        }
-    }
-
-    if (!list) return;
-
-    const transactions = getFilteredTransactions(state);
-    const subCategories = getSubCategoriesWithParents(state);
-    const subLookup = new Map(subCategories.map((sub) => [sub.id, sub]));
-    const accountLookup = new Map(source.accounts.map((acc) => [acc.id, acc]));
-
-    if (!transactions.length) {
-        list.innerHTML = '<div class="p-6 text-center text-sm text-slate-500">No transactions yet. Connect Plaid or load demo data.</div>';
-        return;
-    }
-
-    list.innerHTML = transactions
-        .map((txn) => {
-            const sub = txn.subCategoryId ? subLookup.get(txn.subCategoryId) : null;
-            const account = accountLookup.get(txn.accountId);
-            const isOpen = openTransactionPanels.has(txn.id);
-            const searchValue = transactionSearchTerms.get(txn.id) || '';
-            return `
-                <div class="transaction-row" data-transaction-id="${txn.id}">
-                    <div class="grid grid-cols-[auto_1fr_auto_auto] gap-3 px-4 py-3 items-start">
-                        <div class="text-sm font-medium text-slate-600">${txn.date}</div>
-                        <div>
-                            <p class="text-sm font-semibold text-slate-900">${txn.merchant}</p>
-                            <p class="text-[11px] uppercase tracking-wide text-slate-400">${account ? account.name : 'Account'}${txn.poiType ? ` • ${txn.poiType}` : ''}</p>
-                        </div>
-                        <div class="text-sm font-semibold ${txn.amount < 0 ? 'text-rose-500' : 'text-emerald-600'}">${formatCurrency(txn.amount)}</div>
-                        <div class="flex flex-col items-end gap-1">
-                            ${sub ? `<span class="badge bg-blue-50 text-blue-700">${sub.parentName} • ${sub.name}</span>` : '<span class="badge bg-amber-50 text-amber-700">Uncategorized</span>'}
-                            <button class="transaction-toggle text-xs font-semibold text-blue-600 hover:underline">${isOpen ? 'Hide' : 'Categorize'}</button>
-                        </div>
-                    </div>
-                    <div class="transaction-panel ${isOpen ? '' : 'hidden'} border-t border-slate-100 bg-slate-50 px-4 py-3 space-y-3">
-                        <div class="input-row">
-                            <label class="text-xs font-semibold text-slate-500" for="txn-search-${txn.id}">Find a sub-category</label>
-                            <input id="txn-search-${txn.id}" class="subcategory-search rounded-full border border-slate-200 px-3 py-2 text-sm" type="search" value="${searchValue}" placeholder="Search sub-categories" data-transaction-id="${txn.id}" />
-                        </div>
-                        <div class="grid gap-2" data-chip-grid data-transaction-id="${txn.id}">
-                            ${renderSubcategoryChipsMarkup(state, searchValue, txn.subCategoryId)}
-                        </div>
-                        <button class="text-sm font-semibold text-blue-600 hover:underline" data-action="create-subcategory" data-transaction-id="${txn.id}">
-                            <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-700 mr-2">+</span>
-                            Create new sub-category
-                        </button>
-                    </div>
-                </div>
-            `;
-        })
-        .join('');
 }
 
 function focusableElementsWithin(container) {
