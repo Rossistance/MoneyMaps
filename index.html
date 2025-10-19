@@ -315,9 +315,10 @@
                     </div>
                     <div class="flex rounded-full bg-slate-100 text-xs font-semibold text-slate-600 px-3 py-1">Beta</div>
                 </div>
-                <div class="grid grid-cols-2 gap-2 mt-4">
+                <div class="grid grid-cols-3 gap-2 mt-4">
                     <button class="nav-btn active flex items-center justify-center rounded-xl py-2 font-semibold text-sm text-blue-600 bg-blue-50" data-view="budget-view">Budget</button>
-                    <button class="nav-btn flex items-center justify-center rounded-xl py-2 font-semibold text-sm text-slate-500 bg-slate-100" data-view="transactions-view">History</button>
+                    <button class="nav-btn flex items-center justify-center rounded-xl py-2 font-semibold text-sm text-slate-500 bg-slate-100" data-view="accounts-view">Accounts</button>
+                    <button class="nav-btn flex items-center justify-center rounded-xl py-2 font-semibold text-sm text-slate-500 bg-slate-100" data-view="transactions-view">Transactions</button>
                 </div>
             </div>
             <div id="sidebar-content">
@@ -331,32 +332,79 @@
                             </svg>
                         </button>
                     </div>
+                    <div class="flex items-center gap-2 text-xs text-slate-500">
+                        <span class="font-semibold text-slate-600">Viewing:</span>
+                        <span id="active-data-source" class="badge bg-slate-100 text-slate-600">Demo data</span>
+                        <span id="active-account-filter" class="hidden badge bg-blue-50 text-blue-700"></span>
+                        <button id="clear-account-filter" class="hidden text-blue-600 hover:underline text-xs font-semibold">Clear filter</button>
+                    </div>
                     <div id="budget-list" class="space-y-4"></div>
                 </section>
-                <section id="transactions-view" class="sidebar-view p-4 space-y-4">
-                    <h2 class="text-xl font-bold text-slate-900">History</h2>
-                    <p class="text-sm text-slate-500">Transaction history demo data is not linked in this prototype.</p>
+                <section id="accounts-view" class="sidebar-view p-4 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xl font-bold text-slate-900">Accounts</h2>
+                        <button id="disconnect-plaid" class="hidden text-xs font-semibold text-rose-600 hover:underline">Disconnect</button>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs text-slate-500">
+                        <span class="font-semibold text-slate-600">Source:</span>
+                        <span id="accounts-data-source" class="badge bg-slate-100 text-slate-600">Demo</span>
+                    </div>
+                    <div id="accounts-summary" class="rounded-3xl bg-slate-900 text-white p-4 space-y-1 hidden">
+                        <p class="text-xs uppercase tracking-wide text-slate-300">Total balance</p>
+                        <p id="accounts-total" class="text-2xl font-semibold">$0.00</p>
+                    </div>
+                    <div id="accounts-list" class="space-y-3"></div>
+                </section>
+                <section id="transactions-view" class="sidebar-view p-4 space-y-5">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">Transactions</h2>
+                            <p class="text-sm text-slate-500">Stay in sync across Plaid, demo, and map categories.</p>
+                        </div>
+                        <div class="flex flex-col gap-2 items-end">
+                            <button id="demo-data-btn" class="hidden text-xs font-semibold text-blue-600 hover:underline">Use Demo Data (200)</button>
+                            <button id="reset-demo-btn" class="hidden text-xs font-semibold text-slate-500 hover:underline">Reset Demo Data</button>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button id="connect-plaid-btn" class="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow">Connect Bank (Plaid)</button>
+                        <div id="transactions-source-pill" class="badge bg-slate-100 text-slate-600">Using demo data</div>
+                        <div id="transactions-account-pill" class="hidden badge bg-blue-50 text-blue-700"></div>
+                    </div>
+                    <div class="border border-slate-200 rounded-3xl overflow-hidden">
+                        <div class="grid grid-cols-[auto_1fr_auto_auto] gap-3 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                            <div>Date</div>
+                            <div>Merchant</div>
+                            <div>Amount</div>
+                            <div>Category</div>
+                        </div>
+                        <div id="transactions-list" class="divide-y divide-slate-100 max-h-[420px] overflow-y-auto"></div>
+                    </div>
                 </section>
             </div>
         </aside>
     </div>
 
     <div id="link-subcategory-modal" class="modal-backdrop">
-        <div class="modal-panel space-y-6">
+        <div class="modal-panel space-y-5">
             <div class="space-y-2">
-                <h3>Link to sub-category</h3>
-                <p class="text-sm text-slate-500">Choose a sub-category to link <span id="link-place-name" class="font-semibold text-slate-700"></span>.</p>
+                <h3>Select a sub-category</h3>
+                <p class="text-sm text-slate-500">Choose where to track <span id="link-context-label" class="font-semibold text-slate-700"></span>.</p>
             </div>
-            <form id="link-subcategory-form" class="space-y-5">
+            <div class="space-y-3">
                 <div class="input-row">
-                    <label for="link-subcategory-select">Sub-category</label>
-                    <select id="link-subcategory-select" required></select>
+                    <label for="subcategory-search">Search</label>
+                    <input id="subcategory-search" type="text" placeholder="Filter by name" />
                 </div>
-                <div class="flex items-center justify-end gap-2">
-                    <button type="button" data-action="cancel-link" class="px-4 py-2 rounded-full text-sm font-semibold text-slate-500 hover:bg-slate-100">Cancel</button>
-                    <button type="submit" class="px-4 py-2 rounded-full text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700">Link place</button>
-                </div>
-            </form>
+                <div id="subcategory-chip-grid" class="grid gap-2 max-h-72 overflow-y-auto"></div>
+            </div>
+            <div class="flex items-center justify-between">
+                <button type="button" id="link-create-subcategory" class="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:underline">
+                    <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-700">+</span>
+                    Create new sub-category
+                </button>
+                <button type="button" data-action="cancel-link" class="px-4 py-2 rounded-full text-sm font-semibold text-slate-500 hover:bg-slate-100">Close</button>
+            </div>
         </div>
     </div>
 
@@ -364,7 +412,7 @@
         <div class="modal-panel space-y-6">
             <div class="space-y-2">
                 <h3>Create sub-category</h3>
-                <p class="text-sm text-slate-500">Create a sub-category and optionally link the selected place.</p>
+                <p class="text-sm text-slate-500">Create a sub-category and optionally link the selected item.</p>
             </div>
             <form id="create-subcategory-form" class="space-y-5">
                 <div class="input-row">
@@ -377,8 +425,11 @@
                 </div>
                 <div class="input-row">
                     <label for="create-subcategory-budget">Budget amount</label>
-                    <input id="create-subcategory-budget" type="range" min="50" max="3000" step="25" class="slider-input" />
-                    <div class="text-sm font-semibold text-blue-600" id="create-budget-display">$50</div>
+                    <input id="create-subcategory-budget" type="range" min="25" max="5000" step="25" class="slider-input" />
+                    <div class="flex items-center justify-between text-sm">
+                        <div class="font-semibold text-blue-600" id="create-budget-display">$25</div>
+                        <input id="create-subcategory-budget-input" type="number" min="0" max="10000" step="5" class="w-24 rounded-full border border-slate-200 px-3 py-1 text-right text-sm" />
+                    </div>
                 </div>
                 <div class="flex items-center justify-end gap-2">
                     <button type="button" data-action="cancel-create-subcategory" class="px-4 py-2 rounded-full text-sm font-semibold text-slate-500 hover:bg-slate-100">Cancel</button>
@@ -408,777 +459,1605 @@
     </div>
 
     <script>
-        const HERE_API_KEY = '6iHV0y797UXNMW3TZlJX6gXy67xGh2uEIX77Q7tHdjU';
+const HERE_API_KEY = '6iHV0y797UXNMW3TZlJX6gXy67xGh2uEIX77Q7tHdjU';
+const STORAGE_KEY = 'money-maps-state-v2';
 
-        const POI_TYPES = [
-            "airport","amusement park","aquarium","art gallery","ATM","bakery","bank","bar","beauty salon","bicycle store","book store","bowling alley","bus station","cafe","campground","car dealer","car rental","car repair","car wash","casino","cemetery","church","city hall","clothing store","convenience store","courthouse","dentist","department store","doctor","drugstore","electrician","electronics store","embassy","fire station","florist","funeral home","furniture store","gas station","gym","hair care","hardware store","Hindu temple","home goods store","hospital","insurance agency","jewelry store","laundry","lawyer","library","light rail station","liquor store","local government office","locksmith","lodging","meal delivery","meal takeaway","mosque","movie rental","movie theater","moving company","museum","night club","painter","park","parking","pet store","pharmacy","physiotherapist","plumber","police","post office","primary school","real estate agency","restaurant","roofing contractor","RV park","school","secondary school","shoe store","shopping mall","spa","stadium","storage","store","subway station","supermarket","synagogue","taxi stand","tourist attraction","train station","transit station","travel agency","university","veterinary care","zoo"
-        ];
+const POI_TYPES = [
+    "airport","amusement park","aquarium","art gallery","ATM","bakery","bank","bar","beauty salon","bicycle store","book store","bowling alley","bus station","cafe","campground","car dealer","car rental","car repair","car wash","casino","cemetery","church","city hall","clothing store","convenience store","courthouse","dentist","department store","doctor","drugstore","electrician","electronics store","embassy","fire station","florist","funeral home","furniture store","gas station","gym","hair care","hardware store","Hindu temple","home goods store","hospital","insurance agency","jewelry store","laundry","lawyer","library","light rail station","liquor store","local government office","locksmith","lodging","meal delivery","meal takeaway","mosque","movie rental","movie theater","moving company","museum","night club","painter","park","parking","pet store","pharmacy","physiotherapist","plumber","police","post office","primary school","real estate agency","restaurant","roofing contractor","RV park","school","secondary school","shoe store","shopping mall","spa","stadium","storage","store","subway station","supermarket","synagogue","taxi stand","tourist attraction","train station","transit station","travel agency","university","veterinary care","zoo"
+];
 
-        const GREEN_GRADIENT = ['#34d399', '#059669'];
-        const ZOOM_FOR_40_MILES = 10;
-        const RADIUS_40_MILES_METERS = 64373;
+const GREEN_GRADIENT = ['#34d399', '#059669'];
+const COLOR_PALETTE = [
+    ['#2563eb', '#1e40af'],
+    ['#ec4899', '#be185d'],
+    ['#f59e0b', '#b45309'],
+    ['#10b981', '#047857'],
+    ['#6366f1', '#4338ca'],
+    ['#f97316', '#c2410c'],
+    ['#14b8a6', '#0f766e'],
+    ['#8b5cf6', '#6d28d9'],
+    ['#0ea5e9', '#0369a1'],
+    ['#f43f5e', '#be123c']
+];
 
-        const COLOR_PALETTE = [
-            ['#2563eb', '#1e40af'],
-            ['#ec4899', '#be185d'],
-            ['#f59e0b', '#b45309'],
-            ['#10b981', '#047857'],
-            ['#6366f1', '#4338ca'],
-            ['#f97316', '#c2410c'],
-            ['#14b8a6', '#0f766e'],
-            ['#8b5cf6', '#6d28d9']
-        ];
+const SUB_GRADIENT_VARIANTS = [
+    { start: 0.02, end: -0.05 },
+    { start: 0.08, end: 0 },
+    { start: -0.05, end: -0.12 },
+    { start: 0.14, end: 0.05 }
+];
 
-        function slugify(value) {
-            return value
-                .toLowerCase()
-                .trim()
-                .replace(/[^a-z0-9]+/g, '-');
+const ZOOM_FOR_40_MILES = 10;
+const RADIUS_40_MILES_METERS = 64373;
+
+function slugify(value) {
+    return value
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)+/g, '') || `id-${Date.now()}`;
+}
+
+function clone(obj) {
+    if (typeof structuredClone === 'function') {
+        return structuredClone(obj);
+    }
+    return JSON.parse(JSON.stringify(obj));
+}
+
+function hexToRgb(hex) {
+    const sanitized = hex.replace('#', '');
+    const bigint = parseInt(sanitized, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return { r, g, b };
+}
+
+function rgbToHsl({ r, g, b }) {
+    r /= 255;
+    g /= 255;
+    b /= 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h = 0;
+    let s = 0;
+    const l = (max + min) / 2;
+
+    if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r:
+                h = (g - b) / d + (g < b ? 6 : 0);
+                break;
+            case g:
+                h = (b - r) / d + 2;
+                break;
+            case b:
+                h = (r - g) / d + 4;
+                break;
         }
+        h /= 6;
+    }
 
-        function clone(obj) {
-            return JSON.parse(JSON.stringify(obj));
-        }
+    return { h, s, l };
+}
 
-        const budgetStore = (() => {
-            const parentCategories = [
-                {
-                    id: 'food-dining',
-                    name: 'Food & Dining',
-                    colorStops: COLOR_PALETTE[0],
-                    subCategories: [
-                        { id: 'restaurants', parentId: 'food-dining', name: 'Restaurants', budgetAmount: 450 },
-                        { id: 'coffee', parentId: 'food-dining', name: 'Coffee Shops', budgetAmount: 120 }
-                    ]
-                },
-                {
-                    id: 'home-life',
-                    name: 'Home & Life',
-                    colorStops: COLOR_PALETTE[1],
-                    subCategories: [
-                        { id: 'groceries', parentId: 'home-life', name: 'Groceries', budgetAmount: 520 },
-                        { id: 'home-supplies', parentId: 'home-life', name: 'Home Supplies', budgetAmount: 200 }
-                    ]
-                },
-                {
-                    id: 'mobility',
-                    name: 'Mobility',
-                    colorStops: COLOR_PALETTE[2],
-                    subCategories: [
-                        { id: 'fuel', parentId: 'mobility', name: 'Fuel', budgetAmount: 180 },
-                        { id: 'rideshare', parentId: 'mobility', name: 'Ride Share', budgetAmount: 120 }
-                    ]
-                }
-            ];
+function hslToRgb({ h, s, l }) {
+    let r, g, b;
 
-            const categorizedPlaces = new Map([
-                [
-                    'here:poi:8409qh0k-f1b0795aa9de45dc94cf5f8a3fa1f166',
-                    {
-                        place: {
-                            id: 'here:poi:8409qh0k-f1b0795aa9de45dc94cf5f8a3fa1f166',
-                            name: 'Triangle Coffee',
-                            lat: 35.787743,
-                            lng: -78.644257,
-                            poiType: 'cafe',
-                            address: '201 W Martin St, Raleigh, NC'
-                        },
-                        categoryId: 'food-dining',
-                        subCategoryId: 'coffee'
-                    }
-                ]
-            ]);
+    if (s === 0) {
+        r = g = b = l;
+    } else {
+        const hue2rgb = (p, q, t) => {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1 / 6) return p + (q - p) * 6 * t;
+            if (t < 1 / 2) return q;
+            if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+            return p;
+        };
 
-            const listeners = new Set();
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1 / 3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1 / 3);
+    }
 
-            function notify() {
-                const snapshot = getSnapshot();
-                listeners.forEach((listener) => listener(snapshot));
-            }
+    return {
+        r: Math.round(r * 255),
+        g: Math.round(g * 255),
+        b: Math.round(b * 255)
+    };
+}
 
-            function getSnapshot() {
-                return {
-                    parentCategories: clone(parentCategories),
-                    categorizedPlaces: Array.from(categorizedPlaces.values()).map((entry) => ({
-                        ...clone(entry),
-                        place: clone(entry.place)
-                    }))
-                };
-            }
+function rgbToHex({ r, g, b }) {
+    return `#${[r, g, b]
+        .map((x) => {
+            const hex = x.toString(16);
+            return hex.length === 1 ? '0' + hex : hex;
+        })
+        .join('')}`;
+}
 
-            function subscribe(listener) {
-                listeners.add(listener);
-                listener(getSnapshot());
-                return () => listeners.delete(listener);
-            }
+function adjustHex(hex, delta) {
+    const hsl = rgbToHsl(hexToRgb(hex));
+    hsl.l = Math.min(1, Math.max(0, hsl.l + delta));
+    return rgbToHex(hslToRgb(hsl));
+}
 
-            function nextColor() {
-                return COLOR_PALETTE[parentCategories.length % COLOR_PALETTE.length];
-            }
+function deriveSubGradient(parentStops, variantIndex) {
+    const variant = SUB_GRADIENT_VARIANTS[variantIndex % SUB_GRADIENT_VARIANTS.length];
+    const [start, end] = parentStops;
+    return [adjustHex(start, variant.start), adjustHex(end, variant.end)];
+}
 
-            function recalcParentTotals(parent) {
-                parent.totalBudget = parent.subCategories.reduce((sum, sub) => sum + sub.budgetAmount, 0);
-            }
+function gradientStyle(stops) {
+    return `linear-gradient(135deg, ${stops[0]}, ${stops[1]})`;
+}
 
-            parentCategories.forEach(recalcParentTotals);
+function formatCurrency(value) {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+}
 
-            function findParent(parentId) {
-                return parentCategories.find((parent) => parent.id === parentId);
-            }
+function formatPercent(value) {
+    return `${Math.round(value * 100)}%`;
+}
 
-            function findSubCategory(subCategoryId) {
-                for (const parent of parentCategories) {
-                    const sub = parent.subCategories.find((candidate) => candidate.id === subCategoryId);
-                    if (sub) {
-                        return { parent, sub };
-                    }
-                }
-                return null;
-            }
+const DEFAULT_CATEGORY_SETUP = [
+    {
+        id: 'home-life',
+        name: 'Home & Life',
+        subCategories: [
+            { id: 'rent-mortgage', name: 'Rent & Mortgage', budget: 1800 },
+            { id: 'utilities', name: 'Utilities', budget: 220 },
+            { id: 'home-supplies', name: 'Home Supplies', budget: 160 }
+        ]
+    },
+    {
+        id: 'food-dining',
+        name: 'Food & Dining',
+        subCategories: [
+            { id: 'groceries', name: 'Groceries', budget: 550 },
+            { id: 'restaurants', name: 'Restaurants', budget: 320 },
+            { id: 'coffee', name: 'Coffee Shops', budget: 110 }
+        ]
+    },
+    {
+        id: 'transport',
+        name: 'Transportation',
+        subCategories: [
+            { id: 'fuel', name: 'Fuel', budget: 200 },
+            { id: 'rideshare', name: 'Rideshare & Taxi', budget: 120 },
+            { id: 'parking', name: 'Parking', budget: 60 }
+        ]
+    },
+    {
+        id: 'health',
+        name: 'Health & Wellness',
+        subCategories: [
+            { id: 'pharmacy', name: 'Pharmacy', budget: 85 },
+            { id: 'fitness', name: 'Fitness & Sports', budget: 95 }
+        ]
+    },
+    {
+        id: 'entertainment',
+        name: 'Entertainment',
+        subCategories: [
+            { id: 'streaming', name: 'Streaming & Media', budget: 70 },
+            { id: 'events', name: 'Concerts & Events', budget: 120 },
+            { id: 'outdoors', name: 'Outdoors & Adventure', budget: 140 }
+        ]
+    }
+];
 
-            function ensureUniqueId(baseId) {
-                let id = baseId || 'category';
-                let attempt = 1;
-                while (parentCategories.some((parent) => parent.id === id)) {
-                    id = `${baseId || 'category'}-${attempt++}`;
-                }
-                return id;
-            }
-
-            function createParentCategory(name) {
-                const baseId = slugify(name);
-                const id = ensureUniqueId(baseId);
-                const newParent = {
-                    id,
-                    name,
-                    colorStops: nextColor(),
-                    subCategories: [],
-                    totalBudget: 0
-                };
-                parentCategories.push(newParent);
-                notify();
-                return clone(newParent);
-            }
-
-            function createSubCategory(parentId, name, budgetAmount) {
-                const parent = findParent(parentId);
-                if (!parent) throw new Error('Parent category not found');
-                const baseId = slugify(name) || `subcategory-${Date.now()}`;
-                let id = baseId;
-                let index = 1;
-                while (parent.subCategories.some((sub) => sub.id === id)) {
-                    id = `${baseId}-${index++}`;
-                }
-                const subCategory = { id, parentId, name, budgetAmount };
-                parent.subCategories.push(subCategory);
-                recalcParentTotals(parent);
-                notify();
-                return clone(subCategory);
-            }
-
-            function linkPlaceToSubCategory(place, subCategoryId) {
-                const located = findSubCategory(subCategoryId);
-                if (!located) throw new Error('Sub-category not found');
-                const payload = {
-                    place: { ...place },
-                    categoryId: located.parent.id,
-                    subCategoryId: located.sub.id
-                };
-                categorizedPlaces.set(place.id, payload);
-                notify();
-                return clone(payload);
-            }
-
-            function getCategorization(placeId) {
-                const record = categorizedPlaces.get(placeId);
-                if (!record) return null;
-                const located = findSubCategory(record.subCategoryId);
-                if (!located) return null;
-                return {
-                    ...clone(record),
-                    colorStops: located.parent.colorStops,
-                    categoryName: located.parent.name,
-                    subCategoryName: located.sub.name
-                };
-            }
-
-            function getAllSubCategories() {
-                return parentCategories.flatMap((parent) =>
-                    parent.subCategories.map((sub) => ({
-                        ...clone(sub),
-                        parentName: parent.name,
-                        colorStops: parent.colorStops
-                    }))
-                );
-            }
-
-            return {
-                subscribe,
-                getSnapshot,
-                createParentCategory,
-                createSubCategory,
-                linkPlaceToSubCategory,
-                getCategorization,
-                getAllSubCategories,
-                findParent,
-                findSubCategory
-            };
-        })();
-
-        let map;
-        let mapMarkers = [];
-        let activePoiType = '';
-        let latestResults = [];
-        let pendingPlaceId = null;
-        let pendingPlaceForNewSub = null;
-
-        function initializeMap() {
-            map = L.map('map', {
-                center: [35.7796, -78.6382],
-                zoom: ZOOM_FOR_40_MILES,
-                zoomControl: true,
-                attributionControl: false
+function buildDefaultCategories() {
+    const categories = [];
+    const subCategories = [];
+    DEFAULT_CATEGORY_SETUP.forEach((entry, index) => {
+        const colorStops = COLOR_PALETTE[index % COLOR_PALETTE.length];
+        categories.push({ id: entry.id, name: entry.name, colorStops });
+        entry.subCategories.forEach((sub, subIndex) => {
+            subCategories.push({
+                id: sub.id,
+                parentId: entry.id,
+                name: sub.name,
+                budget: sub.budget,
+                colorStops: deriveSubGradient(colorStops, subIndex)
             });
+        });
+    });
+    return { categories, subCategories, paletteIndex: categories.length };
+}
 
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; CARTO'
-            }).addTo(map);
+function getActiveSource(state) {
+    return state.sources[state.dataSource] || { accounts: [], transactions: [], seeded: false };
+}
 
-            requestInitialLocation();
-        }
+function getFilteredTransactions(state) {
+    const source = getActiveSource(state);
+    let transactions = source.transactions || [];
+    if (state.activeAccountId) {
+        transactions = transactions.filter((txn) => txn.accountId === state.activeAccountId);
+    }
+    return transactions;
+}
 
-        function requestInitialLocation() {
-            if (!navigator.geolocation) {
-                return;
+function computeSpentBySubCategory(state) {
+    const spent = new Map();
+    const transactions = getFilteredTransactions(state);
+    transactions.forEach((txn) => {
+        if (!txn.subCategoryId) return;
+        const amount = txn.amount < 0 ? Math.abs(txn.amount) : 0;
+        if (amount === 0) return;
+        spent.set(txn.subCategoryId, (spent.get(txn.subCategoryId) || 0) + amount);
+    });
+    return spent;
+}
+
+function computeAccountTotals(state) {
+    const transactions = getActiveSource(state).transactions || [];
+    const totals = new Map();
+    transactions.forEach((txn) => {
+        const amount = txn.amount;
+        totals.set(txn.accountId, (totals.get(txn.accountId) || 0) + amount);
+    });
+    return totals;
+}
+
+function createStore() {
+    const listeners = new Set();
+
+    function loadState() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+            try {
+                const parsed = JSON.parse(raw);
+                if (!parsed.sources) {
+                    parsed.sources = {
+                        demo: { accounts: parsed.accounts || [], transactions: parsed.transactions || [], seeded: !!(parsed.transactions && parsed.transactions.length) },
+                        plaid: { accounts: [], transactions: [], seeded: false }
+                    };
+                    delete parsed.accounts;
+                    delete parsed.transactions;
+                }
+                parsed.plaidConnected = Boolean(parsed.plaidConnected);
+                parsed.dataSource = parsed.plaidConnected ? 'plaid' : parsed.dataSource || 'demo';
+                parsed.activeAccountId = parsed.activeAccountId || null;
+                parsed.placeLinks = parsed.placeLinks || {};
+                parsed.paletteIndex = parsed.paletteIndex || (parsed.categories ? parsed.categories.length : 0);
+                parsed.sources.demo = parsed.sources.demo || { accounts: [], transactions: [], seeded: false };
+                parsed.sources.plaid = parsed.sources.plaid || { accounts: [], transactions: [], seeded: false };
+                parsed.categories = parsed.categories || [];
+                parsed.subCategories = parsed.subCategories || [];
+                parsed.categories.forEach((category, index) => {
+                    if (!category.colorStops) {
+                        category.colorStops = COLOR_PALETTE[index % COLOR_PALETTE.length];
+                    }
+                });
+                parsed.subCategories.forEach((sub) => {
+                    if (!sub.colorStops) {
+                        const parent = parsed.categories.find((cat) => cat.id === sub.parentId);
+                        sub.colorStops = deriveSubGradient(parent ? parent.colorStops : COLOR_PALETTE[0], 0);
+                    }
+                    if (typeof sub.budget !== 'number') {
+                        sub.budget = 0;
+                    }
+                });
+                return parsed;
+            } catch (error) {
+                console.error('Failed to parse saved state, using defaults', error);
             }
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const { latitude, longitude } = position.coords;
-                    map.setView([latitude, longitude], ZOOM_FOR_40_MILES);
-                },
-                () => {},
-                { enableHighAccuracy: true, timeout: 5000 }
-            );
         }
+        const defaults = buildDefaultCategories();
+        return {
+            plaidConnected: false,
+            dataSource: 'demo',
+            activeAccountId: null,
+            paletteIndex: defaults.paletteIndex,
+            categories: defaults.categories,
+            subCategories: defaults.subCategories,
+            placeLinks: {},
+            sources: {
+                demo: { accounts: [], transactions: [], seeded: false },
+                plaid: { accounts: [], transactions: [], seeded: false }
+            }
+        };
+    }
 
-        function setLoaderVisible(isVisible) {
-            const loader = document.getElementById('map-loader');
-            loader.classList.toggle('active', isVisible);
+    let state = loadState();
+
+    function persist() {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (error) {
+            console.warn('Unable to persist state', error);
         }
+    }
 
-        function clearMarkers() {
-            mapMarkers.forEach((entry) => entry.marker.remove());
-            mapMarkers = [];
+    function notify() {
+        const snapshot = clone(state);
+        listeners.forEach((listener) => listener(snapshot));
+    }
+
+    function mutate(updater) {
+        const draft = clone(state);
+        updater(draft);
+        state = draft;
+        persist();
+        notify();
+    }
+
+    function subscribe(listener) {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+    }
+
+    function getState() {
+        return clone(state);
+    }
+
+    function createParentCategory(name) {
+        let created = null;
+        mutate((draft) => {
+            const baseId = slugify(name);
+            let id = baseId;
+            let attempt = 1;
+            while (draft.categories.some((cat) => cat.id === id)) {
+                id = `${baseId}-${attempt++}`;
+            }
+            const colorStops = COLOR_PALETTE[draft.paletteIndex % COLOR_PALETTE.length];
+            const parent = { id, name, colorStops };
+            draft.categories.push(parent);
+            draft.paletteIndex = (draft.paletteIndex + 1) % COLOR_PALETTE.length;
+            created = parent;
+        });
+        return created;
+    }
+
+    function createSubCategory(parentId, name, budget) {
+        let created = null;
+        mutate((draft) => {
+            const parent = draft.categories.find((cat) => cat.id === parentId);
+            if (!parent) return;
+            const baseId = slugify(name);
+            let id = baseId;
+            let attempt = 1;
+            while (draft.subCategories.some((sub) => sub.id === id)) {
+                id = `${baseId}-${attempt++}`;
+            }
+            const siblingCount = draft.subCategories.filter((sub) => sub.parentId === parentId).length;
+            const colorStops = deriveSubGradient(parent.colorStops, siblingCount);
+            const subCategory = {
+                id,
+                parentId,
+                name,
+                budget: Number(budget) || 0,
+                colorStops
+            };
+            draft.subCategories.push(subCategory);
+            created = subCategory;
+        });
+        return created;
+    }
+
+    function assignTransactionToSubCategory(transactionId, subCategoryId) {
+        mutate((draft) => {
+            const source = draft.sources[draft.dataSource];
+            const transaction = source.transactions.find((txn) => txn.id === transactionId);
+            if (transaction) {
+                transaction.subCategoryId = subCategoryId;
+            }
+        });
+    }
+
+    function linkPlaceToSubCategory(place, subCategoryId) {
+        mutate((draft) => {
+            draft.placeLinks[place.id] = {
+                place: { ...place },
+                subCategoryId
+            };
+        });
+    }
+
+    function removePlaceLink(placeId) {
+        mutate((draft) => {
+            delete draft.placeLinks[placeId];
+        });
+    }
+
+    function getCategorizationForPlace(placeId) {
+        const record = state.placeLinks[placeId];
+        if (!record) return null;
+        const subCategory = state.subCategories.find((sub) => sub.id === record.subCategoryId);
+        if (!subCategory) return null;
+        const category = state.categories.find((cat) => cat.id === subCategory.parentId);
+        if (!category) return null;
+        return {
+            subCategoryId: subCategory.id,
+            categoryId: category.id,
+            categoryName: category.name,
+            subCategoryName: subCategory.name,
+            colorStops: subCategory.colorStops || category.colorStops
+        };
+    }
+
+    function setAccountFilter(accountId) {
+        mutate((draft) => {
+            draft.activeAccountId = accountId;
+        });
+    }
+
+    function clearAccountFilter() {
+        mutate((draft) => {
+            draft.activeAccountId = null;
+        });
+    }
+
+    function seedDemoData(generator) {
+        mutate((draft) => {
+            const demoData = generator ? generator(draft) : generateDemoData(draft);
+            draft.sources.demo.accounts = demoData.accounts;
+            draft.sources.demo.transactions = demoData.transactions;
+            draft.sources.demo.seeded = true;
+            draft.dataSource = 'demo';
+            draft.activeAccountId = null;
+        });
+    }
+
+    function resetDemoData() {
+        seedDemoData(generateDemoData);
+    }
+
+    function connectPlaid(generator) {
+        mutate((draft) => {
+            const plaidData = generator ? generator(draft) : generatePlaidData(draft);
+            draft.sources.plaid.accounts = plaidData.accounts;
+            draft.sources.plaid.transactions = plaidData.transactions;
+            draft.sources.plaid.seeded = true;
+            draft.plaidConnected = true;
+            draft.dataSource = 'plaid';
+            if (draft.activeAccountId && !plaidData.accounts.some((acc) => acc.id === draft.activeAccountId)) {
+                draft.activeAccountId = null;
+            }
+        });
+    }
+
+    function disconnectPlaid() {
+        mutate((draft) => {
+            draft.plaidConnected = false;
+            draft.dataSource = 'demo';
+            draft.activeAccountId = null;
+        });
+    }
+
+    function setDataSource(source) {
+        mutate((draft) => {
+            if (source === 'plaid' && !draft.plaidConnected) return;
+            draft.dataSource = source;
+            draft.activeAccountId = null;
+        });
+    }
+
+    return {
+        subscribe,
+        getState,
+        createParentCategory,
+        createSubCategory,
+        assignTransactionToSubCategory,
+        linkPlaceToSubCategory,
+        removePlaceLink,
+        getCategorizationForPlace,
+        setAccountFilter,
+        clearAccountFilter,
+        seedDemoData,
+        resetDemoData,
+        connectPlaid,
+        disconnectPlaid,
+        setDataSource
+    };
+}
+
+function randomBetween(min, max) {
+    return Math.random() * (max - min) + min;
+}
+
+function randomChoice(list) {
+    return list[Math.floor(Math.random() * list.length)];
+}
+
+function randomDateWithin(daysBack) {
+    const now = new Date();
+    const offset = Math.floor(Math.random() * daysBack);
+    const date = new Date(now.getTime() - offset * 24 * 60 * 60 * 1000);
+    return date.toISOString().slice(0, 10);
+}
+
+const DEMO_MERCHANTS = [
+    { name: 'Bluegrass Grill', subCategoryId: 'restaurants', mcc: '5812', poiType: 'restaurant', amountRange: [-28, -12], account: 'demo-checking-1', lat: 35.0408, lng: -85.3097 },
+    { name: 'Clumpies Ice Cream Co.', subCategoryId: 'restaurants', mcc: '5814', poiType: 'dessert shop', amountRange: [-14, -6], account: 'demo-checking-1', lat: 35.0569, lng: -85.3102 },
+    { name: 'Publix Hixson Pike', subCategoryId: 'groceries', mcc: '5411', poiType: 'supermarket', amountRange: [-95, -45], account: 'demo-checking-1', lat: 35.1189, lng: -85.2453 },
+    { name: 'Food City Red Bank', subCategoryId: 'groceries', mcc: '5411', poiType: 'supermarket', amountRange: [-130, -60], account: 'demo-checking-1', lat: 35.1256, lng: -85.3187 },
+    { name: 'The Daily Ration', subCategoryId: 'coffee', mcc: '5814', poiType: 'coffee shop', amountRange: [-18, -8], account: 'demo-checking-1', lat: 35.0461, lng: -85.2905 },
+    { name: "Mean Mug Coffeehouse", subCategoryId: 'coffee', mcc: '5814', poiType: 'coffee shop', amountRange: [-12, -5], account: 'demo-checking-1', lat: 35.0401, lng: -85.3006 },
+    { name: 'EPB Energy', subCategoryId: 'utilities', mcc: '4900', poiType: 'utility service', amountRange: [-130, -95], account: 'demo-checking-1' },
+    { name: 'Chattanooga Water Co.', subCategoryId: 'utilities', mcc: '4900', poiType: 'utility service', amountRange: [-70, -45], account: 'demo-checking-1' },
+    { name: 'Scenic City Rideshare', subCategoryId: 'rideshare', mcc: '4121', poiType: 'taxi stand', amountRange: [-28, -12], account: 'demo-checking-1' },
+    { name: 'Nooga Transit', subCategoryId: 'rideshare', mcc: '4121', poiType: 'transportation', amountRange: [-34, -16], account: 'demo-checking-1' },
+    { name: 'Volks Fuel Station', subCategoryId: 'fuel', mcc: '5541', poiType: 'gas station', amountRange: [-58, -32], account: 'demo-checking-1', lat: 35.0468, lng: -85.3043 },
+    { name: 'Chatt Trail Outfitters', subCategoryId: 'outdoors', mcc: '5941', poiType: 'outdoor shop', amountRange: [-125, -60], account: 'demo-credit-1' },
+    { name: 'High Point Climbing', subCategoryId: 'fitness', mcc: '7991', poiType: 'gym', amountRange: [-75, -55], account: 'demo-credit-1', lat: 35.0556, lng: -85.3113 },
+    { name: 'Orange Grove Pharmacy', subCategoryId: 'pharmacy', mcc: '5912', poiType: 'pharmacy', amountRange: [-35, -12], account: 'demo-credit-1' },
+    { name: 'Songbirds Museum', subCategoryId: 'events', mcc: '7999', poiType: 'museum', amountRange: [-48, -20], account: 'demo-credit-1', lat: 35.042, lng: -85.3079 },
+    { name: 'Riverfront Parking Garage', subCategoryId: 'parking', mcc: '7523', poiType: 'parking', amountRange: [-16, -8], account: 'demo-credit-1', lat: 35.0521, lng: -85.3091 },
+    { name: 'Spotify', subCategoryId: 'streaming', mcc: '4899', poiType: 'streaming service', amountRange: [-16, -11], account: 'demo-credit-1' },
+    { name: 'Netflix', subCategoryId: 'streaming', mcc: '4899', poiType: 'streaming service', amountRange: [-20, -15], account: 'demo-credit-1' },
+    { name: 'Chatta Outdoor Rentals', subCategoryId: 'outdoors', mcc: '7999', poiType: 'outdoor recreation', amountRange: [-140, -90], account: 'demo-credit-1' },
+    { name: 'Gig City Payroll', subCategoryId: null, mcc: '6011', poiType: 'direct deposit', amountRange: [1800, 2300], account: 'demo-checking-1' },
+    { name: 'Tennessee River Arts Fest', subCategoryId: 'events', mcc: '7922', poiType: 'event', amountRange: [-95, -45], account: 'demo-credit-1' },
+    { name: 'Whole Body Health', subCategoryId: 'fitness', mcc: '7298', poiType: 'fitness center', amountRange: [-65, -45], account: 'demo-credit-1' },
+    { name: 'Greenway Run Club', subCategoryId: 'fitness', mcc: '7997', poiType: 'sports club', amountRange: [-55, -30], account: 'demo-credit-1' },
+    { name: 'Lookouts Tickets', subCategoryId: 'events', mcc: '7941', poiType: 'stadium', amountRange: [-48, -22], account: 'demo-credit-1' },
+    { name: 'Barking Legs Theater', subCategoryId: 'events', mcc: '7922', poiType: 'theater', amountRange: [-40, -20], account: 'demo-credit-1' },
+    { name: 'BlueCross Premium', subCategoryId: null, mcc: '6300', poiType: 'insurance', amountRange: [-340, -260], account: 'demo-checking-1' },
+    { name: 'Prime Video', subCategoryId: 'streaming', mcc: '4899', poiType: 'streaming service', amountRange: [-15, -9], account: 'demo-credit-1' },
+    { name: 'Chattanooga Library', subCategoryId: null, mcc: '8231', poiType: 'library', amountRange: [0, 0], account: 'demo-checking-1' },
+    { name: 'Public House Chattanooga', subCategoryId: 'restaurants', mcc: '5812', poiType: 'restaurant', amountRange: [-90, -45], account: 'demo-checking-1', lat: 35.0425, lng: -85.3109 },
+    { name: 'Stir Chattanooga', subCategoryId: 'restaurants', mcc: '5812', poiType: 'restaurant', amountRange: [-80, -38], account: 'demo-checking-1', lat: 35.0437, lng: -85.3085 },
+    { name: 'Fleet Feet Sports', subCategoryId: 'outdoors', mcc: '5651', poiType: 'sporting goods', amountRange: [-145, -70], account: 'demo-credit-1' }
+];
+
+function generateDemoAccounts() {
+    return [
+        { id: 'demo-checking-1', source: 'demo', name: 'Nooga Checking', type: 'checking', balance: 4125.42 },
+        { id: 'demo-savings-1', source: 'demo', name: 'Riverwalk Savings', type: 'savings', balance: 8200.73 },
+        { id: 'demo-credit-1', source: 'demo', name: 'Scenic Rewards Visa', type: 'credit', balance: -1285.12 }
+    ];
+}
+
+function generateDemoData() {
+    const accounts = generateDemoAccounts();
+    const transactions = [];
+    let counter = 0;
+    while (transactions.length < 200) {
+        const merchant = randomChoice(DEMO_MERCHANTS);
+        const [min, max] = merchant.amountRange;
+        const amount = Number(randomBetween(min, max).toFixed(2));
+        const txn = {
+            id: `demo-${counter++}`,
+            accountId: merchant.account,
+            date: randomDateWithin(120),
+            merchant: merchant.name,
+            amount,
+            mcc: merchant.mcc,
+            poiType: merchant.poiType,
+            lat: merchant.lat ? merchant.lat + randomBetween(-0.01, 0.01) : undefined,
+            lng: merchant.lng ? merchant.lng + randomBetween(-0.01, 0.01) : undefined,
+            subCategoryId: merchant.subCategoryId && Math.random() > 0.2 ? merchant.subCategoryId : null,
+            source: 'demo'
+        };
+        transactions.push(txn);
+    }
+    transactions.sort((a, b) => (a.date < b.date ? 1 : -1));
+    return { accounts, transactions };
+}
+
+function generatePlaidData() {
+    const accounts = [
+        { id: 'plaid-checking-1', source: 'plaid', name: 'Plaid Checking', type: 'checking', balance: 5240.31 },
+        { id: 'plaid-credit-1', source: 'plaid', name: 'Plaid Rewards', type: 'credit', balance: -980.44 }
+    ];
+    const merchants = [
+        { name: 'Trader Joe\'s Atlanta', subCategoryId: 'groceries', mcc: '5411', poiType: 'supermarket', amountRange: [-110, -60], account: 'plaid-checking-1' },
+        { name: 'Whole Foods Market', subCategoryId: 'groceries', mcc: '5411', poiType: 'supermarket', amountRange: [-140, -65], account: 'plaid-checking-1' },
+        { name: 'Delta Airlines', subCategoryId: 'events', mcc: '4511', poiType: 'travel agency', amountRange: [-420, -210], account: 'plaid-credit-1' },
+        { name: 'Uber Trip', subCategoryId: 'rideshare', mcc: '4121', poiType: 'transportation', amountRange: [-32, -12], account: 'plaid-credit-1' },
+        { name: 'Spotify', subCategoryId: 'streaming', mcc: '4899', poiType: 'streaming service', amountRange: [-18, -11], account: 'plaid-credit-1' },
+        { name: 'Gympass', subCategoryId: 'fitness', mcc: '7997', poiType: 'fitness', amountRange: [-58, -34], account: 'plaid-credit-1' },
+        { name: 'Downtown Parking', subCategoryId: 'parking', mcc: '7523', poiType: 'parking', amountRange: [-22, -12], account: 'plaid-credit-1' },
+        { name: 'Payroll Deposit', subCategoryId: null, mcc: '6011', poiType: 'direct deposit', amountRange: [2400, 3200], account: 'plaid-checking-1' }
+    ];
+    const transactions = [];
+    let counter = 0;
+    for (let i = 0; i < 120; i++) {
+        const merchant = randomChoice(merchants);
+        const [min, max] = merchant.amountRange;
+        const amount = Number(randomBetween(min, max).toFixed(2));
+        transactions.push({
+            id: `plaid-${counter++}`,
+            accountId: merchant.account,
+            date: randomDateWithin(90),
+            merchant: merchant.name,
+            amount,
+            mcc: merchant.mcc,
+            poiType: merchant.poiType,
+            subCategoryId: merchant.subCategoryId && Math.random() > 0.35 ? merchant.subCategoryId : null,
+            source: 'plaid'
+        });
+    }
+    transactions.sort((a, b) => (a.date < b.date ? 1 : -1));
+    return { accounts, transactions };
+}
+
+let map;
+let mapMarkers = [];
+let activePoiType = '';
+let latestResults = [];
+let linkModalContext = null;
+let openTransactionPanels = new Set();
+let transactionSearchTerms = new Map();
+let pendingCreateContext = null;
+
+const appStore = createStore();
+
+function setLoaderVisible(isVisible) {
+    const loader = document.getElementById('map-loader');
+    if (loader) {
+        loader.classList.toggle('active', isVisible);
+    }
+}
+
+function initializeMap() {
+    map = L.map('map', {
+        center: [35.0456, -85.3097],
+        zoom: ZOOM_FOR_40_MILES,
+        zoomControl: true,
+        attributionControl: false
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; CARTO'
+    }).addTo(map);
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                map.setView([latitude, longitude], ZOOM_FOR_40_MILES);
+            },
+            () => {},
+            { enableHighAccuracy: true, timeout: 5000 }
+        );
+    }
+}
+
+function clearMarkers() {
+    mapMarkers.forEach((entry) => entry.marker.remove());
+    mapMarkers = [];
+}
+
+function createMarker(place, colorStops) {
+    const icon = L.divIcon({
+        className: 'gradient-pin-wrapper',
+        iconSize: [38, 38],
+        iconAnchor: [19, 36],
+        html: `
+            <div class="gradient-pin" style="background:${gradientStyle(colorStops)}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+            </div>
+        `
+    });
+    const marker = L.marker([place.lat, place.lng], { icon });
+    marker.addTo(map);
+    mapMarkers.push({ marker, placeId: place.id });
+}
+
+function renderMarkers(results) {
+    clearMarkers();
+    results.forEach((result) => {
+        const colorStops = result.status === 'categorized' ? result.colorStops : GREEN_GRADIENT;
+        if (result.lat && result.lng) {
+            createMarker(result, colorStops);
         }
+    });
+}
 
-        function gradientStyle([start, end]) {
-            return `linear-gradient(135deg, ${start}, ${end})`;
+function renderPoiButtons() {
+    const container = document.getElementById('poi-type-strip');
+    if (!container) return;
+    container.innerHTML = POI_TYPES.map((type) => `<button class="poi-button" data-poi-type="${type}">${type}</button>`).join('');
+}
+
+function formatAddress(item) {
+    if (!item.address) return '';
+    return item.address.label || '';
+}
+
+function selectBestPoiType(categories = []) {
+    if (!categories || categories.length === 0) return 'point of interest';
+    const sorted = [...categories].sort((a, b) => (b.name?.length || 0) - (a.name?.length || 0));
+    return sorted[0]?.name?.toLowerCase() || 'point of interest';
+}
+
+function decorateResults(results) {
+    return results.map((place) => {
+        const categorization = appStore.getCategorizationForPlace(place.id);
+        if (categorization) {
+            return {
+                ...place,
+                status: 'categorized',
+                categoryId: categorization.categoryId,
+                subCategoryId: categorization.subCategoryId,
+                colorStops: categorization.colorStops,
+                categoryName: categorization.categoryName,
+                subCategoryName: categorization.subCategoryName
+            };
         }
+        return { ...place, status: 'uncategorized', colorStops: GREEN_GRADIENT };
+    });
+}
 
-        function createMarker(place, colorStops) {
-            const icon = L.divIcon({
-                className: 'gradient-pin-wrapper',
-                iconSize: [38, 38],
-                iconAnchor: [19, 36],
-                html: `
-                    <div class="gradient-pin" style="background:${gradientStyle(colorStops)}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+function renderSearchResults(results) {
+    const container = document.getElementById('search-results');
+    if (!container) return;
+    if (!results || results.length === 0) {
+        container.innerHTML = `<div class="bg-white/90 backdrop-blur-sm rounded-2xl p-6 text-center text-sm text-slate-500 shadow-lg">No places found. Try a different search or tap a place type.</div>`;
+        container.classList.remove('hidden');
+        return;
+    }
+
+    container.innerHTML = results
+        .map((result) => {
+            const gradient = gradientStyle(result.status === 'categorized' ? result.colorStops : GREEN_GRADIENT);
+            const badgeClass =
+                result.status === 'categorized'
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'bg-emerald-50 text-emerald-700';
+            const badgeLabel =
+                result.status === 'categorized'
+                    ? `Categorized • ${result.subCategoryName || 'Sub-category'}`
+                    : 'Uncategorized';
+
+            return `
+                <div class="search-result-card bg-white/90 backdrop-blur-sm rounded-2xl p-4 flex gap-3 items-start" data-place-id="${result.id}">
+                    <div class="search-result-icon" style="background:${gradient}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0z"></path>
                             <circle cx="12" cy="10" r="3"></circle>
                         </svg>
                     </div>
-                `
-            });
-            const marker = L.marker([place.lat, place.lng], { icon });
-            marker.addTo(map);
-            mapMarkers.push({ marker, placeId: place.id });
-        }
-
-        function renderMarkers(results) {
-            clearMarkers();
-            results.forEach((result) => {
-                const colorStops = result.status === 'categorized' ? result.colorStops : GREEN_GRADIENT;
-                createMarker(result, colorStops);
-            });
-        }
-
-        function renderPoiButtons() {
-            const container = document.getElementById('poi-type-strip');
-            container.innerHTML = POI_TYPES.map((type) => `<button class="poi-button" data-poi-type="${type}">${type}</button>`).join('');
-        }
-
-        function formatAddress(item) {
-            if (!item.address) return '';
-            const { label } = item.address;
-            return label || '';
-        }
-
-        function selectBestPoiType(categories = []) {
-            if (!categories || categories.length === 0) return 'point of interest';
-            const sorted = [...categories].sort((a, b) => (b.name?.length || 0) - (a.name?.length || 0));
-            return sorted[0]?.name?.toLowerCase() || 'point of interest';
-        }
-
-        function decorateResults(results) {
-            return results.map((place) => {
-                const categorization = budgetStore.getCategorization(place.id);
-                if (categorization) {
-                    return {
-                        ...place,
-                        status: 'categorized',
-                        categoryId: categorization.categoryId,
-                        subCategoryId: categorization.subCategoryId,
-                        colorStops: categorization.colorStops || GREEN_GRADIENT,
-                        categoryName: categorization.categoryName,
-                        subCategoryName: categorization.subCategoryName
-                    };
-                }
-                return { ...place, status: 'uncategorized', colorStops: GREEN_GRADIENT };
-            });
-        }
-
-        function renderSearchResults(results) {
-            const container = document.getElementById('search-results');
-            if (!results || results.length === 0) {
-                container.innerHTML = `<div class="bg-white/90 backdrop-blur-sm rounded-2xl p-6 text-center text-sm text-slate-500 shadow-lg">No places found. Try a different search or tap a place type.</div>`;
-                container.classList.remove('hidden');
-                return;
-            }
-
-            container.innerHTML = results
-                .map((result) => {
-                    const gradient = gradientStyle(result.status === 'categorized' ? result.colorStops : GREEN_GRADIENT);
-                    const badgeClass =
-                        result.status === 'categorized'
-                            ? 'bg-blue-50 text-blue-700'
-                            : 'bg-emerald-50 text-emerald-700';
-                    const badgeLabel = result.status === 'categorized' ? `Categorized • ${result.subCategoryName || 'Sub-category'}` : 'New place';
-
-                    return `
-                        <div class="search-result-card bg-white/90 backdrop-blur-sm rounded-2xl p-4 flex gap-3 items-start" data-place-id="${result.id}">
-                            <div class="search-result-icon" style="background:${gradient}">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M3 21V8a2 2 0 0 1 2-2h3l2-3h4l2 3h3a2 2 0 0 1 2 2v13"></path>
-                                    <path d="M16 21v-5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v5"></path>
-                                </svg>
+                    <div class="flex-1 space-y-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="space-y-1">
+                                <h3 class="font-semibold text-slate-900">${result.name}</h3>
+                                <p class="text-xs uppercase tracking-wide text-slate-400">${result.poiType}</p>
+                                ${result.address ? `<p class="text-xs text-slate-500">${result.address}</p>` : ''}
                             </div>
-                            <div class="flex-1 space-y-3">
-                                <div class="flex items-start justify-between gap-3">
-                                    <div class="space-y-1">
-                                        <h3 class="font-semibold text-slate-900">${result.name}</h3>
-                                        <p class="text-xs uppercase tracking-wide text-slate-400">${result.poiType}</p>
-                                        ${result.address ? `<p class="text-xs text-slate-500">${result.address}</p>` : ''}
-                                    </div>
-                                    <span class="badge ${badgeClass}">${badgeLabel}</span>
-                                </div>
-                                <div class="search-result-actions flex flex-wrap gap-2">
-                                    <button data-action="link-existing" data-place-id="${result.id}">
-                                        <span>+</span>
-                                        <span>Add to existing</span>
-                                    </button>
-                                    <button data-action="create-subcategory" data-place-id="${result.id}">
-                                        <span>+</span>
-                                        <span>Create sub-category</span>
-                                    </button>
-                                </div>
+                            <span class="badge ${badgeClass}">${badgeLabel}</span>
+                        </div>
+                        <div class="search-result-actions flex flex-wrap gap-2">
+                            <button data-action="map-link" data-place-id="${result.id}">
+                                <span>🗂</span>
+                                <span>Add to sub-category</span>
+                            </button>
+                            <button data-action="map-create" data-place-id="${result.id}">
+                                <span>+</span>
+                                <span>Create sub-category</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        })
+        .join('');
+
+    container.classList.remove('hidden');
+}
+
+function computeDistanceMeters(lat1, lng1, lat2, lng2) {
+    const R = 6371e3;
+    const rad = (deg) => (deg * Math.PI) / 180;
+    const dLat = rad(lat2 - lat1);
+    const dLng = rad(lng2 - lng1);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+function mergeWithCategorized(results, center) {
+    const mergedMap = new Map();
+    results.forEach((result) => mergedMap.set(result.id, result));
+    const state = appStore.getState();
+    Object.values(state.placeLinks).forEach((entry) => {
+        const categorization = appStore.getCategorizationForPlace(entry.place.id);
+        if (!categorization) return;
+        const withinRadius = !center
+            ? true
+            : computeDistanceMeters(center.lat, center.lng, entry.place.lat, entry.place.lng) <= RADIUS_40_MILES_METERS * 1.5;
+        if (!withinRadius) return;
+        mergedMap.set(entry.place.id, {
+            ...entry.place,
+            status: 'categorized',
+            categoryId: categorization.categoryId,
+            subCategoryId: categorization.subCategoryId,
+            colorStops: categorization.colorStops,
+            categoryName: categorization.categoryName,
+            subCategoryName: categorization.subCategoryName
+        });
+    });
+    return Array.from(mergedMap.values());
+}
+
+async function geocodeIfLocation(query) {
+    if (!query) return null;
+    const locationRegex = /(chattanooga|tennessee|tn|\d{5})/i;
+    if (!locationRegex.test(query)) {
+        return null;
+    }
+    try {
+        const url = `https://geocode.search.hereapi.com/v1/geocode?q=${encodeURIComponent(query)}&limit=1&apiKey=${HERE_API_KEY}`;
+        const response = await fetch(url);
+        if (!response.ok) return null;
+        const data = await response.json();
+        const item = data.items?.[0];
+        if (!item) return null;
+        const type = item.resultType;
+        if (['locality', 'administrativeArea', 'county', 'state', 'postalCode'].includes(type)) {
+            return {
+                lat: item.position.lat,
+                lng: item.position.lng
+            };
+        }
+    } catch (error) {
+        console.error('Geocode error', error);
+    }
+    return null;
+}
+
+async function fetchHereResults(query, center, poiType) {
+    const circle = `${center.lat},${center.lng};r=${RADIUS_40_MILES_METERS}`;
+    let url;
+    if (poiType && query) {
+        url = `https://discover.search.hereapi.com/v1/discover?q=${encodeURIComponent(`${query} ${poiType}`)}&in=circle:${circle}&limit=80&apiKey=${HERE_API_KEY}`;
+    } else if (poiType) {
+        url = `https://discover.search.hereapi.com/v1/discover?q=${encodeURIComponent(poiType)}&in=circle:${circle}&limit=80&apiKey=${HERE_API_KEY}`;
+    } else if (query) {
+        url = `https://discover.search.hereapi.com/v1/discover?q=${encodeURIComponent(query)}&in=circle:${circle}&limit=80&apiKey=${HERE_API_KEY}`;
+    } else {
+        return [];
+    }
+
+    const response = await fetch(url);
+    if (!response.ok) {
+        console.error('HERE API error', await response.text());
+        return [];
+    }
+
+    const data = await response.json();
+    if (!data.items) return [];
+
+    return data.items
+        .filter((item) => item.position?.lat && item.position?.lng)
+        .map((item) => ({
+            id: item.id,
+            name: item.title,
+            lat: item.position.lat,
+            lng: item.position.lng,
+            poiType: selectBestPoiType(item.categories),
+            address: formatAddress(item),
+            status: 'uncategorized'
+        }));
+}
+
+async function runSearch(query) {
+    if (HERE_API_KEY === 'YOUR_HERE_API_KEY') {
+        console.error('HERE API key missing');
+        return;
+    }
+
+    if (!query && !activePoiType) {
+        latestResults = [];
+        clearMarkers();
+        const container = document.getElementById('search-results');
+        if (container) {
+            container.classList.add('hidden');
+            container.innerHTML = '';
+        }
+        return;
+    }
+
+    setLoaderVisible(true);
+    let center = map.getCenter();
+    const geocoded = await geocodeIfLocation(query);
+    if (geocoded) {
+        center = geocoded;
+        map.setView([geocoded.lat, geocoded.lng], ZOOM_FOR_40_MILES);
+    }
+
+    try {
+        const hereResults = await fetchHereResults(query, center, activePoiType);
+        const merged = mergeWithCategorized(hereResults, center);
+        latestResults = decorateResults(merged);
+        renderMarkers(latestResults);
+        renderSearchResults(latestResults);
+    } catch (error) {
+        console.error('Search error', error);
+    } finally {
+        setLoaderVisible(false);
+    }
+}
+
+function refreshResults() {
+    if (latestResults.length === 0) return;
+    latestResults = decorateResults(latestResults);
+    renderMarkers(latestResults);
+    renderSearchResults(latestResults);
+}
+
+function getSubCategoriesWithParents(state) {
+    const parentMap = new Map(state.categories.map((cat) => [cat.id, cat]));
+    return state.subCategories.map((sub) => ({
+        ...sub,
+        parentName: parentMap.get(sub.parentId)?.name || 'Category'
+    }));
+}
+
+function renderBudgetView(state) {
+    const container = document.getElementById('budget-list');
+    if (!container) return;
+    const dataSourceLabel = document.getElementById('active-data-source');
+    if (dataSourceLabel) {
+        const sourceText = state.dataSource === 'plaid' ? 'Plaid accounts' : 'Demo data';
+        dataSourceLabel.textContent = sourceText;
+    }
+    const filterBadge = document.getElementById('active-account-filter');
+    const clearFilterBtn = document.getElementById('clear-account-filter');
+    if (state.activeAccountId) {
+        const account = getActiveSource(state).accounts.find((acc) => acc.id === state.activeAccountId);
+        if (account) {
+            filterBadge.textContent = `Account · ${account.name}`;
+            filterBadge.classList.remove('hidden');
+            if (clearFilterBtn) clearFilterBtn.classList.remove('hidden');
+        }
+    } else {
+        filterBadge?.classList.add('hidden');
+        clearFilterBtn?.classList.add('hidden');
+    }
+
+    if (!state.categories.length) {
+        container.innerHTML = '<p class="text-sm text-slate-500">No parent categories yet. Create one to begin tracking.</p>';
+        return;
+    }
+
+    const spentBySub = computeSpentBySubCategory(state);
+    const subByParent = new Map();
+    state.subCategories.forEach((sub) => {
+        if (!subByParent.has(sub.parentId)) {
+            subByParent.set(sub.parentId, []);
+        }
+        subByParent.get(sub.parentId).push(sub);
+    });
+
+    container.innerHTML = state.categories
+        .map((parent) => {
+            const subCategories = subByParent.get(parent.id) || [];
+            const totalBudget = subCategories.reduce((sum, sub) => sum + (sub.budget || 0), 0);
+            const subMarkup = subCategories
+                .map((sub) => {
+                    const spent = spentBySub.get(sub.id) || 0;
+                    const ratio = sub.budget > 0 ? Math.min(1, spent / sub.budget) : spent > 0 ? 1 : 0;
+                    const overspent = sub.budget > 0 && spent > sub.budget;
+                    return `
+                        <div class="space-y-2 rounded-2xl border border-slate-200 bg-white p-3" aria-label="${sub.name} ${formatCurrency(spent)} spent of ${formatCurrency(sub.budget)}">
+                            <div class="flex items-center justify-between">
+                                <p class="text-sm font-semibold text-slate-800">${sub.name}</p>
+                                <span class="text-xs font-semibold ${overspent ? 'text-rose-600' : 'text-slate-500'}">
+                                    ${formatCurrency(spent)} / ${formatCurrency(sub.budget)}
+                                </span>
+                            </div>
+                            <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuenow="${Math.min(100, Math.round((spent / (sub.budget || 1)) * 100))}" aria-valuemin="0" aria-valuemax="100">
+                                <div class="h-full rounded-full ${overspent ? 'bg-rose-500' : ''}" style="width:${Math.min(100, ratio * 100)}%;background:${gradientStyle(sub.colorStops)}"></div>
+                            </div>
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-slate-400">Budgeted ${formatCurrency(sub.budget)}</span>
+                                <span class="font-semibold ${overspent ? 'text-rose-600' : 'text-slate-500'}">${formatPercent(sub.budget > 0 ? Math.min(spent / sub.budget, 1) : spent > 0 ? 1 : 0)}</span>
                             </div>
                         </div>
                     `;
                 })
                 .join('');
 
-            container.classList.remove('hidden');
-        }
+            const categorySpent = subCategories.reduce((sum, sub) => sum + (spentBySub.get(sub.id) || 0), 0);
+            const categoryRatio = totalBudget > 0 ? Math.min(1, categorySpent / totalBudget) : categorySpent > 0 ? 1 : 0;
+            const categoryOverspent = totalBudget > 0 && categorySpent > totalBudget;
 
-        function computeDistanceMeters(lat1, lng1, lat2, lng2) {
-            const R = 6371e3;
-            const rad = (deg) => (deg * Math.PI) / 180;
-            const dLat = rad(lat2 - lat1);
-            const dLng = rad(lng2 - lng1);
-            const a =
-                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c;
-        }
+            return `
+                <article class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm space-y-4" aria-label="${parent.name} ${formatCurrency(categorySpent)} spent of ${formatCurrency(totalBudget)}">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="h-10 w-10 rounded-2xl" style="background:${gradientStyle(parent.colorStops)}"></div>
+                            <div>
+                                <h3 class="font-semibold text-lg text-slate-900">${parent.name}</h3>
+                                <p class="text-xs uppercase tracking-wide text-slate-400">${formatCurrency(totalBudget)} budgeted</p>
+                            </div>
+                        </div>
+                        <button class="add-subcategory-btn flex h-9 items-center justify-center rounded-full bg-slate-100 px-3 text-xs font-semibold text-slate-600 hover:bg-slate-200" data-parent-id="${parent.id}">
+                            + Sub-category
+                        </button>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="space-y-2">
+                            <div class="h-3 w-full overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuenow="${Math.min(100, Math.round((categorySpent / (totalBudget || 1)) * 100))}" aria-valuemin="0" aria-valuemax="100">
+                                <div class="h-full rounded-full ${categoryOverspent ? 'bg-rose-500' : ''}" style="width:${Math.min(100, categoryRatio * 100)}%;background:${gradientStyle(parent.colorStops)}"></div>
+                            </div>
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="font-semibold ${categoryOverspent ? 'text-rose-600' : 'text-slate-600'}">${formatCurrency(categorySpent)} spent</span>
+                                <span class="text-slate-400">${formatPercent(totalBudget > 0 ? Math.min(categorySpent / totalBudget, 1) : categorySpent > 0 ? 1 : 0)} used</span>
+                            </div>
+                        </div>
+                        ${subMarkup || '<p class="text-xs text-slate-400">No sub-categories yet.</p>'}
+                    </div>
+                </article>
+            `;
+        })
+        .join('');
+}
 
-        function mergeWithCategorized(results, center) {
-            const mergedMap = new Map();
-            results.forEach((result) => mergedMap.set(result.id, result));
+function renderAccounts(state) {
+    const accountsList = document.getElementById('accounts-list');
+    const accountsSummary = document.getElementById('accounts-summary');
+    const accountsTotal = document.getElementById('accounts-total');
+    const dataSourceLabel = document.getElementById('accounts-data-source');
+    const disconnectButton = document.getElementById('disconnect-plaid');
+    if (!accountsList) return;
 
-            const categorized = budgetStore.getSnapshot().categorizedPlaces
-                .map((entry) => {
-                    const parent = budgetStore.findParent(entry.categoryId);
-                    const located = budgetStore.findSubCategory(entry.subCategoryId);
-                    return {
-                        ...entry.place,
-                        status: 'categorized',
-                        colorStops: parent?.colorStops || GREEN_GRADIENT,
-                        categoryId: entry.categoryId,
-                        subCategoryId: entry.subCategoryId,
-                        categoryName: parent?.name,
-                        subCategoryName: located?.sub.name
-                    };
-                })
-                .filter((place) => {
-                    if (!center) return true;
-                    return computeDistanceMeters(center.lat, center.lng, place.lat, place.lng) <= RADIUS_40_MILES_METERS * 1.5;
-                });
+    const source = getActiveSource(state);
+    dataSourceLabel.textContent = state.dataSource === 'plaid' ? 'Plaid' : 'Demo';
 
-            categorized.forEach((place) => {
-                if (!mergedMap.has(place.id)) {
-                    mergedMap.set(place.id, place);
-                }
-            });
+    if (state.plaidConnected) {
+        disconnectButton?.classList.remove('hidden');
+    } else {
+        disconnectButton?.classList.add('hidden');
+    }
 
-            return Array.from(mergedMap.values());
-        }
+    if (!source.accounts.length) {
+        accountsList.innerHTML = '<p class="text-sm text-slate-500">No accounts yet. Connect Plaid or load demo data.</p>';
+        accountsSummary?.classList.add('hidden');
+        return;
+    }
 
-        async function geocodeIfLocation(query) {
-            if (!query) return null;
-            try {
-                const url = `https://geocode.search.hereapi.com/v1/geocode?q=${encodeURIComponent(query)}&limit=1&apiKey=${HERE_API_KEY}`;
-                const response = await fetch(url);
-                if (!response.ok) return null;
-                const data = await response.json();
-                const item = data.items?.[0];
-                if (!item) return null;
-                const type = item.resultType;
-                if (['locality', 'administrativeArea', 'county', 'state', 'postalCode'].includes(type)) {
-                    return {
-                        lat: item.position.lat,
-                        lng: item.position.lng
-                    };
-                }
-            } catch (error) {
-                console.error('Geocode error', error);
+    const total = source.accounts.reduce((sum, acc) => sum + acc.balance, 0);
+    if (accountsSummary && accountsTotal) {
+        accountsTotal.textContent = formatCurrency(total);
+        accountsSummary.classList.remove('hidden');
+    }
+
+    accountsList.innerHTML = source.accounts
+        .map((account) => {
+            const isActive = state.activeAccountId === account.id;
+            const balanceClass = account.balance < 0 ? 'text-rose-500' : 'text-emerald-500';
+            return `
+                <button class="w-full rounded-3xl border ${isActive ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white'} px-4 py-3 text-left shadow-sm hover:border-blue-400" data-account-id="${account.id}">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-slate-900">${account.name}</p>
+                            <p class="text-xs uppercase tracking-wide text-slate-400">${account.type}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-semibold ${balanceClass}">${formatCurrency(account.balance)}</p>
+                            ${isActive ? '<p class="text-[10px] text-blue-600 font-semibold uppercase">Filtered</p>' : ''}
+                        </div>
+                    </div>
+                </button>
+            `;
+        })
+        .join('');
+}
+
+function renderSubcategoryChipsMarkup(state, searchTerm, activeId) {
+    const normalized = (searchTerm || '').toLowerCase();
+    const subCategories = getSubCategoriesWithParents(state).filter((sub) => {
+        if (!normalized) return true;
+        return sub.name.toLowerCase().includes(normalized) || sub.parentName.toLowerCase().includes(normalized);
+    });
+    if (!subCategories.length) {
+        return '<p class="text-xs text-slate-500">No matches. Create a new sub-category.</p>';
+    }
+    return subCategories
+        .map((sub) => {
+            const active = sub.id === activeId;
+            return `
+                <button class="subcategory-chip inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold text-white shadow-sm" style="background:${gradientStyle(sub.colorStops)};${active ? 'box-shadow:0 0 0 2px rgba(37,99,235,0.5);' : ''}" data-subcategory-id="${sub.id}">
+                    <span>${sub.name}</span>
+                    <span class="text-[10px] uppercase tracking-wide text-white/70">${sub.parentName}</span>
+                </button>
+            `;
+        })
+        .join('');
+}
+
+function renderTransactions(state) {
+    const list = document.getElementById('transactions-list');
+    const sourcePill = document.getElementById('transactions-source-pill');
+    const accountPill = document.getElementById('transactions-account-pill');
+    const demoBtn = document.getElementById('demo-data-btn');
+    const resetDemoBtn = document.getElementById('reset-demo-btn');
+    const connectBtn = document.getElementById('connect-plaid-btn');
+
+    const source = getActiveSource(state);
+    if (sourcePill) {
+        sourcePill.textContent = state.dataSource === 'plaid' ? 'Using Plaid data' : 'Using demo data';
+    }
+    if (accountPill) {
+        if (state.activeAccountId) {
+            const account = source.accounts.find((acc) => acc.id === state.activeAccountId);
+            if (account) {
+                accountPill.textContent = `Filtered: ${account.name}`;
+                accountPill.classList.remove('hidden');
             }
-            return null;
+        } else {
+            accountPill.classList.add('hidden');
         }
+    }
 
-        async function fetchHereResults(query, center, poiType) {
-            const circle = `${center.lat},${center.lng};r=${RADIUS_40_MILES_METERS}`;
-            let url;
-            if (poiType && query) {
-                url = `https://discover.search.hereapi.com/v1/discover?q=${encodeURIComponent(`${query} ${poiType}`)}&in=circle:${circle}&limit=80&apiKey=${HERE_API_KEY}`;
-            } else if (poiType) {
-                url = `https://discover.search.hereapi.com/v1/discover?q=${encodeURIComponent(poiType)}&in=circle:${circle}&limit=80&apiKey=${HERE_API_KEY}`;
-            } else if (query) {
-                url = `https://discover.search.hereapi.com/v1/discover?q=${encodeURIComponent(query)}&in=circle:${circle}&limit=80&apiKey=${HERE_API_KEY}`;
+    if (demoBtn) {
+        if (state.plaidConnected) {
+            demoBtn.classList.add('hidden');
+        } else if (state.sources.demo.seeded) {
+            demoBtn.textContent = 'Demo data loaded';
+            demoBtn.classList.add('pointer-events-none', 'text-slate-400');
+            demoBtn.classList.remove('hidden');
+        } else {
+            demoBtn.textContent = 'Use Demo Data (200)';
+            demoBtn.classList.remove('pointer-events-none', 'text-slate-400');
+            demoBtn.classList.remove('hidden');
+        }
+    }
+    if (resetDemoBtn) {
+        if (!state.plaidConnected && state.sources.demo.seeded) {
+            resetDemoBtn.classList.remove('hidden');
+        } else {
+            resetDemoBtn.classList.add('hidden');
+        }
+    }
+    if (connectBtn) {
+        if (state.plaidConnected) {
+            connectBtn.textContent = 'Plaid Connected';
+            connectBtn.classList.add('bg-emerald-600');
+            connectBtn.classList.remove('bg-blue-600');
+            connectBtn.disabled = true;
+        } else {
+            connectBtn.textContent = 'Connect Bank (Plaid)';
+            connectBtn.classList.remove('bg-emerald-600');
+            connectBtn.classList.add('bg-blue-600');
+            connectBtn.disabled = false;
+        }
+    }
+
+    if (!list) return;
+
+    const transactions = getFilteredTransactions(state);
+    const subCategories = getSubCategoriesWithParents(state);
+    const subLookup = new Map(subCategories.map((sub) => [sub.id, sub]));
+    const accountLookup = new Map(source.accounts.map((acc) => [acc.id, acc]));
+
+    if (!transactions.length) {
+        list.innerHTML = '<div class="p-6 text-center text-sm text-slate-500">No transactions yet. Connect Plaid or load demo data.</div>';
+        return;
+    }
+
+    list.innerHTML = transactions
+        .map((txn) => {
+            const sub = txn.subCategoryId ? subLookup.get(txn.subCategoryId) : null;
+            const account = accountLookup.get(txn.accountId);
+            const isOpen = openTransactionPanels.has(txn.id);
+            const searchValue = transactionSearchTerms.get(txn.id) || '';
+            return `
+                <div class="transaction-row" data-transaction-id="${txn.id}">
+                    <div class="grid grid-cols-[auto_1fr_auto_auto] gap-3 px-4 py-3 items-start">
+                        <div class="text-sm font-medium text-slate-600">${txn.date}</div>
+                        <div>
+                            <p class="text-sm font-semibold text-slate-900">${txn.merchant}</p>
+                            <p class="text-[11px] uppercase tracking-wide text-slate-400">${account ? account.name : 'Account'}${txn.poiType ? ` • ${txn.poiType}` : ''}</p>
+                        </div>
+                        <div class="text-sm font-semibold ${txn.amount < 0 ? 'text-rose-500' : 'text-emerald-600'}">${formatCurrency(txn.amount)}</div>
+                        <div class="flex flex-col items-end gap-1">
+                            ${sub ? `<span class="badge bg-blue-50 text-blue-700">${sub.parentName} • ${sub.name}</span>` : '<span class="badge bg-amber-50 text-amber-700">Uncategorized</span>'}
+                            <button class="transaction-toggle text-xs font-semibold text-blue-600 hover:underline">${isOpen ? 'Hide' : 'Categorize'}</button>
+                        </div>
+                    </div>
+                    <div class="transaction-panel ${isOpen ? '' : 'hidden'} border-t border-slate-100 bg-slate-50 px-4 py-3 space-y-3">
+                        <div class="input-row">
+                            <label class="text-xs font-semibold text-slate-500" for="txn-search-${txn.id}">Find a sub-category</label>
+                            <input id="txn-search-${txn.id}" class="subcategory-search rounded-full border border-slate-200 px-3 py-2 text-sm" type="search" value="${searchValue}" placeholder="Search sub-categories" data-transaction-id="${txn.id}" />
+                        </div>
+                        <div class="grid gap-2" data-chip-grid data-transaction-id="${txn.id}">
+                            ${renderSubcategoryChipsMarkup(state, searchValue, txn.subCategoryId)}
+                        </div>
+                        <button class="text-sm font-semibold text-blue-600 hover:underline" data-action="create-subcategory" data-transaction-id="${txn.id}">
+                            <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-700 mr-2">+</span>
+                            Create new sub-category
+                        </button>
+                    </div>
+                </div>
+            `;
+        })
+        .join('');
+}
+
+function updateTransactionChips(transactionId, searchTerm) {
+    const state = appStore.getState();
+    const grid = document.querySelector(`[data-chip-grid][data-transaction-id="${transactionId}"]`);
+    if (!grid) return;
+    const txn = getActiveSource(state).transactions.find((item) => item.id === transactionId);
+    grid.innerHTML = renderSubcategoryChipsMarkup(state, searchTerm || '', txn?.subCategoryId);
+}
+
+function openLinkModal(context) {
+    linkModalContext = context;
+    const modal = document.getElementById('link-subcategory-modal');
+    if (!modal) return;
+    const label = document.getElementById('link-context-label');
+    if (label) {
+        label.textContent = context.label || 'this item';
+    }
+    const searchInput = document.getElementById('subcategory-search');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    renderModalSubcategoryChips('');
+    modal.classList.add('active');
+}
+
+function closeLinkModal() {
+    const modal = document.getElementById('link-subcategory-modal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+    linkModalContext = null;
+}
+
+function renderModalSubcategoryChips(searchTerm) {
+    const state = appStore.getState();
+    const grid = document.getElementById('subcategory-chip-grid');
+    if (!grid) return;
+    grid.innerHTML = renderSubcategoryChipsMarkup(state, searchTerm, null);
+}
+
+function openCreateSubcategoryModal(context) {
+    const modal = document.getElementById('create-subcategory-modal');
+    if (!modal) return;
+    pendingCreateContext = context;
+    populateParentSelect();
+    const parentSelect = document.getElementById('create-parent-select');
+    if (parentSelect.disabled) {
+        openCreateParentModal();
+        return;
+    }
+    if (context?.parentId) {
+        parentSelect.value = context.parentId;
+    }
+    document.getElementById('create-subcategory-name').value = '';
+    const slider = document.getElementById('create-subcategory-budget');
+    const numberInput = document.getElementById('create-subcategory-budget-input');
+    slider.value = 25;
+    numberInput.value = 25;
+    document.getElementById('create-budget-display').textContent = formatCurrency(25);
+    modal.classList.add('active');
+}
+
+function closeCreateSubcategoryModal() {
+    document.getElementById('create-subcategory-modal')?.classList.remove('active');
+    pendingCreateContext = null;
+}
+
+function openCreateParentModal() {
+    const modal = document.getElementById('create-parent-modal');
+    if (!modal) return;
+    const input = document.getElementById('create-parent-name');
+    if (input) {
+        input.value = '';
+    }
+    modal.classList.add('active');
+}
+
+function closeCreateParentModal() {
+    document.getElementById('create-parent-modal')?.classList.remove('active');
+}
+
+function populateParentSelect() {
+    const select = document.getElementById('create-parent-select');
+    if (!select) return;
+    const state = appStore.getState();
+    if (!state.categories.length) {
+        select.innerHTML = '<option value="">No parent categories yet</option>';
+        select.disabled = true;
+        return;
+    }
+    select.disabled = false;
+    select.innerHTML = state.categories.map((parent) => `<option value="${parent.id}">${parent.name}</option>`).join('');
+}
+
+function handleCreateSubcategory(event) {
+    event.preventDefault();
+    const parentId = document.getElementById('create-parent-select').value;
+    const name = document.getElementById('create-subcategory-name').value.trim();
+    const budgetSlider = document.getElementById('create-subcategory-budget');
+    const budgetInput = document.getElementById('create-subcategory-budget-input');
+    const budgetAmount = Number(budgetInput.value || budgetSlider.value || 0);
+    if (!parentId || !name || budgetAmount < 0) return;
+    const created = appStore.createSubCategory(parentId, name, budgetAmount);
+    if (created && pendingCreateContext) {
+        if (pendingCreateContext.type === 'transaction') {
+            appStore.assignTransactionToSubCategory(pendingCreateContext.id, created.id);
+        } else if (pendingCreateContext.type === 'map') {
+            const place = latestResults.find((item) => item.id === pendingCreateContext.id);
+            if (place) {
+                appStore.linkPlaceToSubCategory(place, created.id);
+            }
+        }
+    }
+    closeCreateSubcategoryModal();
+}
+
+function handleCreateParent(event) {
+    event.preventDefault();
+    const name = document.getElementById('create-parent-name').value.trim();
+    if (!name) return;
+    appStore.createParentCategory(name);
+    closeCreateParentModal();
+    populateParentSelect();
+}
+
+function handleLinkChipClick(subCategoryId) {
+    if (!linkModalContext) return;
+    if (linkModalContext.type === 'map') {
+        const place = latestResults.find((item) => item.id === linkModalContext.id);
+        if (place) {
+            appStore.linkPlaceToSubCategory(place, subCategoryId);
+        }
+    } else if (linkModalContext.type === 'transaction') {
+        appStore.assignTransactionToSubCategory(linkModalContext.id, subCategoryId);
+    }
+    closeLinkModal();
+}
+
+function handleTransactionChipClick(transactionId, subCategoryId) {
+    appStore.assignTransactionToSubCategory(transactionId, subCategoryId);
+}
+
+function openSubcategoryPickerForTransaction(transactionId) {
+    const txn = getActiveSource(appStore.getState()).transactions.find((item) => item.id === transactionId);
+    openLinkModal({ type: 'transaction', id: transactionId, label: txn ? txn.merchant : 'transaction' });
+}
+
+function openSubcategoryPickerForPlace(placeId) {
+    const place = latestResults.find((item) => item.id === placeId);
+    if (!place) return;
+    openLinkModal({ type: 'map', id: placeId, label: place.name });
+}
+
+function updateTransactionsAfterStateChange(state) {
+    renderTransactions(state);
+    state.sources[state.dataSource].transactions.forEach((txn) => {
+        if (!openTransactionPanels.has(txn.id)) {
+            transactionSearchTerms.delete(txn.id);
+        }
+    });
+}
+
+function simulatePlaidConnection() {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve(generatePlaidData());
+        }, 1000);
+    });
+}
+
+function simulateDemoSeed() {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve(generateDemoData());
+        }, 600);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initializeMap();
+    renderPoiButtons();
+
+    const initialState = appStore.getState();
+    populateParentSelect();
+    renderBudgetView(initialState);
+    renderAccounts(initialState);
+    renderTransactions(initialState);
+
+    appStore.subscribe((state) => {
+        populateParentSelect();
+        renderBudgetView(state);
+        renderAccounts(state);
+        updateTransactionsAfterStateChange(state);
+        refreshResults();
+    });
+
+    document.getElementById('search-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const query = document.getElementById('search-input').value.trim();
+        runSearch(query || activePoiType);
+    });
+
+    document.getElementById('poi-type-strip').addEventListener('click', (event) => {
+        const button = event.target.closest('.poi-button');
+        if (!button) return;
+        const type = button.dataset.poiType;
+        activePoiType = activePoiType === type ? '' : type;
+        document.querySelectorAll('.poi-button').forEach((btn) => btn.classList.remove('active'));
+        if (activePoiType) {
+            button.classList.add('active');
+            runSearch(document.getElementById('search-input').value.trim());
+        }
+    });
+
+    document.getElementById('search-results').addEventListener('click', (event) => {
+        const actionButton = event.target.closest('button[data-action]');
+        if (!actionButton) return;
+        const placeId = actionButton.dataset.placeId;
+        if (actionButton.dataset.action === 'map-link') {
+            openSubcategoryPickerForPlace(placeId);
+        } else if (actionButton.dataset.action === 'map-create') {
+            openCreateSubcategoryModal({ type: 'map', id: placeId });
+        }
+    });
+
+    document.getElementById('link-create-subcategory').addEventListener('click', () => {
+        if (!linkModalContext) return;
+        openCreateSubcategoryModal({ type: linkModalContext.type, id: linkModalContext.id });
+    });
+
+    document.getElementById('link-subcategory-modal').addEventListener('click', (event) => {
+        const chip = event.target.closest('.subcategory-chip');
+        if (chip) {
+            handleLinkChipClick(chip.dataset.subcategoryId);
+            return;
+        }
+        if (event.target.matches('[data-action="cancel-link"]')) {
+            closeLinkModal();
+        }
+    });
+
+    document.getElementById('subcategory-search').addEventListener('input', (event) => {
+        renderModalSubcategoryChips(event.target.value);
+    });
+
+    document.getElementById('create-subcategory-form').addEventListener('submit', handleCreateSubcategory);
+    document.getElementById('create-parent-form').addEventListener('submit', handleCreateParent);
+
+    document.querySelector('[data-action="cancel-create-subcategory"]').addEventListener('click', () => {
+        closeCreateSubcategoryModal();
+    });
+    document.querySelector('[data-action="cancel-create-parent"]').addEventListener('click', () => {
+        closeCreateParentModal();
+    });
+
+    document.getElementById('create-parent-btn').addEventListener('click', () => {
+        openCreateParentModal();
+    });
+
+    document.getElementById('create-subcategory-budget').addEventListener('input', (event) => {
+        const value = Number(event.target.value || 0);
+        document.getElementById('create-budget-display').textContent = formatCurrency(value);
+        document.getElementById('create-subcategory-budget-input').value = value;
+    });
+
+    document.getElementById('create-subcategory-budget-input').addEventListener('input', (event) => {
+        const value = Math.max(0, Number(event.target.value || 0));
+        document.getElementById('create-subcategory-budget').value = value;
+        document.getElementById('create-budget-display').textContent = formatCurrency(value);
+    });
+
+    document.getElementById('budget-list').addEventListener('click', (event) => {
+        const button = event.target.closest('.add-subcategory-btn');
+        if (!button) return;
+        openCreateSubcategoryModal({ type: 'budget', parentId: button.dataset.parentId });
+    });
+
+    document.getElementById('transactions-list').addEventListener('click', (event) => {
+        const transactionRow = event.target.closest('.transaction-row');
+        if (!transactionRow) return;
+        const transactionId = transactionRow.dataset.transactionId;
+        if (event.target.matches('.transaction-toggle')) {
+            const panel = transactionRow.querySelector('.transaction-panel');
+            const isHidden = panel.classList.contains('hidden');
+            panel.classList.toggle('hidden', !isHidden);
+            if (isHidden) {
+                openTransactionPanels.add(transactionId);
             } else {
-                return [];
-            }
-
-            const response = await fetch(url);
-            if (!response.ok) {
-                console.error('HERE API error', await response.text());
-                return [];
-            }
-
-            const data = await response.json();
-            if (!data.items) return [];
-
-            return data.items
-                .filter((item) => item.position?.lat && item.position?.lng)
-                .map((item) => ({
-                    id: item.id,
-                    name: item.title,
-                    lat: item.position.lat,
-                    lng: item.position.lng,
-                    poiType: selectBestPoiType(item.categories),
-                    address: formatAddress(item),
-                    status: 'uncategorized'
-                }));
-        }
-
-        async function runSearch(query) {
-            if (HERE_API_KEY === 'YOUR_HERE_API_KEY') {
-                console.error('HERE API key missing');
-                return;
-            }
-
-            if (!query && !activePoiType) {
-                latestResults = [];
-                clearMarkers();
-                const container = document.getElementById('search-results');
-                container.classList.add('hidden');
-                container.innerHTML = '';
-                return;
-            }
-
-            setLoaderVisible(true);
-            let center = map.getCenter();
-            const geocoded = await geocodeIfLocation(query);
-            if (geocoded) {
-                center = geocoded;
-                map.setView([geocoded.lat, geocoded.lng], ZOOM_FOR_40_MILES);
-            }
-
-            try {
-                const hereResults = await fetchHereResults(query, center, activePoiType);
-                const merged = mergeWithCategorized(hereResults, center);
-                latestResults = decorateResults(merged);
-                renderMarkers(latestResults);
-                renderSearchResults(latestResults);
-            } catch (error) {
-                console.error('Search error', error);
-            } finally {
-                setLoaderVisible(false);
+                openTransactionPanels.delete(transactionId);
             }
         }
-
-        function refreshResults() {
-            if (latestResults.length === 0) return;
-            latestResults = decorateResults(latestResults);
-            renderMarkers(latestResults);
-            renderSearchResults(latestResults);
+        const chip = event.target.closest('.subcategory-chip');
+        if (chip) {
+            handleTransactionChipClick(transactionId, chip.dataset.subcategoryId);
         }
-
-        function toggleModal(modalId, open) {
-            const modal = document.getElementById(modalId);
-            modal.classList.toggle('active', open);
+        const createButton = event.target.closest('[data-action="create-subcategory"]');
+        if (createButton) {
+            openCreateSubcategoryModal({ type: 'transaction', id: transactionId });
         }
+    });
 
-        function populateSubcategorySelect(selectId) {
-            const select = document.getElementById(selectId);
-            const subCategories = budgetStore.getAllSubCategories();
-            if (subCategories.length === 0) {
-                select.innerHTML = '<option value="">No sub-categories yet</option>';
-                select.disabled = true;
-                return;
-            }
-            select.disabled = false;
-            select.innerHTML = subCategories
-                .map(
-                    (sub) => `
-                        <option value="${sub.id}">
-                            ${sub.parentName} • ${sub.name}
-                        </option>
-                    `
-                )
-                .join('');
+    document.getElementById('transactions-list').addEventListener('input', (event) => {
+        const search = event.target.closest('.subcategory-search');
+        if (!search) return;
+        const transactionId = search.dataset.transactionId;
+        transactionSearchTerms.set(transactionId, search.value);
+        updateTransactionChips(transactionId, search.value);
+    });
+
+    document.getElementById('demo-data-btn').addEventListener('click', async (event) => {
+        if (appStore.getState().plaidConnected) return;
+        const button = event.currentTarget;
+        button.textContent = 'Loading demo data…';
+        button.classList.add('pointer-events-none', 'text-slate-400');
+        const data = await simulateDemoSeed();
+        appStore.seedDemoData(() => data);
+    });
+
+    document.getElementById('reset-demo-btn').addEventListener('click', async (event) => {
+        if (appStore.getState().plaidConnected) return;
+        const button = event.currentTarget;
+        button.textContent = 'Refreshing demo data…';
+        button.classList.add('pointer-events-none', 'text-slate-400');
+        const data = await simulateDemoSeed();
+        appStore.seedDemoData(() => data);
+        button.textContent = 'Reset Demo Data';
+        button.classList.remove('pointer-events-none', 'text-slate-400');
+    });
+
+    document.getElementById('connect-plaid-btn').addEventListener('click', async (event) => {
+        if (appStore.getState().plaidConnected) return;
+        const button = event.currentTarget;
+        button.textContent = 'Connecting…';
+        button.disabled = true;
+        const data = await simulatePlaidConnection();
+        appStore.connectPlaid(() => data);
+    });
+
+    document.getElementById('disconnect-plaid').addEventListener('click', () => {
+        appStore.disconnectPlaid();
+    });
+
+    document.getElementById('accounts-list').addEventListener('click', (event) => {
+        const accountBtn = event.target.closest('[data-account-id]');
+        if (!accountBtn) return;
+        const accountId = accountBtn.dataset.accountId;
+        const state = appStore.getState();
+        if (state.activeAccountId === accountId) {
+            appStore.clearAccountFilter();
+        } else {
+            appStore.setAccountFilter(accountId);
         }
+    });
 
-        function populateParentSelect(selectId) {
-            const select = document.getElementById(selectId);
-            const snapshot = budgetStore.getSnapshot();
-            if (!snapshot.parentCategories.length) {
-                select.innerHTML = '<option value="">No parent categories yet</option>';
-                select.disabled = true;
-                return;
-            }
-            select.innerHTML = snapshot.parentCategories
-                .map((parent) => `<option value="${parent.id}">${parent.name}</option>`)
-                .join('');
-            select.disabled = false;
-        }
+    document.getElementById('clear-account-filter').addEventListener('click', () => {
+        appStore.clearAccountFilter();
+    });
 
-        function openExistingLinkModal(placeId) {
-            const place = latestResults.find((item) => item.id === placeId);
-            if (!place) return;
-            pendingPlaceId = placeId;
-            document.getElementById('link-place-name').textContent = place.name;
-            populateSubcategorySelect('link-subcategory-select');
-            toggleModal('link-subcategory-modal', true);
-        }
-
-        function openCreateSubcategoryModal(placeId, parentId) {
-            const snapshot = budgetStore.getSnapshot();
-            if (!snapshot.parentCategories.length) {
-                openCreateParentModal();
-                return;
-            }
-            pendingPlaceForNewSub = placeId || null;
-            populateParentSelect('create-parent-select');
-            const parentSelect = document.getElementById('create-parent-select');
-            if (parentId) {
-                parentSelect.value = parentId;
-            }
-            document.getElementById('create-subcategory-name').value = '';
-            document.getElementById('create-subcategory-budget').value = 50;
-            document.getElementById('create-budget-display').textContent = '$50';
-            toggleModal('create-subcategory-modal', true);
-        }
-
-        function openCreateParentModal() {
-            document.getElementById('create-parent-name').value = '';
-            toggleModal('create-parent-modal', true);
-        }
-
-        function renderBudgetView(snapshot) {
-            const container = document.getElementById('budget-list');
-            if (!snapshot.parentCategories.length) {
-                container.innerHTML = '<p class="text-sm text-slate-500">No parent categories yet. Create one to begin tracking.</p>';
-                return;
-            }
-
-            container.innerHTML = snapshot.parentCategories
-                .map((parent) => {
-                    const gradient = gradientStyle(parent.colorStops);
-                    const total = parent.totalBudget || parent.subCategories.reduce((sum, sub) => sum + sub.budgetAmount, 0);
-                    const subList = parent.subCategories
-                        .map(
-                            (sub) => `
-                                <div class="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
-                                    <div>
-                                        <p class="text-sm font-semibold text-slate-800">${sub.name}</p>
-                                        <p class="text-xs text-slate-400">Budget ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(sub.budgetAmount)}</p>
-                                    </div>
-                                </div>
-                            `
-                        )
-                        .join('');
-
-                    return `
-                        <article class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="flex items-center gap-3">
-                                    <div class="h-10 w-10 rounded-2xl" style="background:${gradient}"></div>
-                                    <div>
-                                        <h3 class="font-semibold text-lg text-slate-900">${parent.name}</h3>
-                                        <p class="text-xs uppercase tracking-wide text-slate-400">${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(total)} budgeted</p>
-                                    </div>
-                                </div>
-                                <button class="add-subcategory-btn flex h-9 items-center justify-center rounded-full bg-slate-100 px-3 text-xs font-semibold text-slate-600 hover:bg-slate-200" data-parent-id="${parent.id}">
-                                    + Sub-category
-                                </button>
-                            </div>
-                            <div class="space-y-2">
-                                ${subList || '<p class="text-xs text-slate-400">No sub-categories yet.</p>'}
-                            </div>
-                        </article>
-                    `;
-                })
-                .join('');
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            initializeMap();
-            renderPoiButtons();
-
-            budgetStore.subscribe((snapshot) => {
-                populateParentSelect('create-parent-select');
-                populateSubcategorySelect('link-subcategory-select');
-                renderBudgetView(snapshot);
-                refreshResults();
-            });
-
-            document.getElementById('search-form').addEventListener('submit', (event) => {
-                event.preventDefault();
-                const query = document.getElementById('search-input').value.trim();
-                runSearch(query || activePoiType);
-            });
-
-            document.getElementById('poi-type-strip').addEventListener('click', (event) => {
-                const button = event.target.closest('.poi-button');
-                if (!button) return;
-                const type = button.dataset.poiType;
-                activePoiType = activePoiType === type ? '' : type;
-                document.querySelectorAll('.poi-button').forEach((btn) => btn.classList.remove('active'));
-                if (activePoiType) {
-                    button.classList.add('active');
-                }
-                if (activePoiType) {
-                    runSearch(document.getElementById('search-input').value.trim());
-                }
-            });
-
-            document.getElementById('search-results').addEventListener('click', (event) => {
-                const actionButton = event.target.closest('button[data-action]');
-                if (!actionButton) return;
-                const placeId = actionButton.dataset.placeId;
-                if (actionButton.dataset.action === 'link-existing') {
-                    openExistingLinkModal(placeId);
-                } else if (actionButton.dataset.action === 'create-subcategory') {
-                    openCreateSubcategoryModal(placeId);
-                }
-            });
-
-            document.getElementById('create-parent-btn').addEventListener('click', () => {
-                openCreateParentModal();
-            });
-
-            document.getElementById('link-subcategory-form').addEventListener('submit', (event) => {
-                event.preventDefault();
-                const select = document.getElementById('link-subcategory-select');
-                const subCategoryId = select.value;
-                if (!pendingPlaceId || !subCategoryId) {
-                    pendingPlaceId = null;
-                    toggleModal('link-subcategory-modal', false);
-                    return;
-                }
-                const place = latestResults.find((item) => item.id === pendingPlaceId);
-                if (!place) {
-                    pendingPlaceId = null;
-                    return;
-                }
-                budgetStore.linkPlaceToSubCategory(place, subCategoryId);
-                toggleModal('link-subcategory-modal', false);
-                pendingPlaceId = null;
-            });
-
-            document.querySelector('[data-action="cancel-link"]').addEventListener('click', () => {
-                toggleModal('link-subcategory-modal', false);
-                pendingPlaceId = null;
-            });
-
-            document.getElementById('create-subcategory-budget').addEventListener('input', (event) => {
-                document.getElementById('create-budget-display').textContent = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(event.target.value || 0));
-            });
-
-            document.getElementById('create-subcategory-form').addEventListener('submit', (event) => {
-                event.preventDefault();
-                const parentId = document.getElementById('create-parent-select').value;
-                const name = document.getElementById('create-subcategory-name').value.trim();
-                const budgetAmount = Number(document.getElementById('create-subcategory-budget').value || 0);
-                if (!parentId || !name || budgetAmount <= 0) return;
-                const sub = budgetStore.createSubCategory(parentId, name, budgetAmount);
-                if (pendingPlaceForNewSub) {
-                    const place = latestResults.find((item) => item.id === pendingPlaceForNewSub);
-                    if (place) {
-                        budgetStore.linkPlaceToSubCategory(place, sub.id);
-                    }
-                }
-                toggleModal('create-subcategory-modal', false);
-                pendingPlaceForNewSub = null;
-            });
-
-            document.querySelector('[data-action="cancel-create-subcategory"]').addEventListener('click', () => {
-                toggleModal('create-subcategory-modal', false);
-                pendingPlaceForNewSub = null;
-            });
-
-            document.getElementById('create-parent-form').addEventListener('submit', (event) => {
-                event.preventDefault();
-                const name = document.getElementById('create-parent-name').value.trim();
-                if (!name) return;
-                budgetStore.createParentCategory(name);
-                toggleModal('create-parent-modal', false);
-            });
-
-            document.querySelector('[data-action="cancel-create-parent"]').addEventListener('click', () => {
-                toggleModal('create-parent-modal', false);
-            });
-
-            document.getElementById('budget-list').addEventListener('click', (event) => {
-                const button = event.target.closest('.add-subcategory-btn');
-                if (!button) return;
-                const parentId = button.dataset.parentId;
-                openCreateSubcategoryModal(null, parentId);
-            });
-
-            document.querySelectorAll('.nav-btn').forEach((button) => {
-                button.addEventListener('click', () => {
-                    document.querySelectorAll('.nav-btn').forEach((btn) => btn.classList.remove('active', 'text-blue-600', 'bg-blue-50'));
-                    document.querySelectorAll('.nav-btn').forEach((btn) => btn.classList.add('text-slate-500', 'bg-slate-100'));
-                    button.classList.add('active', 'text-blue-600', 'bg-blue-50');
-                    button.classList.remove('text-slate-500', 'bg-slate-100');
-                    const target = button.dataset.view;
-                    document.querySelectorAll('.sidebar-view').forEach((view) => view.classList.remove('active'));
-                    document.getElementById(target).classList.add('active');
-                });
-            });
+    document.querySelectorAll('.nav-btn').forEach((button) => {
+        button.addEventListener('click', () => {
+            document.querySelectorAll('.nav-btn').forEach((btn) => btn.classList.remove('active', 'text-blue-600', 'bg-blue-50'));
+            document.querySelectorAll('.nav-btn').forEach((btn) => btn.classList.add('text-slate-500', 'bg-slate-100'));
+            button.classList.add('active', 'text-blue-600', 'bg-blue-50');
+            button.classList.remove('text-slate-500', 'bg-slate-100');
+            const target = button.dataset.view;
+            document.querySelectorAll('.sidebar-view').forEach((view) => view.classList.remove('active'));
+            document.getElementById(target).classList.add('active');
         });
+    });
+
+    document.querySelectorAll('[data-action="cancel-link"]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            closeLinkModal();
+        });
+    });
+});
+
     </script>
 </body>
 </html>
