@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Money Maps - Web</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
     <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -140,8 +141,18 @@
             transform: rotate(45deg);
         }
 
+        .gradient-pin.selected {
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.4), 0 12px 30px rgba(15, 23, 42, 0.25);
+            border-color: rgba(37, 99, 235, 0.6);
+        }
+
         .search-result-card {
             box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+        }
+
+        .search-result-card.selected {
+            border: 2px solid rgba(37, 99, 235, 0.3);
+            box-shadow: 0 16px 40px rgba(37, 99, 235, 0.15);
         }
 
         .search-result-icon {
@@ -171,6 +182,84 @@
 
         .search-result-actions button:hover {
             background-color: rgba(226, 232, 240, 0.85);
+        }
+
+        #map-card-container.hidden {
+            display: none;
+        }
+
+        .map-card {
+            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 1.5rem;
+            box-shadow: 0 30px 70px rgba(15, 23, 42, 0.25);
+            padding: 1.5rem;
+        }
+
+        .map-card .map-card-actions button {
+            flex: 1;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 0.6rem 0.9rem;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            transition: background-color 0.15s ease, transform 0.15s ease;
+        }
+
+        .map-card .map-card-actions button:hover {
+            background-color: rgba(226, 232, 240, 0.85);
+            transform: translateY(-1px);
+        }
+
+        .map-card .map-card-actions button.primary {
+            background: #2563eb;
+            color: #ffffff;
+            border-color: transparent;
+        }
+
+        .map-card .map-card-actions button.primary:hover {
+            background: #1d4ed8;
+        }
+
+        .map-card-close {
+            height: 2rem;
+            width: 2rem;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(248, 250, 252, 0.8);
+            transition: background-color 0.15s ease;
+        }
+
+        .map-card-close:hover {
+            background: rgba(226, 232, 240, 0.85);
+        }
+
+        .collapse-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 2.25rem;
+            width: 2.25rem;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            background: rgba(248, 250, 252, 0.9);
+            transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+
+        .collapse-toggle:hover {
+            background: rgba(226, 232, 240, 0.85);
+            border-color: rgba(148, 163, 184, 0.6);
+        }
+
+        .collapse-toggle svg {
+            transition: transform 0.2s ease;
+        }
+
+        .collapse-toggle[aria-expanded='true'] svg {
+            transform: rotate(180deg);
         }
 
         .badge {
@@ -277,9 +366,10 @@
         <div id="map-container">
             <div id="map"></div>
             <div id="map-loader" class="flex"><div class="loader"></div></div>
-            <div class="map-overlay absolute top-0 left-0 right-0 p-4 z-20 space-y-3">
-                <div class="max-w-3xl mx-auto space-y-3">
-                    <form id="search-form" class="relative flex items-center">
+            <div class="map-overlay absolute inset-0 z-20">
+                <div class="p-4">
+                    <div class="max-w-3xl mx-auto space-y-3 pointer-events-auto">
+                        <form id="search-form" class="relative flex items-center">
                         <span class="absolute left-4 text-slate-400">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="11" cy="11" r="7"></circle>
@@ -301,8 +391,12 @@
                             Search
                         </button>
                     </form>
-                    <div id="poi-type-strip" class="scrollbars flex items-center gap-2 overflow-x-auto rounded-2xl bg-white/80 backdrop-blur-sm p-2 shadow-lg"></div>
-                    <div id="search-results" class="hidden max-h-96 overflow-y-auto space-y-3"></div>
+                        <div id="poi-type-strip" class="scrollbars flex items-center gap-2 overflow-x-auto rounded-2xl bg-white/80 backdrop-blur-sm p-2 shadow-lg"></div>
+                        <div id="search-results" class="hidden max-h-96 overflow-y-auto space-y-3"></div>
+                    </div>
+                </div>
+                <div id="map-card-host" class="absolute bottom-0 left-0 right-0 p-4 pb-6 pointer-events-none">
+                    <div id="map-card-container" class="max-w-md mx-auto pointer-events-auto hidden"></div>
                 </div>
             </div>
         </div>
@@ -371,6 +465,7 @@
                         <div id="transactions-source-pill" class="badge bg-slate-100 text-slate-600">Using demo data</div>
                         <div id="transactions-account-pill" class="hidden badge bg-blue-50 text-blue-700"></div>
                     </div>
+                    <div id="plaid-feedback" class="text-xs font-semibold text-emerald-600 hidden"></div>
                     <div class="border border-slate-200 rounded-3xl overflow-hidden">
                         <div class="grid grid-cols-[auto_1fr_auto_auto] gap-3 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
                             <div>Date</div>
@@ -461,6 +556,12 @@
     <script>
 const HERE_API_KEY = '6iHV0y797UXNMW3TZlJX6gXy67xGh2uEIX77Q7tHdjU';
 const STORAGE_KEY = 'money-maps-state-v2';
+const POI_OVERRIDE_STORAGE_KEY = 'money-maps-poi-overrides-v1';
+const STRICT_DEMO_MODE = Boolean(window.STRICT_DEMO_MODE);
+
+const PLAID_LINK_TOKEN_ENDPOINT = window.MONEYMAPS_PLAID_LINK_TOKEN_URL || '/api/create_link_token';
+const PLAID_TOKEN_EXCHANGE_ENDPOINT = window.MONEYMAPS_PLAID_EXCHANGE_URL || '/api/exchange_public_token';
+const DEFAULT_PLAID_ENV = window.MONEYMAPS_PLAID_ENV || 'sandbox';
 
 const POI_TYPES = [
     "airport","amusement park","aquarium","art gallery","ATM","bakery","bank","bar","beauty salon","bicycle store","book store","bowling alley","bus station","cafe","campground","car dealer","car rental","car repair","car wash","casino","cemetery","church","city hall","clothing store","convenience store","courthouse","dentist","department store","doctor","drugstore","electrician","electronics store","embassy","fire station","florist","funeral home","furniture store","gas station","gym","hair care","hardware store","Hindu temple","home goods store","hospital","insurance agency","jewelry store","laundry","lawyer","library","light rail station","liquor store","local government office","locksmith","lodging","meal delivery","meal takeaway","mosque","movie rental","movie theater","moving company","museum","night club","painter","park","parking","pet store","pharmacy","physiotherapist","plumber","police","post office","primary school","real estate agency","restaurant","roofing contractor","RV park","school","secondary school","shoe store","shopping mall","spa","stadium","storage","store","subway station","supermarket","synagogue","taxi stand","tourist attraction","train station","transit station","travel agency","university","veterinary care","zoo"
@@ -479,6 +580,11 @@ const COLOR_PALETTE = [
     ['#0ea5e9', '#0369a1'],
     ['#f43f5e', '#be123c']
 ];
+
+const searchUIState = {
+    isDropdownVisible: true,
+    isPOIButtonsVisible: true
+};
 
 const SUB_GRADIENT_VARIANTS = [
     { start: 0.02, end: -0.05 },
@@ -606,6 +712,62 @@ function formatPercent(value) {
     return `${Math.round(value * 100)}%`;
 }
 
+function loadPoiOverrideTable() {
+    try {
+        const raw = localStorage.getItem(POI_OVERRIDE_STORAGE_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+            return parsed;
+        }
+    } catch (error) {
+        console.error('Failed to parse POI override table', error);
+    }
+    return {};
+}
+
+function persistPoiOverrideTable(table) {
+    try {
+        localStorage.setItem(POI_OVERRIDE_STORAGE_KEY, JSON.stringify(table));
+    } catch (error) {
+        console.error('Failed to persist POI override table', error);
+    }
+}
+
+function getRuntimePoiOverrides() {
+    if (window.MoneyMapsPOIOverrides && typeof window.MoneyMapsPOIOverrides === 'object') {
+        return window.MoneyMapsPOIOverrides;
+    }
+    return {};
+}
+
+function normalizePoiLabel(label) {
+    return (label || '').toString().trim().toLowerCase();
+}
+
+const DEFAULT_POI_SYNONYMS = {
+    'coffee shop': ['coffee', 'coffee shops', 'cafe'],
+    cafe: ['coffee shops', 'restaurants'],
+    restaurant: ['restaurants', 'food', 'dining'],
+    'fast food restaurant': ['restaurants', 'food'],
+    supermarket: ['groceries', 'grocery'],
+    'grocery store': ['groceries', 'food'],
+    pharmacy: ['pharmacy', 'health'],
+    gym: ['fitness', 'health'],
+    'fitness center': ['fitness', 'health'],
+    'gas station': ['fuel', 'gas'],
+    'taxi stand': ['rideshare', 'transportation'],
+    parking: ['parking', 'transportation'],
+    'streaming service': ['streaming', 'entertainment'],
+    museum: ['events', 'entertainment'],
+    stadium: ['events', 'entertainment'],
+    'outdoor shop': ['outdoors'],
+    'outdoor recreation': ['outdoors'],
+    'fitness & sports': ['fitness']
+};
+
+const FALLBACK_CATEGORY_LABELS = ['misc', 'other', 'uncategorized'];
+
 const DEFAULT_CATEGORY_SETUP = [
     {
         id: 'home-life',
@@ -697,6 +859,155 @@ function computeSpentBySubCategory(state) {
     return spent;
 }
 
+function computeSpentBySubCategoryAll(state) {
+    const spent = new Map();
+    const transactions = (getActiveSource(state).transactions || []).slice();
+    transactions.forEach((txn) => {
+        if (!txn.subCategoryId) return;
+        const amount = txn.amount < 0 ? Math.abs(txn.amount) : 0;
+        if (amount === 0) return;
+        spent.set(txn.subCategoryId, (spent.get(txn.subCategoryId) || 0) + amount);
+    });
+    return spent;
+}
+
+function summarizeCategorySpend(categoryId, subCategoryId, state, spentMap) {
+    const summary = { budget: 0, spent: 0, available: 0 };
+    if (!state) return summary;
+    if (subCategoryId) {
+        const sub = state.subCategories.find((item) => item.id === subCategoryId);
+        if (!sub) return summary;
+        const budget = Number(sub.budget || 0);
+        const spent = spentMap.get(sub.id) || 0;
+        summary.budget = budget;
+        summary.spent = spent;
+        summary.available = Math.max(0, budget - spent);
+        return summary;
+    }
+    if (categoryId) {
+        const subs = state.subCategories.filter((item) => item.parentId === categoryId);
+        const budget = subs.reduce((sum, sub) => sum + (Number(sub.budget) || 0), 0);
+        const spent = subs.reduce((sum, sub) => sum + (spentMap.get(sub.id) || 0), 0);
+        summary.budget = budget;
+        summary.spent = spent;
+        summary.available = Math.max(0, budget - spent);
+        return summary;
+    }
+    return summary;
+}
+
+function resolveOverrideMapping(overrideValue, state) {
+    if (!overrideValue) return null;
+    const overrides = typeof overrideValue === 'string' ? { subCategoryId: overrideValue } : overrideValue;
+    if (overrides.subCategoryId) {
+        const sub = state.subCategories.find((item) => item.id === overrides.subCategoryId);
+        if (sub) {
+            return {
+                categoryId: sub.parentId,
+                subCategoryId: sub.id,
+                confidence: overrides.confidence ?? 0.98,
+                matchedName: overrides.label || sub.name
+            };
+        }
+    }
+    if (overrides.categoryId) {
+        const category = state.categories.find((item) => item.id === overrides.categoryId);
+        if (category) {
+            return {
+                categoryId: category.id,
+                confidence: overrides.confidence ?? 0.85,
+                matchedName: overrides.label || category.name
+            };
+        }
+    }
+    if (typeof overrideValue === 'string') {
+        const category = state.categories.find((item) => normalizePoiLabel(item.name) === normalizePoiLabel(overrideValue));
+        if (category) {
+            return {
+                categoryId: category.id,
+                confidence: 0.85,
+                matchedName: category.name
+            };
+        }
+    }
+    return null;
+}
+
+function getBudgetCategoryForPOI(poiType, state = appStore.getState()) {
+    const normalized = normalizePoiLabel(poiType);
+    if (!normalized) {
+        return { confidence: 0 };
+    }
+
+    const combinedOverrides = Object.assign({}, state.poiCategoryOverrides || {}, getRuntimePoiOverrides());
+    const overrideValue = combinedOverrides[normalized] || combinedOverrides[normalized.replace(/s$/, '')];
+    if (overrideValue) {
+        const resolved = resolveOverrideMapping(overrideValue, state);
+        if (resolved) {
+            return { ...resolved, confidence: Math.min(1, resolved.confidence ?? 0.95) };
+        }
+    }
+
+    const subCategories = state.subCategories || [];
+    const categories = state.categories || [];
+
+    const directSub = subCategories.find((sub) => normalizePoiLabel(sub.name) === normalized);
+    if (directSub) {
+        return { categoryId: directSub.parentId, subCategoryId: directSub.id, confidence: 1, matchedName: directSub.name };
+    }
+
+    const directCategory = categories.find((cat) => normalizePoiLabel(cat.name) === normalized);
+    if (directCategory) {
+        return { categoryId: directCategory.id, confidence: 0.9, matchedName: directCategory.name };
+    }
+
+    const synonymTargets = DEFAULT_POI_SYNONYMS[normalized] || [];
+    for (const synonym of synonymTargets) {
+        const normalizedSynonym = normalizePoiLabel(synonym);
+        const subMatch = subCategories.find((sub) => normalizePoiLabel(sub.name) === normalizedSynonym);
+        if (subMatch) {
+            return { categoryId: subMatch.parentId, subCategoryId: subMatch.id, confidence: 0.75, matchedName: subMatch.name };
+        }
+        const catMatch = categories.find((cat) => normalizePoiLabel(cat.name) === normalizedSynonym);
+        if (catMatch) {
+            return { categoryId: catMatch.id, confidence: 0.6, matchedName: catMatch.name };
+        }
+    }
+
+    const fuzzySub = subCategories.find((sub) => {
+        const name = normalizePoiLabel(sub.name);
+        return name.includes(normalized) || normalized.includes(name);
+    });
+    if (fuzzySub) {
+        return { categoryId: fuzzySub.parentId, subCategoryId: fuzzySub.id, confidence: 0.55, matchedName: fuzzySub.name };
+    }
+
+    const fuzzyParent = categories.find((cat) => {
+        const name = normalizePoiLabel(cat.name);
+        return name.includes(normalized) || normalized.includes(name);
+    });
+    if (fuzzyParent) {
+        return { categoryId: fuzzyParent.id, confidence: 0.45, matchedName: fuzzyParent.name };
+    }
+
+    const fallback = categories.find((cat) => {
+        const name = normalizePoiLabel(cat.name);
+        return FALLBACK_CATEGORY_LABELS.some((needle) => name.includes(needle));
+    });
+    if (fallback) {
+        return { categoryId: fallback.id, confidence: 0.3, matchedName: fallback.name };
+    }
+
+    return { confidence: 0 };
+}
+
+function getAvailableToSpend(categoryId, subCategoryId) {
+    const state = appStore.getState();
+    const spentMap = computeSpentBySubCategoryAll(state);
+    const summary = summarizeCategorySpend(categoryId, subCategoryId, state, spentMap);
+    return summary.available;
+}
+
 function computeAccountTotals(state) {
     const transactions = getActiveSource(state).transactions || [];
     const totals = new Map();
@@ -746,6 +1057,10 @@ function createStore() {
                         sub.budget = 0;
                     }
                 });
+                parsed.collapsedCategories = parsed.collapsedCategories || {};
+                const persistedOverrides = loadPoiOverrideTable();
+                parsed.poiCategoryOverrides = Object.assign({}, persistedOverrides, parsed.poiCategoryOverrides || {});
+                persistPoiOverrideTable(parsed.poiCategoryOverrides);
                 return parsed;
             } catch (error) {
                 console.error('Failed to parse saved state, using defaults', error);
@@ -760,6 +1075,8 @@ function createStore() {
             categories: defaults.categories,
             subCategories: defaults.subCategories,
             placeLinks: {},
+            collapsedCategories: {},
+            poiCategoryOverrides: loadPoiOverrideTable(),
             sources: {
                 demo: { accounts: [], transactions: [], seeded: false },
                 plaid: { accounts: [], transactions: [], seeded: false }
@@ -772,6 +1089,7 @@ function createStore() {
     function persist() {
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            persistPoiOverrideTable(state.poiCategoryOverrides || {});
         } catch (error) {
             console.warn('Unable to persist state', error);
         }
@@ -896,6 +1214,32 @@ function createStore() {
         });
     }
 
+    function toggleCategoryCollapse(categoryId) {
+        if (!categoryId) return;
+        mutate((draft) => {
+            draft.collapsedCategories = draft.collapsedCategories || {};
+            draft.collapsedCategories[categoryId] = !draft.collapsedCategories[categoryId];
+        });
+    }
+
+    function setPoiCategoryOverride(poiType, override) {
+        const normalized = normalizePoiLabel(poiType);
+        if (!normalized) return;
+        mutate((draft) => {
+            draft.poiCategoryOverrides = { ...(draft.poiCategoryOverrides || {}) };
+            if (override === null || typeof override === 'undefined') {
+                delete draft.poiCategoryOverrides[normalized];
+            } else {
+                draft.poiCategoryOverrides[normalized] = override;
+            }
+            persistPoiOverrideTable(draft.poiCategoryOverrides);
+        });
+    }
+
+    function clearPoiCategoryOverride(poiType) {
+        setPoiCategoryOverride(poiType, null);
+    }
+
     function seedDemoData(generator) {
         mutate((draft) => {
             const demoData = generator ? generator(draft) : generateDemoData(draft);
@@ -956,7 +1300,10 @@ function createStore() {
         resetDemoData,
         connectPlaid,
         disconnectPlaid,
-        setDataSource
+        setDataSource,
+        toggleCategoryCollapse,
+        setPoiCategoryOverride,
+        clearPoiCategoryOverride
     };
 }
 
@@ -1017,16 +1364,31 @@ function generateDemoAccounts() {
     ];
 }
 
-function generateDemoData() {
+function generateDemoData(stateDraft) {
+    const workingState = stateDraft || appStore.getState?.() || {};
     const accounts = generateDemoAccounts();
+    const defaultSetup = buildDefaultCategories();
+    const sourceSubCategories = (workingState.subCategories && workingState.subCategories.length)
+        ? workingState.subCategories
+        : defaultSetup.subCategories;
+    const budgets = new Map(sourceSubCategories.map((sub) => [sub.id, Number(sub.budget) || 0]));
+    const spentTracker = new Map();
     const transactions = [];
     let counter = 0;
-    while (transactions.length < 200) {
-        const merchant = randomChoice(DEMO_MERCHANTS);
+
+    const merchantsBySub = new Map();
+    DEMO_MERCHANTS.forEach((merchant) => {
+        if (!merchant.subCategoryId) return;
+        if (!merchantsBySub.has(merchant.subCategoryId)) {
+            merchantsBySub.set(merchant.subCategoryId, []);
+        }
+        merchantsBySub.get(merchant.subCategoryId).push(merchant);
+    });
+
+    function buildTransaction(merchant, overrideAmount, overrides = {}) {
         const [min, max] = merchant.amountRange;
-        const amount = Number(randomBetween(min, max).toFixed(2));
-        const txn = {
-            id: `demo-${counter++}`,
+        const amount = overrideAmount !== undefined ? overrideAmount : Number(randomBetween(min, max).toFixed(2));
+        return {
             accountId: merchant.account,
             date: randomDateWithin(120),
             merchant: merchant.name,
@@ -1035,11 +1397,94 @@ function generateDemoData() {
             poiType: merchant.poiType,
             lat: merchant.lat ? merchant.lat + randomBetween(-0.01, 0.01) : undefined,
             lng: merchant.lng ? merchant.lng + randomBetween(-0.01, 0.01) : undefined,
-            subCategoryId: merchant.subCategoryId && Math.random() > 0.2 ? merchant.subCategoryId : null,
-            source: 'demo'
+            subCategoryId: merchant.subCategoryId || null,
+            source: 'demo',
+            ...overrides
         };
-        transactions.push(txn);
     }
+
+    function applyDemoGuard(txn) {
+        if (!txn.subCategoryId || txn.amount >= 0) {
+            return true;
+        }
+        const budget = budgets.get(txn.subCategoryId) || 0;
+        if (budget <= 0) {
+            if (STRICT_DEMO_MODE) {
+                console.info('Skipping demo transaction with no budget allocation', txn);
+                return false;
+            }
+            return true;
+        }
+        const spent = spentTracker.get(txn.subCategoryId) || 0;
+        const remaining = Math.max(0, budget - spent);
+        if (remaining <= 0) {
+            console.info('Skipping demo transaction due to exhausted budget', txn);
+            return false;
+        }
+        const spendAmount = Math.abs(txn.amount);
+        if (spendAmount > remaining) {
+            if (remaining < 5 && STRICT_DEMO_MODE) {
+                console.info('Strict mode prevented overspend adjustment', txn);
+                return false;
+            }
+            txn.amount = Number((-remaining).toFixed(2));
+        }
+        if (Math.abs(txn.amount) < 0.5) {
+            return false;
+        }
+        spentTracker.set(txn.subCategoryId, Math.min(budget, spent + Math.abs(txn.amount)));
+        return true;
+    }
+
+    function pushTransaction(merchant, amountOverride, overrides = {}) {
+        const txn = buildTransaction(merchant, amountOverride, overrides);
+        if (!applyDemoGuard(txn)) {
+            return false;
+        }
+        txn.id = `demo-${counter++}`;
+        transactions.push(txn);
+        return true;
+    }
+
+    sourceSubCategories.forEach((sub) => {
+        const merchants = merchantsBySub.get(sub.id);
+        const budget = budgets.get(sub.id) || 0;
+        if (!merchants || !merchants.length || budget <= 0) return;
+        const plannedCount = Math.max(3, Math.ceil(budget / 20));
+        for (let i = 0; i < plannedCount; i++) {
+            const remaining = Math.max(0, (budgets.get(sub.id) || 0) - (spentTracker.get(sub.id) || 0));
+            if (remaining <= 0) break;
+            const merchant = merchants[i % merchants.length];
+            const [min, max] = merchant.amountRange;
+            const absMin = Math.abs(min);
+            const absMax = Math.abs(max);
+            const ideal = remaining / (plannedCount - i);
+            let spend = Math.min(absMax, Math.max(absMin, randomBetween(ideal * 0.7, ideal * 1.15)));
+            spend = Math.min(spend, remaining);
+            spend = Number(spend.toFixed(2));
+            if (spend <= 0) break;
+            if (!pushTransaction(merchant, -spend)) {
+                break;
+            }
+        }
+    });
+
+    const incomeMerchants = DEMO_MERCHANTS.filter((merchant) => merchant.amountRange[0] > 0);
+    incomeMerchants.slice(0, 4).forEach((merchant) => {
+        pushTransaction(merchant);
+    });
+
+    const explorationMerchants = DEMO_MERCHANTS.filter((merchant) => merchant.subCategoryId).slice(0, 12);
+    explorationMerchants.forEach((merchant, index) => {
+        if (index % 4 === 0) {
+            const explorationTxn = buildTransaction(merchant, -Math.abs(Number(randomBetween(12, 35).toFixed(2))), {
+                subCategoryId: null
+            });
+            explorationTxn.id = `demo-${counter++}`;
+            transactions.push(explorationTxn);
+        }
+    });
+
     transactions.sort((a, b) => (a.date < b.date ? 1 : -1));
     return { accounts, transactions };
 }
@@ -1089,8 +1534,20 @@ let linkModalContext = null;
 let openTransactionPanels = new Set();
 let transactionSearchTerms = new Map();
 let pendingCreateContext = null;
+let activeMapPlaceId = null;
+let plaidLinkHandler = null;
+let plaidLinkToken = null;
+let plaidLinkReady = false;
+let plaidLinkError = null;
+let plaidLaunchButton = null;
 
 const appStore = createStore();
+
+window.moneyMapsAdmin = Object.assign({}, window.moneyMapsAdmin, {
+    setPoiOverride: (poiType, override) => appStore.setPoiCategoryOverride(poiType, override),
+    clearPoiOverride: (poiType) => appStore.clearPoiCategoryOverride(poiType),
+    toggleCategory: (categoryId) => appStore.toggleCategoryCollapse(categoryId)
+});
 
 function setLoaderVisible(isVisible) {
     const loader = document.getElementById('map-loader');
@@ -1128,13 +1585,13 @@ function clearMarkers() {
     mapMarkers = [];
 }
 
-function createMarker(place, colorStops) {
+function createMarker(place, colorStops, isSelected) {
     const icon = L.divIcon({
         className: 'gradient-pin-wrapper',
         iconSize: [38, 38],
         iconAnchor: [19, 36],
         html: `
-            <div class="gradient-pin" style="background:${gradientStyle(colorStops)}">
+            <div class="gradient-pin ${isSelected ? 'selected' : ''}" style="background:${gradientStyle(colorStops)}">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0z"></path>
                     <circle cx="12" cy="10" r="3"></circle>
@@ -1143,6 +1600,9 @@ function createMarker(place, colorStops) {
         `
     });
     const marker = L.marker([place.lat, place.lng], { icon });
+    marker.on('click', () => {
+        handlePlaceSelection(place.id);
+    });
     marker.addTo(map);
     mapMarkers.push({ marker, placeId: place.id });
 }
@@ -1152,9 +1612,272 @@ function renderMarkers(results) {
     results.forEach((result) => {
         const colorStops = result.status === 'categorized' ? result.colorStops : GREEN_GRADIENT;
         if (result.lat && result.lng) {
-            createMarker(result, colorStops);
+            const isSelected = activeMapPlaceId === result.id;
+            createMarker(result, colorStops, isSelected);
         }
     });
+}
+
+function renderMapCard(placeId) {
+    const container = document.getElementById('map-card-container');
+    if (!container) return;
+    if (!placeId) {
+        container.classList.add('hidden');
+        container.innerHTML = '';
+        return;
+    }
+    const place = latestResults.find((item) => item.id === placeId);
+    if (!place) {
+        container.classList.add('hidden');
+        container.innerHTML = '';
+        return;
+    }
+
+    const state = appStore.getState();
+    const categorization = appStore.getCategorizationForPlace(place.id);
+    const spentMap = computeSpentBySubCategoryAll(state);
+    let summary = { budget: 0, spent: 0, available: 0 };
+    let badgeLabel = 'Uncategorized';
+    let badgeClass = 'bg-amber-50 text-amber-700';
+    let confidenceLabel = '';
+    let guidanceLabel = 'Assign a budget category to unlock guidance.';
+    let suggestedMapping = null;
+
+    if (categorization) {
+        summary = summarizeCategorySpend(categorization.categoryId, categorization.subCategoryId, state, spentMap);
+        badgeLabel = `${categorization.categoryName} • ${categorization.subCategoryName}`;
+        badgeClass = 'bg-blue-50 text-blue-700';
+        guidanceLabel = 'Linked to your budget.';
+    } else {
+        suggestedMapping = getBudgetCategoryForPOI(place.poiType, state);
+        if (suggestedMapping && (suggestedMapping.subCategoryId || suggestedMapping.categoryId)) {
+            summary = summarizeCategorySpend(suggestedMapping.categoryId, suggestedMapping.subCategoryId, state, spentMap);
+            const parent = state.categories.find((cat) => cat.id === suggestedMapping.categoryId);
+            const sub = state.subCategories.find((item) => item.id === suggestedMapping.subCategoryId);
+            const baseLabel = sub ? `${parent ? parent.name : ''} • ${sub.name}`.trim() : parent?.name || suggestedMapping.matchedName || place.poiType;
+            badgeLabel = baseLabel.replace(/^ • /, '') || 'Suggested match';
+            const confidence = Math.round((suggestedMapping.confidence || 0) * 100);
+            const confident = suggestedMapping.confidence >= 0.5;
+            badgeClass = confident ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700';
+            if (confidence > 0) {
+                confidenceLabel = `${confidence}% match`;
+            }
+            if (!confident) {
+                guidanceLabel = 'Low-confidence suggestion. Assign a category to confirm.';
+                summary = { budget: 0, spent: 0, available: 0 };
+                badgeLabel = 'Uncategorized';
+            } else {
+                guidanceLabel = 'Suggested match based on similar spend.';
+            }
+        }
+    }
+
+    const available = Math.max(0, summary.available || 0);
+    const budgetValue = Number(summary.budget || 0);
+    const spentValue = Number(summary.spent || 0);
+    const hasBudget = budgetValue > 0;
+    const poiLabel = place.poiType || 'Point of interest';
+    const availableLabel = formatCurrency(available);
+    const budgetLabel = formatCurrency(budgetValue);
+    const spentLabel = formatCurrency(spentValue);
+    const availabilityFooter = hasBudget
+        ? `${spentLabel} spent of ${budgetLabel}`
+        : 'No budget set yet. Create or edit a budget to track this spend.';
+
+    container.innerHTML = `
+        <article class="map-card space-y-4" data-place-id="${place.id}">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <h3 class="text-lg font-semibold text-slate-900">${place.name}</h3>
+                    <p class="text-xs uppercase tracking-wide text-slate-400">${poiLabel}</p>
+                    ${place.address ? `<p class="text-sm text-slate-500 mt-1">${place.address}</p>` : ''}
+                </div>
+                <button type="button" class="map-card-close" data-action="close-map-card" aria-label="Close card">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="badge ${badgeClass}">${badgeLabel}</span>
+                ${confidenceLabel ? `<span class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">${confidenceLabel}</span>` : ''}
+            </div>
+            <p class="text-xs text-slate-500">${guidanceLabel}</p>
+            <div class="rounded-2xl bg-slate-50 p-4 space-y-1">
+                <p class="text-xs uppercase tracking-wide text-slate-400">Available to spend</p>
+                <p class="text-2xl font-semibold ${available > 0 ? 'text-emerald-600' : 'text-slate-700'}">${availableLabel}</p>
+                <p class="text-xs text-slate-500">${availabilityFooter}</p>
+            </div>
+            <div class="map-card-actions flex gap-2">
+                <button class="primary" data-action="card-link" data-place-id="${place.id}">Add to Sub-Category</button>
+                <button data-action="card-create" data-place-id="${place.id}">+ Create Sub-Category</button>
+            </div>
+        </article>
+    `;
+    container.classList.remove('hidden');
+}
+
+function renderActiveMapCard() {
+    if (!activeMapPlaceId) {
+        renderMapCard(null);
+        return;
+    }
+    renderMapCard(activeMapPlaceId);
+}
+
+function handlePlaceSelection(placeId) {
+    if (!placeId) return;
+    const place = latestResults.find((item) => item.id === placeId);
+    if (!place) return;
+    activeMapPlaceId = placeId;
+    if (place.lat && place.lng) {
+        map.panTo([place.lat, place.lng]);
+    }
+    renderActiveMapCard();
+    renderMarkers(latestResults);
+    renderSearchResults(latestResults);
+    hideSearchControlsAfterSelection();
+}
+
+function closeMapCard() {
+    activeMapPlaceId = null;
+    renderActiveMapCard();
+    renderMarkers(latestResults);
+    renderSearchResults(latestResults);
+}
+
+function showPlaidFeedback(message, isError = false) {
+    const element = document.getElementById('plaid-feedback');
+    if (!element) return;
+    if (!message) {
+        element.textContent = '';
+        element.classList.add('hidden');
+        element.classList.remove('text-rose-500');
+        element.classList.add('text-emerald-600');
+        return;
+    }
+    element.textContent = message;
+    element.classList.remove('hidden');
+    element.classList.toggle('text-rose-500', isError);
+    element.classList.toggle('text-emerald-600', !isError);
+}
+
+async function fetchPlaidLinkToken() {
+    if (plaidLinkToken) {
+        return plaidLinkToken;
+    }
+    try {
+        const response = await fetch(PLAID_LINK_TOKEN_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ environment: DEFAULT_PLAID_ENV })
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to fetch Plaid link token (${response.status})`);
+        }
+        const data = await response.json();
+        const token = data.link_token || data.linkToken;
+        if (!token) {
+            throw new Error('Missing link token in response');
+        }
+        plaidLinkToken = token;
+        return token;
+    } catch (error) {
+        plaidLinkError = error.message || 'Unable to fetch Plaid link token.';
+        showPlaidFeedback(plaidLinkError, true);
+        throw error;
+    }
+}
+
+function handlePlaidExit(err) {
+    if (err) {
+        const message = err.display_message || err.error_message || 'Plaid Link was closed.';
+        showPlaidFeedback(message, true);
+    } else if (!appStore.getState().plaidConnected) {
+        showPlaidFeedback('Plaid Link closed before connecting.', true);
+    }
+    if (!appStore.getState().plaidConnected && plaidLaunchButton) {
+        plaidLaunchButton.disabled = false;
+        plaidLaunchButton.textContent = 'Connect Bank (Plaid)';
+    }
+}
+
+async function handlePlaidSuccess(publicToken, metadata) {
+    showPlaidFeedback('Bank connected. Finalizing sync…', false);
+    try {
+        if (PLAID_TOKEN_EXCHANGE_ENDPOINT) {
+            const response = await fetch(PLAID_TOKEN_EXCHANGE_ENDPOINT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ public_token: publicToken, metadata })
+            });
+            if (!response.ok) {
+                throw new Error(`Exchange failed (${response.status})`);
+            }
+            const payload = await response.json();
+            if (payload && (payload.accounts || payload.transactions)) {
+                appStore.connectPlaid(() => ({
+                    accounts: payload.accounts || [],
+                    transactions: payload.transactions || []
+                }));
+                plaidLinkHandler = null;
+                plaidLinkToken = null;
+                plaidLaunchButton = null;
+                showPlaidFeedback('Plaid connected.', false);
+                return;
+            }
+        }
+        throw new Error('Plaid exchange endpoint did not return account data.');
+    } catch (error) {
+        console.warn('Plaid exchange failed, using sandbox data instead.', error);
+        showPlaidFeedback('Using Plaid sandbox data.', false);
+        const fallbackData = await simulatePlaidConnection();
+        appStore.connectPlaid(() => fallbackData);
+    } finally {
+        plaidLinkHandler = null;
+        plaidLinkToken = null;
+        if (plaidLaunchButton) {
+            plaidLaunchButton.disabled = false;
+            plaidLaunchButton = null;
+        }
+    }
+}
+
+async function initializePlaidLink() {
+    if (plaidLinkHandler) {
+        return plaidLinkHandler;
+    }
+    if (!window.Plaid || typeof window.Plaid.create !== 'function') {
+        throw new Error('Plaid Link SDK unavailable.');
+    }
+    const token = await fetchPlaidLinkToken();
+    plaidLinkHandler = window.Plaid.create({
+        token,
+        onLoad: () => {
+            plaidLinkReady = true;
+        },
+        onExit: handlePlaidExit,
+        onSuccess: handlePlaidSuccess
+    });
+    return plaidLinkHandler;
+}
+
+async function openPlaidLink(button) {
+    plaidLaunchButton = button;
+    try {
+        const handler = await initializePlaidLink();
+        showPlaidFeedback('Opening Plaid…', false);
+        handler.open();
+    } catch (error) {
+        console.error('Unable to initialize Plaid Link, falling back to sandbox.', error);
+        showPlaidFeedback('Plaid Link unavailable. Loading sandbox data.', true);
+        button.disabled = false;
+        button.textContent = 'Connect Bank (Plaid)';
+        plaidLaunchButton = null;
+        const fallbackData = await simulatePlaidConnection();
+        appStore.connectPlaid(() => fallbackData);
+    }
 }
 
 function renderPoiButtons() {
@@ -1192,12 +1915,40 @@ function decorateResults(results) {
     });
 }
 
+function syncSearchUiVisibility() {
+    const dropdown = document.getElementById('search-results');
+    if (dropdown) {
+        const hasContent = dropdown.innerHTML.trim().length > 0;
+        const shouldShow = searchUIState.isDropdownVisible && hasContent;
+        dropdown.classList.toggle('hidden', !shouldShow);
+    }
+    const poiStrip = document.getElementById('poi-type-strip');
+    if (poiStrip) {
+        poiStrip.classList.toggle('hidden', !searchUIState.isPOIButtonsVisible);
+    }
+}
+
+function setSearchDropdownVisibility(isVisible) {
+    searchUIState.isDropdownVisible = Boolean(isVisible);
+    syncSearchUiVisibility();
+}
+
+function setPoiButtonsVisibility(isVisible) {
+    searchUIState.isPOIButtonsVisible = Boolean(isVisible);
+    syncSearchUiVisibility();
+}
+
+function hideSearchControlsAfterSelection() {
+    setSearchDropdownVisibility(false);
+    setPoiButtonsVisibility(false);
+}
+
 function renderSearchResults(results) {
     const container = document.getElementById('search-results');
     if (!container) return;
     if (!results || results.length === 0) {
         container.innerHTML = `<div class="bg-white/90 backdrop-blur-sm rounded-2xl p-6 text-center text-sm text-slate-500 shadow-lg">No places found. Try a different search or tap a place type.</div>`;
-        container.classList.remove('hidden');
+        syncSearchUiVisibility();
         return;
     }
 
@@ -1212,9 +1963,10 @@ function renderSearchResults(results) {
                 result.status === 'categorized'
                     ? `Categorized • ${result.subCategoryName || 'Sub-category'}`
                     : 'Uncategorized';
+            const isSelected = activeMapPlaceId === result.id;
 
             return `
-                <div class="search-result-card bg-white/90 backdrop-blur-sm rounded-2xl p-4 flex gap-3 items-start" data-place-id="${result.id}">
+                <div class="search-result-card ${isSelected ? 'selected' : ''} bg-white/90 backdrop-blur-sm rounded-2xl p-4 flex gap-3 items-start" data-place-id="${result.id}">
                     <div class="search-result-icon" style="background:${gradient}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0z"></path>
@@ -1246,7 +1998,7 @@ function renderSearchResults(results) {
         })
         .join('');
 
-    container.classList.remove('hidden');
+    syncSearchUiVisibility();
 }
 
 function computeDistanceMeters(lat1, lng1, lat2, lng2) {
@@ -1357,9 +2109,10 @@ async function runSearch(query) {
         clearMarkers();
         const container = document.getElementById('search-results');
         if (container) {
-            container.classList.add('hidden');
             container.innerHTML = '';
         }
+        renderActiveMapCard();
+        syncSearchUiVisibility();
         return;
     }
 
@@ -1377,6 +2130,7 @@ async function runSearch(query) {
         latestResults = decorateResults(merged);
         renderMarkers(latestResults);
         renderSearchResults(latestResults);
+        renderActiveMapCard();
     } catch (error) {
         console.error('Search error', error);
     } finally {
@@ -1385,10 +2139,20 @@ async function runSearch(query) {
 }
 
 function refreshResults() {
-    if (latestResults.length === 0) return;
+    if (latestResults.length === 0) {
+        clearMarkers();
+        const container = document.getElementById('search-results');
+        if (container) {
+            container.innerHTML = '';
+        }
+        syncSearchUiVisibility();
+        renderActiveMapCard();
+        return;
+    }
     latestResults = decorateResults(latestResults);
     renderMarkers(latestResults);
     renderSearchResults(latestResults);
+    renderActiveMapCard();
 }
 
 function getSubCategoriesWithParents(state) {
@@ -1427,6 +2191,7 @@ function renderBudgetView(state) {
     }
 
     const spentBySub = computeSpentBySubCategory(state);
+    const collapsedMap = state.collapsedCategories || {};
     const subByParent = new Map();
     state.subCategories.forEach((sub) => {
         if (!subByParent.has(sub.parentId)) {
@@ -1467,20 +2232,36 @@ function renderBudgetView(state) {
             const categorySpent = subCategories.reduce((sum, sub) => sum + (spentBySub.get(sub.id) || 0), 0);
             const categoryRatio = totalBudget > 0 ? Math.min(1, categorySpent / totalBudget) : categorySpent > 0 ? 1 : 0;
             const categoryOverspent = totalBudget > 0 && categorySpent > totalBudget;
+            const isCollapsed = Boolean(collapsedMap[parent.id]);
+            const subListId = `sub-list-${parent.id}`;
+            const collapseTitle = isCollapsed ? 'Expand category' : 'Collapse category';
+            const collapsedSummary = isCollapsed && subCategories.length
+                ? `<p class="text-xs text-slate-400">${subCategories.length} sub-categories hidden.</p>`
+                : '';
+            const emptyCollapsedSummary = isCollapsed && !subCategories.length ? '<p class="text-xs text-slate-400">No sub-categories yet.</p>' : '';
+            const subSectionClass = `space-y-2 ${isCollapsed ? 'hidden' : ''}`;
+            const subCountLabel = subCategories.length ? ` • ${subCategories.length} sub-categories` : '';
 
             return `
-                <article class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm space-y-4" aria-label="${parent.name} ${formatCurrency(categorySpent)} spent of ${formatCurrency(totalBudget)}">
+                <article class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm space-y-4" data-category-id="${parent.id}" aria-label="${parent.name} ${formatCurrency(categorySpent)} spent of ${formatCurrency(totalBudget)}">
                     <div class="flex items-start justify-between gap-3">
                         <div class="flex items-center gap-3">
                             <div class="h-10 w-10 rounded-2xl" style="background:${gradientStyle(parent.colorStops)}"></div>
                             <div>
                                 <h3 class="font-semibold text-lg text-slate-900">${parent.name}</h3>
-                                <p class="text-xs uppercase tracking-wide text-slate-400">${formatCurrency(totalBudget)} budgeted</p>
+                                <p class="text-xs uppercase tracking-wide text-slate-400">${formatCurrency(totalBudget)} budgeted${subCountLabel}</p>
                             </div>
                         </div>
-                        <button class="add-subcategory-btn flex h-9 items-center justify-center rounded-full bg-slate-100 px-3 text-xs font-semibold text-slate-600 hover:bg-slate-200" data-parent-id="${parent.id}">
-                            + Sub-category
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <button class="collapse-toggle" data-action="toggle-category" data-category-id="${parent.id}" aria-expanded="${!isCollapsed}" aria-controls="${subListId}" title="${collapseTitle}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </button>
+                            <button class="add-subcategory-btn flex h-9 items-center justify-center rounded-full bg-slate-100 px-3 text-xs font-semibold text-slate-600 hover:bg-slate-200" data-parent-id="${parent.id}">
+                                + Sub-category
+                            </button>
+                        </div>
                     </div>
                     <div class="space-y-2">
                         <div class="space-y-2">
@@ -1492,7 +2273,10 @@ function renderBudgetView(state) {
                                 <span class="text-slate-400">${formatPercent(totalBudget > 0 ? Math.min(categorySpent / totalBudget, 1) : categorySpent > 0 ? 1 : 0)} used</span>
                             </div>
                         </div>
-                        ${subMarkup || '<p class="text-xs text-slate-400">No sub-categories yet.</p>'}
+                        ${collapsedSummary || emptyCollapsedSummary}
+                        <div id="${subListId}" class="${subSectionClass}">
+                            ${subMarkup || '<p class="text-xs text-slate-400">No sub-categories yet.</p>'}
+                        </div>
                     </div>
                 </article>
             `;
@@ -1854,7 +2638,7 @@ function simulatePlaidConnection() {
 function simulateDemoSeed() {
     return new Promise((resolve) => {
         setTimeout(() => {
-            resolve(generateDemoData());
+            resolve(generateDemoData(appStore.getState()));
         }, 600);
     });
 }
@@ -1869,17 +2653,44 @@ document.addEventListener('DOMContentLoaded', () => {
     renderAccounts(initialState);
     renderTransactions(initialState);
 
+    const searchInput = document.getElementById('search-input');
+    const mapCardContainer = document.getElementById('map-card-container');
+    syncSearchUiVisibility();
+
     appStore.subscribe((state) => {
         populateParentSelect();
         renderBudgetView(state);
         renderAccounts(state);
         updateTransactionsAfterStateChange(state);
         refreshResults();
+        renderActiveMapCard();
     });
+
+    if (searchInput) {
+        searchInput.addEventListener('focus', () => {
+            setPoiButtonsVisibility(true);
+            setSearchDropdownVisibility(true);
+        });
+        searchInput.addEventListener('blur', () => {
+            setSearchDropdownVisibility(false);
+        });
+        searchInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                setSearchDropdownVisibility(false);
+                searchInput.blur();
+            }
+        });
+        searchInput.addEventListener('input', (event) => {
+            if (!(event.target.value || '').trim()) {
+                setPoiButtonsVisibility(true);
+                setSearchDropdownVisibility(true);
+            }
+        });
+    }
 
     document.getElementById('search-form').addEventListener('submit', (event) => {
         event.preventDefault();
-        const query = document.getElementById('search-input').value.trim();
+        const query = (searchInput ? searchInput.value : '').trim();
         runSearch(query || activePoiType);
     });
 
@@ -1887,24 +2698,59 @@ document.addEventListener('DOMContentLoaded', () => {
         const button = event.target.closest('.poi-button');
         if (!button) return;
         const type = button.dataset.poiType;
-        activePoiType = activePoiType === type ? '' : type;
-        document.querySelectorAll('.poi-button').forEach((btn) => btn.classList.remove('active'));
-        if (activePoiType) {
-            button.classList.add('active');
-            runSearch(document.getElementById('search-input').value.trim());
+        if (activePoiType === type) {
+            activePoiType = '';
+            document.querySelectorAll('.poi-button').forEach((btn) => btn.classList.remove('active'));
+            setPoiButtonsVisibility(true);
+            setSearchDropdownVisibility(true);
+            runSearch(searchInput ? searchInput.value.trim() : '');
+            return;
         }
+        activePoiType = type;
+        document.querySelectorAll('.poi-button').forEach((btn) => btn.classList.remove('active'));
+        button.classList.add('active');
+        hideSearchControlsAfterSelection();
+        runSearch(searchInput ? searchInput.value.trim() : '');
     });
 
     document.getElementById('search-results').addEventListener('click', (event) => {
         const actionButton = event.target.closest('button[data-action]');
-        if (!actionButton) return;
-        const placeId = actionButton.dataset.placeId;
-        if (actionButton.dataset.action === 'map-link') {
-            openSubcategoryPickerForPlace(placeId);
-        } else if (actionButton.dataset.action === 'map-create') {
-            openCreateSubcategoryModal({ type: 'map', id: placeId });
+        if (actionButton) {
+            const placeId = actionButton.dataset.placeId;
+            if (actionButton.dataset.action === 'map-link') {
+                openSubcategoryPickerForPlace(placeId);
+            } else if (actionButton.dataset.action === 'map-create') {
+                openCreateSubcategoryModal({ type: 'map', id: placeId });
+            }
+            hideSearchControlsAfterSelection();
+            return;
+        }
+        const card = event.target.closest('.search-result-card');
+        if (card) {
+            handlePlaceSelection(card.dataset.placeId);
         }
     });
+
+    if (mapCardContainer) {
+        mapCardContainer.addEventListener('click', (event) => {
+            const control = event.target.closest('[data-action]');
+            if (!control) return;
+            const placeId = control.dataset.placeId || activeMapPlaceId;
+            if (control.dataset.action === 'close-map-card') {
+                closeMapCard();
+            } else if (control.dataset.action === 'card-link') {
+                if (placeId) {
+                    openSubcategoryPickerForPlace(placeId);
+                    hideSearchControlsAfterSelection();
+                }
+            } else if (control.dataset.action === 'card-create') {
+                if (placeId) {
+                    openCreateSubcategoryModal({ type: 'map', id: placeId });
+                    hideSearchControlsAfterSelection();
+                }
+            }
+        });
+    }
 
     document.getElementById('link-create-subcategory').addEventListener('click', () => {
         if (!linkModalContext) return;
@@ -1953,6 +2799,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('budget-list').addEventListener('click', (event) => {
+        const toggleButton = event.target.closest('.collapse-toggle');
+        if (toggleButton) {
+            appStore.toggleCategoryCollapse(toggleButton.dataset.categoryId);
+            return;
+        }
         const button = event.target.closest('.add-subcategory-btn');
         if (!button) return;
         openCreateSubcategoryModal({ type: 'budget', parentId: button.dataset.parentId });
@@ -2013,14 +2864,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('connect-plaid-btn').addEventListener('click', async (event) => {
         if (appStore.getState().plaidConnected) return;
         const button = event.currentTarget;
-        button.textContent = 'Connecting…';
+        button.textContent = 'Launching Plaid…';
         button.disabled = true;
-        const data = await simulatePlaidConnection();
-        appStore.connectPlaid(() => data);
+        await openPlaidLink(button);
     });
 
     document.getElementById('disconnect-plaid').addEventListener('click', () => {
         appStore.disconnectPlaid();
+        showPlaidFeedback('Disconnected from Plaid. Using demo data.', false);
     });
 
     document.getElementById('accounts-list').addEventListener('click', (event) => {
