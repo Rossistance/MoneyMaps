@@ -1642,6 +1642,7 @@ function createStore() {
                 parsed.paletteIndex = parsed.paletteIndex || (parsed.categories ? parsed.categories.length : 0);
                 parsed.sources.demo = parsed.sources.demo || { accounts: [], transactions: [], seeded: false };
                 parsed.sources.plaid = parsed.sources.plaid || { accounts: [], transactions: [], seeded: false };
+                parsed.sources.live = parsed.sources.live || { accounts: [], transactions: [], seeded: false };
                 parsed.categories = parsed.categories || [];
                 parsed.subCategories = parsed.subCategories || [];
                 parsed.categories.forEach((category, index) => {
@@ -1682,7 +1683,8 @@ function createStore() {
             poiCategoryOverrides: loadPoiOverrideTable(),
             sources: {
                 demo: { accounts: [], transactions: [], seeded: false },
-                plaid: { accounts: [], transactions: [], seeded: false }
+                plaid: { accounts: [], transactions: [], seeded: false },
+                live: { accounts: [], transactions: [], seeded: false }
             }
         };
     }
@@ -1899,6 +1901,127 @@ function createStore() {
         seedDemoData(generateDemoData);
     }
 
+    function loadLiveData(payload) {
+        mutate((draft) => {
+            const data = payload || {};
+            draft.sources = draft.sources || {};
+            draft.sources.live = draft.sources.live || { accounts: [], transactions: [], seeded: false };
+
+            const incomingCategories = Array.isArray(data.categories) ? data.categories : null;
+            if (incomingCategories) {
+                draft.categories = incomingCategories.map((category, index) => {
+                    const colorStops = Array.isArray(category.colorStops) && category.colorStops.length >= 2
+                        ? category.colorStops.slice(0, 2)
+                        : COLOR_PALETTE[index % COLOR_PALETTE.length];
+                    return {
+                        ...category,
+                        id: category.id || slugify(category.name || `category-${index + 1}`),
+                        name: category.name || `Category ${index + 1}`,
+                        colorStops
+                    };
+                });
+                draft.paletteIndex = draft.categories.length % COLOR_PALETTE.length;
+            } else {
+                draft.categories = draft.categories.map((category, index) => {
+                    const colorStops = Array.isArray(category.colorStops) && category.colorStops.length >= 2
+                        ? category.colorStops.slice(0, 2)
+                        : COLOR_PALETTE[index % COLOR_PALETTE.length];
+                    return { ...category, colorStops };
+                });
+            }
+
+            const categoryById = new Map(draft.categories.map((category) => [category.id, category]));
+            const incomingSubs = Array.isArray(data.subCategories) ? data.subCategories : null;
+            if (incomingSubs) {
+                draft.subCategories = incomingSubs.map((sub, index) => {
+                    const parent = categoryById.get(sub.parentId);
+                    const colorStops = Array.isArray(sub.colorStops) && sub.colorStops.length >= 2
+                        ? sub.colorStops.slice(0, 2)
+                        : deriveSubGradient(parent ? parent.colorStops : COLOR_PALETTE[0], index);
+                    return {
+                        ...sub,
+                        id: sub.id || slugify(sub.name || `subcategory-${index + 1}`),
+                        parentId: sub.parentId,
+                        name: sub.name || `Sub-category ${index + 1}`,
+                        budget: Number(sub.budget) || 0,
+                        colorStops
+                    };
+                });
+            } else {
+                draft.subCategories = draft.subCategories.map((sub, index) => {
+                    const parent = categoryById.get(sub.parentId);
+                    const colorStops = Array.isArray(sub.colorStops) && sub.colorStops.length >= 2
+                        ? sub.colorStops.slice(0, 2)
+                        : deriveSubGradient(parent ? parent.colorStops : COLOR_PALETTE[0], index);
+                    return { ...sub, budget: Number(sub.budget) || 0, colorStops };
+                });
+            }
+
+            const accountsInput = Array.isArray(data.accounts) ? data.accounts : null;
+            if (accountsInput) {
+                draft.sources.live.accounts = accountsInput.map((account, index) => ({
+                    ...account,
+                    id: account.id || slugify(account.name || `account-${index + 1}`),
+                    name: account.name || `Account ${index + 1}`,
+                    type: account.type || 'account',
+                    balance: Number(account.balance) || 0,
+                    source: 'live'
+                }));
+            } else if (!Array.isArray(draft.sources.live.accounts)) {
+                draft.sources.live.accounts = [];
+            }
+
+            const transactionsInput = Array.isArray(data.transactions) ? data.transactions : null;
+            if (transactionsInput) {
+                draft.sources.live.transactions = transactionsInput.map((txn, index) => {
+                    const rawDate = txn.date instanceof Date ? txn.date.toISOString().slice(0, 10) : txn.date;
+                    return {
+                        ...txn,
+                        id: txn.id || `live-${index}`,
+                        accountId: txn.accountId || null,
+                        date: typeof rawDate === 'string' ? rawDate : formatISODate(new Date()),
+                        amount: Number(txn.amount) || 0,
+                        source: 'live'
+                    };
+                });
+            } else if (!Array.isArray(draft.sources.live.transactions)) {
+                draft.sources.live.transactions = [];
+            }
+
+            draft.sources.live.seeded = true;
+
+            if (typeof data.activeAccountId === 'string') {
+                draft.activeAccountId = data.activeAccountId;
+            } else if (data.activeAccountId === null) {
+                draft.activeAccountId = null;
+            }
+
+            if (draft.activeAccountId && !draft.sources.live.accounts.some((account) => account.id === draft.activeAccountId)) {
+                draft.activeAccountId = null;
+            }
+
+            const timelineInput = data.timeline ? { ...data.timeline } : { ...draft.timeline };
+            if (timelineInput.periodStart instanceof Date) {
+                timelineInput.periodStart = formatISODate(timelineInput.periodStart);
+            }
+            if (timelineInput.periodEnd instanceof Date) {
+                timelineInput.periodEnd = formatISODate(timelineInput.periodEnd);
+            }
+            if (timelineInput.selectedDate instanceof Date) {
+                timelineInput.selectedDate = formatISODate(timelineInput.selectedDate);
+            }
+            const normalizedTimeline = normalizeTimelineState(timelineInput);
+            if (data.focusCategoryId !== undefined) {
+                normalizedTimeline.focusCategoryId = data.focusCategoryId || null;
+            } else if (timelineInput.focusCategoryId !== undefined) {
+                normalizedTimeline.focusCategoryId = timelineInput.focusCategoryId || null;
+            }
+            draft.timeline = normalizedTimeline;
+
+            draft.dataSource = 'live';
+        });
+    }
+
     function connectPlaid(generator) {
         mutate((draft) => {
             const plaidData = generator ? generator(draft) : generatePlaidData(draft);
@@ -1923,7 +2046,10 @@ function createStore() {
 
     function setDataSource(source) {
         mutate((draft) => {
+            const allowedSources = ['demo', 'plaid', 'live'];
+            if (!allowedSources.includes(source)) return;
             if (source === 'plaid' && !draft.plaidConnected) return;
+            if (source === 'live' && !(draft.sources?.live?.seeded)) return;
             draft.dataSource = source;
             draft.activeAccountId = null;
         });
@@ -1942,6 +2068,7 @@ function createStore() {
         clearAccountFilter,
         seedDemoData,
         resetDemoData,
+        loadLiveData,
         connectPlaid,
         disconnectPlaid,
         setDataSource,
@@ -2193,7 +2320,9 @@ const appStore = createStore();
 window.moneyMapsAdmin = Object.assign({}, window.moneyMapsAdmin, {
     setPoiOverride: (poiType, override) => appStore.setPoiCategoryOverride(poiType, override),
     clearPoiOverride: (poiType) => appStore.clearPoiCategoryOverride(poiType),
-    toggleCategory: (categoryId) => appStore.toggleCategoryCollapse(categoryId)
+    toggleCategory: (categoryId) => appStore.toggleCategoryCollapse(categoryId),
+    loadLiveData: (payload) => appStore.loadLiveData(payload),
+    useDataSource: (source) => appStore.setDataSource(source)
 });
 
 function setLoaderVisible(isVisible) {
@@ -2815,7 +2944,12 @@ function renderBudgetView(state) {
     if (!container) return;
     const dataSourceLabel = document.getElementById('active-data-source');
     if (dataSourceLabel) {
-        const sourceText = state.dataSource === 'plaid' ? 'Plaid accounts' : 'Demo data';
+        let sourceText = 'Demo data';
+        if (state.dataSource === 'plaid') {
+            sourceText = 'Plaid accounts';
+        } else if (state.dataSource === 'live') {
+            sourceText = 'Live data';
+        }
         dataSourceLabel.textContent = sourceText;
     }
     const timeline = getTimelineState(state);
@@ -2961,7 +3095,10 @@ function renderAccounts(state) {
     if (!accountsList) return;
 
     const source = getActiveSource(state);
-    dataSourceLabel.textContent = state.dataSource === 'plaid' ? 'Plaid' : 'Demo';
+    if (dataSourceLabel) {
+        const name = state.dataSource === 'plaid' ? 'Plaid' : state.dataSource === 'live' ? 'Live' : 'Demo';
+        dataSourceLabel.textContent = name;
+    }
     const timeline = getTimelineState(state);
     const periodStartDate = parseISODate(timeline.periodStart);
     const selectedDate = parseISODate(timeline.selectedDate);
@@ -2974,7 +3111,7 @@ function renderAccounts(state) {
     }
 
     if (!source.accounts.length) {
-        accountsList.innerHTML = '<p class="text-sm text-slate-500">No accounts yet. Connect Plaid or load demo data.</p>';
+        accountsList.innerHTML = '<p class="text-sm text-slate-500">No accounts yet. Connect Plaid or load data.</p>';
         accountsSummary?.classList.add('hidden');
         return;
     }
@@ -3057,7 +3194,12 @@ function renderTransactions(state) {
     const selectedDate = parseISODate(timeline.selectedDate);
     const dayNumber = differenceInDays(periodStartDate, selectedDate) + 1;
     if (sourcePill) {
-        const sourceLabel = state.dataSource === 'plaid' ? 'Using Plaid data' : 'Using demo data';
+        let sourceLabel = 'Using demo data';
+        if (state.dataSource === 'plaid') {
+            sourceLabel = 'Using Plaid data';
+        } else if (state.dataSource === 'live') {
+            sourceLabel = 'Using live data';
+        }
         sourcePill.textContent = `${sourceLabel} • ${formatMonthTitle(periodStartDate)} · Day ${Math.max(1, dayNumber)}`;
     }
     if (accountPill) {
@@ -3073,7 +3215,7 @@ function renderTransactions(state) {
     }
 
     if (demoBtn) {
-        if (state.plaidConnected) {
+        if (state.plaidConnected || state.dataSource === 'live') {
             demoBtn.classList.add('hidden');
         } else if (state.sources.demo.seeded) {
             demoBtn.textContent = 'Demo data loaded';
@@ -3086,7 +3228,7 @@ function renderTransactions(state) {
         }
     }
     if (resetDemoBtn) {
-        if (!state.plaidConnected && state.sources.demo.seeded) {
+        if (!state.plaidConnected && state.sources.demo.seeded && state.dataSource !== 'live') {
             resetDemoBtn.classList.remove('hidden');
         } else {
             resetDemoBtn.classList.add('hidden');
@@ -3114,7 +3256,7 @@ function renderTransactions(state) {
     const accountLookup = new Map(source.accounts.map((acc) => [acc.id, acc]));
 
     if (!transactions.length) {
-        list.innerHTML = '<div class="p-6 text-center text-sm text-slate-500">No transactions yet. Connect Plaid or load demo data.</div>';
+        list.innerHTML = '<div class="p-6 text-center text-sm text-slate-500">No transactions yet. Connect Plaid or load data.</div>';
         return;
     }
 
