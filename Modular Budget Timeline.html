@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-900">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Canvas App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827;
+        }
+
+        /* Container for the canvas, designed to be centered in the body */
+        #financial-canvas-container {
+            position: relative;
+            width: 100%;
+            max-width: 1200px; /* Caps the width on very large screens */
+            height: 85vh;      /* Uses a percentage of the viewport height */
+            max-height: 800px; /* Caps the height */
+            border-radius: 0.75rem;
+            overflow: hidden;
+            background-color: #1f2937;
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+        }
+
+        /* The canvas element itself */
+        #financial-canvas-container canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+    </style>
+</head>
+<body class="h-full flex items-center justify-center p-4 md:p-8">
+
+    <!-- The Standalone Canvas Viewport -->
+    <div id="financial-canvas-container">
+        <!-- The canvas will be created here by the script -->
+    </div>
+
+    <script>
+        /**
+         * FinancialCanvas Class
+         * Creates a fully interactive, zoomable, and pannable financial visualization.
+         * Renders spending and savings categories with data changing over a timeline.
+         * Categories can be dragged and dropped.
+         */
+        class FinancialCanvas {
+            /**
+             * @param {string} containerId The ID of the div that will contain the canvas.
+             * @param {object} data The financial data for the visualization.
+             * @param {Array<object>} data.spendingData Array of spending category objects.
+             * @param {Array<object>} data.savingsData Array of savings category objects.
+             */
+            constructor(containerId, data) {
+                this.container = document.getElementById(containerId);
+                if (!this.container) {
+                    console.error(`Container with id "${containerId}" not found.`);
+                    return;
+                }
+
+                // --- Create DOM Elements ---
+                this.canvas = document.createElement('canvas');
+                this.container.appendChild(this.canvas);
+                this.ctx = this.canvas.getContext('2d');
+
+                // --- Interactivity State ---
+                this.scale = 1;
+                this.offsetX = 0;
+                this.offsetY = 0;
+                this.isPanning = false;
+                this.lastX = 0;
+                this.lastY = 0;
+                this.draggedItem = null;
+                this.dragOffsetX = 0;
+                this.dragOffsetY = 0;
+
+                // --- Vertical Slider State ---
+                this.sliderValue = 17; // Initial day
+                this.isDraggingSlider = false;
+                this.sliderBounds = { x: 0, y: 0, width: 0, height: 0 };
+
+
+                // --- Data Setup ---
+                this.spendingData = data.spendingData || [];
+                this.savingsData = data.savingsData || [];
+                this.assumedIncome = data.assumedIncome || 3500;
+                
+                const totalBudgetedSpending = this.spendingData.reduce((sum, item) => sum + item.total, 0);
+                this.unallocatedData = {
+                    id: 'unallocated-0',
+                    emoji: '❓',
+                    label: 'Unallocated',
+                    total: this.assumedIncome - totalBudgetedSpending,
+                    color: '#6b7280' // gray-500
+                };
+
+                this.today = new Date(2025, 9, 17); // Fixed date for consistent simulation
+                this.currentDayOfMonth = this.today.getDate();
+                this.sliderValue = this.currentDayOfMonth;
+
+                this.init();
+            }
+
+            init() {
+                this.prepareData();
+                this.initializePositions();
+                this.addEventListeners();
+                this.drawScene();
+            }
+
+            prepareData() {
+                const simulateTransactions = (finalAmount, maxDay) => {
+                    let transactions = [];
+                    let amountSum = 0;
+                    if (finalAmount <= 0) return transactions;
+                    while (amountSum < finalAmount) {
+                        let transactionAmount = Math.random() * (finalAmount / 5) + 1;
+                        if (amountSum + transactionAmount > finalAmount) {
+                            transactionAmount = finalAmount - amountSum;
+                        }
+                        amountSum += transactionAmount;
+                        transactions.push({ day: Math.floor(Math.random() * maxDay) + 1, amount: transactionAmount });
+                    }
+                    return transactions;
+                };
+
+                this.spendingData.forEach(d => d.transactions = simulateTransactions(d.finalSpent, this.currentDayOfMonth));
+                this.savingsData.forEach(d => d.transactions = simulateTransactions(d.finalSaved, this.currentDayOfMonth));
+
+                this.dailySnapshots = [];
+                for (let day = 1; day <= this.currentDayOfMonth; day++) {
+                    const dailySpending = this.spendingData.map(ff => ({
+                        id: ff.id,
+                        spent: ff.transactions.filter(t => t.day <= day).reduce((sum, t) => sum + t.amount, 0)
+                    }));
+                    const dailySavings = this.savingsData.map(sg => ({
+                        id: sg.id,
+                        saved: sg.transactions.filter(t => t.day <= day).reduce((sum, t) => sum + t.amount, 0)
+                    }));
+                    const unallocatedSpent = dailySavings.reduce((sum, item) => sum + item.saved, 0);
+
+                    this.dailySnapshots.push({
+                        day: day,
+                        spending: dailySpending,
+                        savings: dailySavings,
+                        unallocatedSpent: unallocatedSpent
+                    });
+                }
+            }
+            
+            initializePositions() {
+                const rect = this.canvas.getBoundingClientRect();
+                const width = rect.width;
+                const isTwoColumn = width >= 1024;
+                const padding = 30;
+                const columnGap = 40;
+                const col1X = padding;
+                const colWidth = isTwoColumn ? (width - padding * 2 - columnGap) / 2 : width - padding * 2;
+                const col2X = isTwoColumn ? col1X + colWidth + columnGap : col1X;
+                const sourceBoxHeight = 70;
+
+                const layoutGrid = (items, startX, startY) => {
+                    const itemGridGapY = 50;
+                    const itemBlockHeight = 180;
+                    const itemsPer = 3;
+                    const itemWidth = 80;
+                    const itemGapX = (colWidth - (itemsPer * itemWidth)) / (itemsPer - 1);
+
+                    items.forEach((item, index) => {
+                        if (item.x === undefined || item.y === undefined) {
+                            const row = Math.floor(index / itemsPer);
+                            const col = index % itemsPer;
+                            item.x = startX + col * (itemWidth + itemGapX);
+                            item.y = startY + row * (itemBlockHeight + itemGridGapY);
+                        }
+                    });
+                    const numRows = Math.ceil(items.length / itemsPer);
+                    return startY + (numRows > 0 ? numRows * itemBlockHeight + (numRows - 1) * itemGridGapY : 0);
+                };
+                
+                const allSpendingSideItems = [...this.spendingData, this.unallocatedData];
+
+                const spendingGridStartY = padding + sourceBoxHeight + 130;
+                layoutGrid(allSpendingSideItems, col1X, spendingGridStartY);
+
+                const savingsGridStartY = isTwoColumn ? (padding + sourceBoxHeight + 130) : spendingGridStartY + 300;
+                layoutGrid(this.savingsData, col2X, savingsGridStartY);
+            }
+            
+            // --- Drawing Methods ---
+
+            drawScene() {
+                if (!this.dailySnapshots || this.dailySnapshots.length === 0) return;
+
+                const dayIndex = Math.round(this.sliderValue) - 1;
+                const snapshot = this.dailySnapshots[dayIndex];
+                if (!snapshot) return;
+
+                const dpr = window.devicePixelRatio || 1;
+                const rect = this.canvas.getBoundingClientRect();
+                this.canvas.width = rect.width * dpr;
+                this.canvas.height = rect.height * dpr;
+                this.ctx.scale(dpr, dpr);
+                const width = rect.width;
+                const height = rect.height;
+
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                this.ctx.save();
+                this.ctx.translate(this.offsetX, this.offsetY);
+                this.ctx.scale(this.scale, this.scale);
+
+                // Define layout constants
+                const isTwoColumn = width >= 1024;
+                const padding = 30;
+                const col1X = padding;
+                const colWidth = isTwoColumn ? (width - padding * 3) / 2 : width - padding * 2;
+                const sourceBoxWidth = 220;
+                const sourceBoxHeight = 90;
+                const incomeSourcePos = { x: col1X + colWidth / 2 - sourceBoxWidth / 2, y: padding };
+                
+                this.drawIncomeBox(incomeSourcePos, sourceBoxWidth, sourceBoxHeight);
+                
+                const allItems = [...this.spendingData, ...this.savingsData, this.unallocatedData];
+                allItems.filter(item => item.id !== this.draggedItem?.id).forEach(item => this.drawItem(item, snapshot));
+                
+                const incomeStart = {x: incomeSourcePos.x + sourceBoxWidth / 2, y: incomeSourcePos.y + sourceBoxHeight};
+                
+                [...this.spendingData, this.unallocatedData].forEach(item => this.drawFlowLine(incomeStart.x, incomeStart.y, item.x + 40, item.y, item.color));
+
+                const unallocatedStart = {
+                    x: this.unallocatedData.x + 40,
+                    y: this.unallocatedData.y + 180
+                };
+                this.savingsData.forEach(item => this.drawFlowLine(unallocatedStart.x, unallocatedStart.y, item.x + 40, item.y, item.color));
+                
+                if (this.draggedItem) {
+                    this.ctx.save();
+                    this.ctx.shadowColor = '#00FFFF';
+                    this.ctx.shadowBlur = 20;
+                    this.ctx.globalAlpha = 0.95; 
+                    this.drawItem(this.draggedItem, snapshot);
+                    this.ctx.restore();
+                }
+
+                this.ctx.restore(); // Restore from pan/zoom transforms
+
+                // Draw UI elements on top, not affected by pan/zoom
+                this.drawVerticalSlider(width, height);
+            }
+
+            drawIncomeBox(pos, width, height) {
+                const totalUsedForBudget = this.spendingData.reduce((sum, item) => sum + item.total, 0);
+
+                this.ctx.fillStyle = '#374151';
+                this.drawRoundRect(pos.x, pos.y, width, height, 8);
+                this.ctx.fill();
+
+                const percent = totalUsedForBudget / this.assumedIncome;
+                const fillWidth = Math.max(0, width * percent);
+                if(fillWidth > 0) {
+                    this.ctx.fillStyle = '#00FF7F';
+                    this.drawRoundRect(pos.x, pos.y, fillWidth, height, 8);
+                    this.ctx.fill();
+                }
+
+                this.ctx.fillStyle = '#111827';
+                this.ctx.font = 'bold 18px Inter';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText('Budget vs. Income', pos.x + width / 2, pos.y + 25);
+                this.ctx.font = '16px "Inter"';
+                this.ctx.fillText(`${this.formatCurrency(totalUsedForBudget)} / ${this.formatCurrency(this.assumedIncome)}`, pos.x + width / 2, pos.y + 55);
+            }
+
+            drawItem(item, snapshot) {
+                if (item.id === 'unallocated-0') {
+                    const remainingUnallocated = this.unallocatedData.total - snapshot.unallocatedSpent;
+                    this.drawCategory(item, remainingUnallocated, true);
+                    return;
+                }
+                const snapshotItem = snapshot.spending.find(si => si.id === item.id) || snapshot.savings.find(si => si.id === item.id);
+                if (snapshotItem) {
+                    const amount = snapshotItem.spent ?? snapshotItem.saved;
+                    this.drawCategory(item, amount);
+                }
+            }
+
+            drawCategory(item, amount, isUnallocated = false) {
+                const itemWidth = 80;
+                const itemTextHeight = 60;
+                const itemBarHeight = 120;
+                
+                this.ctx.font = '28px sans-serif';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText(item.emoji, item.x + itemWidth / 2, item.y);
+                this.ctx.fillStyle = '#f9fafb';
+                this.ctx.font = '14px Inter';
+                this.ctx.fillText(item.label, item.x + itemWidth / 2, item.y + 25);
+                
+                this.ctx.fillStyle = '#9ca3af';
+                this.ctx.font = '12px "Inter"';
+
+                if (isUnallocated) {
+                    this.ctx.fillText(`${this.formatCurrency(amount)} left`, item.x + itemWidth / 2, item.y + 45);
+                } else {
+                    this.ctx.fillText(`${this.formatCurrency(amount)} / ${this.formatCurrency(item.total)}`, item.x + itemWidth / 2, item.y + 45);
+                }
+
+                const barY = item.y + itemTextHeight;
+                this.ctx.fillStyle = '#374151';
+                this.drawRoundRect(item.x, barY, itemWidth, itemBarHeight, 6);
+                this.ctx.fill();
+
+                const percent = (item.total > 0) ? (amount / item.total) : 0;
+                const fillHeight = Math.max(0, itemBarHeight * percent);
+                if (fillHeight > 0) {
+                    this.ctx.fillStyle = item.color;
+                    this.drawRoundRect(item.x, barY + (itemBarHeight - fillHeight), itemWidth, fillHeight, 6);
+                    this.ctx.fill();
+                }
+            }
+
+            drawFlowLine(startX, startY, endX, endY, color) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(startX, startY);
+                this.ctx.bezierCurveTo(startX, startY + 80, endX, endY - 80, endX, endY);
+                this.ctx.lineWidth = 3 / this.scale;
+                const rgb = this.hexToRgb(color);
+                this.ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`;
+                this.ctx.shadowColor = color;
+                this.ctx.shadowBlur = 10;
+                this.ctx.stroke();
+                this.ctx.shadowBlur = 0;
+            }
+
+            drawVerticalSlider(width, height) {
+                const sliderWidth = 8;
+                const thumbRadius = 12;
+                const padding = 40;
+                
+                this.sliderBounds.x = width - padding - thumbRadius;
+                this.sliderBounds.y = padding * 2;
+                this.sliderBounds.width = thumbRadius * 2;
+                this.sliderBounds.height = height - padding * 4;
+
+                // Draw track
+                this.ctx.fillStyle = '#4A5568';
+                this.drawRoundRect(width - padding - (sliderWidth/2), this.sliderBounds.y, sliderWidth, this.sliderBounds.height, 4);
+                this.ctx.fill();
+                
+                // Draw Thumb
+                const percent = (this.sliderValue - 1) / (this.currentDayOfMonth - 1);
+                const thumbY = this.sliderBounds.y + this.sliderBounds.height * percent;
+
+                this.ctx.fillStyle = '#00FFFF';
+                this.ctx.strokeStyle = '#111827';
+                this.ctx.lineWidth = 4;
+                this.ctx.beginPath();
+                this.ctx.arc(width - padding, thumbY, thumbRadius, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.stroke();
+
+                // Draw Date Label
+                const currentDate = new Date(this.today.getFullYear(), this.today.getMonth(), Math.round(this.sliderValue));
+                const dateString = currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                this.ctx.fillStyle = '#00FFFF';
+                this.ctx.font = '14px "Inter"';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText(dateString, width - padding, thumbY - thumbRadius - 8);
+            }
+
+            // --- Event Handlers ---
+            addEventListeners() {
+                new ResizeObserver(() => {
+                    this.initializePositions();
+                    this.drawScene();
+                }).observe(this.container);
+
+                this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
+                this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
+                this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
+                this.canvas.addEventListener('mouseleave', this.handleMouseUp.bind(this));
+                this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
+            }
+
+            handleMouseDown(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const canvasMouseX = e.clientX - rect.left;
+                const canvasMouseY = e.clientY - rect.top;
+
+                // Check for slider drag first (slider is in screen space)
+                const percent = (this.sliderValue - 1) / (this.currentDayOfMonth - 1);
+                const thumbY = this.sliderBounds.y + this.sliderBounds.height * percent;
+                const dist = Math.hypot(canvasMouseX - (this.sliderBounds.x + this.sliderBounds.width/2), canvasMouseY - thumbY);
+                if (dist < 20) { // Larger hit area for thumb
+                    this.isDraggingSlider = true;
+                } else {
+                    // Check for item drag (item is in world space)
+                    const { mouseX, mouseY } = this.getMousePos(e);
+                    const itemWidth = 80;
+                    const itemHeight = 180;
+
+                    this.draggedItem = [...this.spendingData, ...this.savingsData, this.unallocatedData].reverse().find(item => 
+                        mouseX >= item.x && mouseX <= item.x + itemWidth &&
+                        mouseY >= item.y && mouseY <= item.y + itemHeight
+                    ) || null;
+
+                    if (this.draggedItem) {
+                        this.isPanning = false;
+                        this.dragOffsetX = mouseX - this.draggedItem.x;
+                        this.dragOffsetY = mouseY - this.draggedItem.y;
+                    } else {
+                        this.isPanning = true;
+                        this.lastX = e.clientX;
+                        this.lastY = e.clientY;
+                    }
+                }
+                 this.canvas.style.cursor = 'grabbing';
+            }
+
+            handleMouseMove(e) {
+                if (this.isDraggingSlider) {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const canvasMouseY = e.clientY - rect.top;
+                    const relativeY = canvasMouseY - this.sliderBounds.y;
+                    const percent = Math.max(0, Math.min(1, relativeY / this.sliderBounds.height));
+                    this.sliderValue = percent * (this.currentDayOfMonth - 1) + 1;
+                    requestAnimationFrame(() => this.drawScene());
+
+                } else if (this.draggedItem) {
+                    const { mouseX, mouseY } = this.getMousePos(e);
+                    this.draggedItem.x = mouseX - this.dragOffsetX;
+                    this.draggedItem.y = mouseY - this.dragOffsetY;
+                    requestAnimationFrame(() => this.drawScene());
+                } else if (this.isPanning) {
+                    const dx = e.clientX - this.lastX;
+                    const dy = e.clientY - this.lastY;
+                    this.offsetX += dx;
+                    this.offsetY += dy;
+                    this.lastX = e.clientX;
+                    this.lastY = e.clientY;
+                    requestAnimationFrame(() => this.drawScene());
+                }
+            }
+
+            handleMouseUp() {
+                this.isPanning = false;
+                this.isDraggingSlider = false;
+                this.draggedItem = null;
+                this.canvas.style.cursor = 'grab';
+                this.drawScene(); // Redraw to remove glow effect
+            }
+
+            handleWheel(e) {
+                e.preventDefault();
+                const rect = this.canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+
+                const worldX = (mouseX - this.offsetX) / this.scale;
+                const worldY = (mouseY - this.offsetY) / this.scale;
+                
+                const zoomFactor = 1.1;
+                const newScale = e.deltaY < 0 ? this.scale * zoomFactor : this.scale / zoomFactor;
+                this.scale = Math.max(0.25, Math.min(4, newScale));
+
+                this.offsetX = mouseX - worldX * this.scale;
+                this.offsetY = mouseY - worldY * this.scale;
+
+                requestAnimationFrame(() => this.drawScene());
+            }
+
+            // --- Utility Methods ---
+            getMousePos(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                return {
+                    mouseX: (e.clientX - rect.left - this.offsetX) / this.scale,
+                    mouseY: (e.clientY - rect.top - this.offsetY) / this.scale
+                };
+            }
+
+            formatCurrency(value) {
+                return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+            }
+
+            drawRoundRect(x, y, width, height, radius) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(x + radius, y);
+                this.ctx.lineTo(x + width - radius, y);
+                this.ctx.arcTo(x + width, y, x + width, y + radius, radius);
+                this.ctx.lineTo(x + width, y + height - radius);
+                this.ctx.arcTo(x + width, y + height, x + width - radius, y + height, radius);
+                this.ctx.lineTo(x + radius, y + height);
+                this.ctx.arcTo(x, y + height, x, y + height - radius, radius);
+                this.ctx.lineTo(x, y + radius);
+                this.ctx.arcTo(x, y, x + radius, y, radius);
+                this.ctx.closePath();
+            }
+            
+            hexToRgb(hex) {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? {
+                    r: parseInt(result[1], 16),
+                    g: parseInt(result[2], 16),
+                    b: parseInt(result[3], 16)
+                } : null;
+            }
+        }
+
+        // --- DATA FOR THE VISUALIZATION ---
+        const spendingData = [
+            { id: 'spend-0', emoji: "🍽️", label: "Dining Out", finalSpent: 164.50, total: 250.00, color: '#FF6384' },
+            { id: 'spend-1', emoji: "🛒", label: "Groceries", finalSpent: 310.55, total: 500.00, color: '#FF9F40' },
+            { id: 'spend-2', emoji: "⛽", label: "Transport", finalSpent: 94.90, total: 150.00, color: '#FFCD56' },
+            { id: 'spend-3', emoji: "🛍️", label: "Shopping", finalSpent: 55.50, total: 200.00, color: '#4BC0C0' },
+            { id: 'spend-4', emoji: "🎬", label: "Entertainment", finalSpent: 75.00, total: 150.00, color: '#36A2EB' },
+            { id: 'spend-5', emoji: "💡", label: "Utilities", finalSpent: 20.00, total: 200.00, color: '#9966FF' },
+        ];
+        const savingsData = [
+            { id: 'save-0', emoji: "💵", label: "Cash Reserve", finalSaved: 150.00, total: 1000.00, color: '#1E90FF' },
+            { id: 'save-1', emoji: "🏦", label: "Emergency Fund", finalSaved: 100.00, total: 500.00, color: '#1E90FF' },
+            { id: 'save-2', emoji: "✈️", label: "Vacation", finalSaved: 50.00, total: 250.00, color: '#1E90FF' }
+        ];
+
+        // --- INITIALIZE THE CANVAS ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const financialData = {
+                spendingData: spendingData,
+                savingsData: savingsData,
+                assumedIncome: 3500.00
+            };
+            new FinancialCanvas('financial-canvas-container', financialData);
+        });
+    </script>
+</body>
+</html>
