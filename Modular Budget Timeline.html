@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-900">
+<head>
+    <meta charset="UTF-8">
+    <title>Modular Budget Timeline</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Tailwind CDN (dev only; replace with app’s pipeline if needed) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root{
+            --bg:#0b1220;
+            --panel:#111827;
+            --panel-2:#0f172a;
+            --ink:#e5e7eb;
+            --ink-dim:#9ca3af;
+            --accent:#60a5fa;
+            --accent-2:#34d399;
+            --grid:#1f2937;
+            --warn:#f59e0b;
+            --alert:#ef4444;
+        }
+        html,body{height:100%;}
+        body{
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+                         Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji, "Inter var", Inter, sans-serif;
+            background-color: #111827;
+            color: var(--ink);
+        }
+        .panel{
+            background: linear-gradient(180deg, var(--panel), var(--panel-2));
+            box-shadow: 0 6px 24px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03);
+        }
+        .grid-bg{
+            background-image:
+                linear-gradient(var(--grid) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+            background-size: 24px 24px, 24px 24px;
+            background-position: -1px -1px, -1px -1px;
+        }
+        .chip{
+            background: rgba(96,165,250,.1);
+            border: 1px solid rgba(96,165,250,.25);
+            color: #cfe6ff;
+        }
+        .bar{
+            border-radius: 10px;
+            height: 18px;
+            background: linear-gradient(90deg, rgba(96,165,250,.35), rgba(52,211,153,.35));
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+        }
+        .bar-fill{
+            height: 100%;
+            border-radius: 10px;
+            background: linear-gradient(90deg, #60a5fa, #34d399);
+            box-shadow: 0 3px 16px rgba(52,211,153,.25);
+        }
+        .flow{
+            height: 6px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(99,102,241,.45), rgba(34,197,94,.45));
+        }
+        .mini-badge{
+            border: 1px solid rgba(255,255,255,.08);
+            background: rgba(255,255,255,.03);
+            border-radius: 8px;
+            padding: 2px 6px;
+            font-size: 12px;
+            color: var(--ink-dim);
+        }
+        .legend-dot{
+            width:10px;height:10px;border-radius:50%;
+            display:inline-block;margin-right:6px;
+        }
+        .legend{
+            display:flex;gap:12px;flex-wrap:wrap;color:#d1d5db;font-size:12px;
+        }
+        .slider{
+            -webkit-appearance: none;height: 4px;border-radius:999px;background:#1f2937;outline:none;
+        }
+        .slider::-webkit-slider-thumb{
+            -webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+            background: linear-gradient(180deg,#93c5fd,#3b82f6);
+            border: 2px solid #0b1220;box-shadow: 0 6px 12px rgba(59,130,246,.45);
+            cursor:pointer;
+        }
+        .kpi{
+            border:1px solid rgba(255,255,255,.08);
+            background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+            border-radius:14px;
+            padding:10px 12px;
+        }
+        .scroll-shadow{
+            -webkit-mask-image: linear-gradient( to bottom, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+            mask-image: linear-gradient( to bottom, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+        }
+        .btn{
+            background: linear-gradient(180deg, #1f2937, #0b1220);
+            border:1px solid rgba(255,255,255,.08);
+            color:#e5e7eb;border-radius:12px;padding:8px 12px;
+        }
+        .btn:hover{ border-color: rgba(255,255,255,.14);}
+        .btn-primary{
+            background: linear-gradient(180deg, #3b82f6, #2563eb);
+            border:1px solid rgba(59,130,246,.3);
+            color:white;
+            box-shadow: 0 12px 24px rgba(37,99,235,.35), inset 0 1px 0 rgba(255,255,255,.2);
+        }
+        .kbd{
+            background:#0b1220;border:1px solid rgba(255,255,255,.12);padding:2px 6px;border-radius:8px;font-size:11px;color:#cbd5e1;
+        }
+    </style>
+</head>
+<body class="h-full">
+<div class="min-h-full p-4 sm:p-6">
+    <div class="max-w-7xl mx-auto space-y-4">
+        <!-- Header -->
+        <div class="flex items-center justify-between">
+            <div class="space-y-1">
+                <h1 class="text-2xl sm:text-3xl font-semibold text-gray-100 tracking-tight">Modular Budget Timeline</h1>
+                <p class="text-gray-400">Visualize income, allocations, and spend across the month. Pan, zoom, and inspect trends.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="btn hidden md:inline-flex items-center gap-2" id="btnResetView">
+                    Reset View <span class="kbd">R</span>
+                </button>
+                <button class="btn-primary inline-flex items-center gap-2" id="btnExport">
+                    Export Snapshot
+                </button>
+            </div>
+        </div>
+
+        <!-- KPI Row -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="kpi">
+                <div class="text-xs text-gray-400">Month Inflow</div>
+                <div class="text-lg font-semibold text-gray-100" id="lblInflow">—</div>
+            </div>
+            <div class="kpi">
+                <div class="text-xs text-gray-400">Budgeted</div>
+                <div class="text-lg font-semibold text-gray-100" id="lblBudgeted">—</div>
+            </div>
+            <div class="kpi">
+                <div class="text-xs text-gray-400">Unallocated</div>
+                <div class="text-lg font-semibold text-gray-100" id="lblUnallocated">—</div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="panel rounded-2xl p-3 sm:p-4">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div class="legend">
+                    <span><span class="legend-dot" style="background:#60a5fa"></span>Budget</span>
+                    <span><span class="legend-dot" style="background:#34d399"></span>Spent</span>
+                    <span><span class="legend-dot" style="background:#f59e0b"></span>Upcoming</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="mini-badge">Pan: <span class="kbd">Drag</span></div>
+                    <div class="mini-badge">Zoom: <span class="kbd">Ctrl + Wheel</span></div>
+                    <div class="mini-badge">Reset: <span class="kbd">R</span></div>
+                </div>
+            </div>
+            <div class="mt-3">
+                <input id="daySlider" class="slider w-full" type="range" min="1" max="31" step="1" value="1" disabled />
+                <div class="flex justify-between text-[12px] text-gray-500 mt-1">
+                    <span>Day 1</span><span>Day 31</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Canvas Panel -->
+        <div class="panel rounded-2xl p-3 sm:p-4 grid-bg">
+            <div class="flex items-center justify-between mb-2">
+                <div class="chip px-2 py-1 rounded-lg text-sm">Overview</div>
+                <div class="text-sm text-gray-400" id="lblPeriod">—</div>
+            </div>
+            <div class="relative">
+                <canvas id="timelineCanvas" class="w-full rounded-xl" height="520"></canvas>
+                <div id="hoverTip" class="hidden absolute text-xs bg-gray-800/95 border border-white/10 px-2 py-1 rounded-md pointer-events-none"></div>
+            </div>
+            <div class="mt-3 overflow-auto max-h-56 scroll-shadow">
+                <div id="categoryList" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center text-xs text-gray-500">
+            Prototype timeline module. Replace simulated data with live app store before production.
+        </div>
+    </div>
+</div>
+
+<script>
+/** NOTE:
+ * This module now expects live data to be supplied by the host application.
+ * Use `window.MoneyMapsTimeline.setData({ ... })` or dispatch the
+ * `moneymaps:timeline-data` event with a compatible payload.
+ */
+
+const DEFAULT_CATEGORY_COLOR = '#60a5fa';
+const DATE_FORMAT_OPTIONS = { month: 'long', year: 'numeric' };
+
+const lblInflow = document.getElementById('lblInflow');
+const lblBudgeted = document.getElementById('lblBudgeted');
+const lblUnallocated = document.getElementById('lblUnallocated');
+const daySlider = document.getElementById('daySlider');
+const lblPeriod = document.getElementById('lblPeriod');
+const categoryList = document.getElementById('categoryList');
+const canvas = document.getElementById('timelineCanvas');
+const ctx = canvas.getContext('2d');
+const sliderLabelRow = daySlider?.nextElementSibling || null;
+const sliderMinLabel = sliderLabelRow?.querySelector('span:first-child') || null;
+const sliderMaxLabel = sliderLabelRow?.querySelector('span:last-child') || null;
+
+const timelineState = {
+    snapshot: null,
+    currentIndex: 0,
+    defaultIndex: 0
+};
+
+function fmt(value) {
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+        return '—';
+    }
+    return value.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+}
+
+function startOfDay(date) {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d;
+}
+
+function parseDate(value) {
+    if (!value && value !== 0) return null;
+    if (value instanceof Date) return startOfDay(value);
+    if (typeof value === 'number') return startOfDay(new Date(value));
+    if (typeof value === 'string') {
+        const isoMatch = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (isoMatch) {
+            const [, y, m, d] = isoMatch;
+            return new Date(Number(y), Number(m) - 1, Number(d));
+        }
+        const parsed = new Date(value);
+        if (!Number.isNaN(parsed.getTime())) {
+            return startOfDay(parsed);
+        }
+    }
+    return null;
+}
+
+function addDays(date, amount) {
+    const result = new Date(date);
+    result.setDate(result.getDate() + amount);
+    return result;
+}
+
+function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+}
+
+function clampDate(date, min, max) {
+    if (date < min) return new Date(min);
+    if (date > max) return new Date(max);
+    return date;
+}
+
+function differenceInDays(start, end) {
+    const startTime = startOfDay(start).getTime();
+    const endTime = startOfDay(end).getTime();
+    return Math.round((endTime - startTime) / (24 * 60 * 60 * 1000));
+}
+
+function shallowCloneSnapshot(snapshot) {
+    if (!snapshot) return null;
+    return JSON.parse(JSON.stringify(snapshot));
+}
+
+function resolveTransactionCategoryId(txn, categoryMap, subToParent) {
+    if (!txn) return null;
+    const candidates = [];
+    if (txn.categoryId) candidates.push(txn.categoryId);
+    if (txn.parentCategoryId) candidates.push(txn.parentCategoryId);
+    if (txn.category) {
+        if (typeof txn.category === 'string') {
+            candidates.push(txn.category);
+        } else if (typeof txn.category === 'object') {
+            if (txn.category.id) candidates.push(txn.category.id);
+            if (txn.category.parentId) candidates.push(txn.category.parentId);
+        }
+    }
+    if (txn.subCategoryId) {
+        candidates.push(subToParent.get(txn.subCategoryId) || txn.subCategoryId);
+    }
+    if (txn.subCategory && typeof txn.subCategory === 'object') {
+        if (txn.subCategory.parentId) {
+            candidates.push(txn.subCategory.parentId);
+        }
+        if (txn.subCategory.id) {
+            candidates.push(subToParent.get(txn.subCategory.id) || txn.subCategory.id);
+        }
+    }
+    if (Array.isArray(txn.categories)) {
+        txn.categories.forEach((item) => {
+            if (typeof item === 'string') {
+                candidates.push(item);
+            } else if (item && typeof item === 'object') {
+                if (item.id) candidates.push(item.id);
+                if (item.parentId) candidates.push(item.parentId);
+            }
+        });
+    }
+    for (const id of candidates) {
+        if (!id) continue;
+        if (categoryMap.has(id)) return id;
+        if (subToParent.has(id)) {
+            const parentId = subToParent.get(id);
+            if (categoryMap.has(parentId)) return parentId;
+        }
+    }
+    return null;
+}
+
+function buildSnapshot(rawData) {
+    const data = rawData && typeof rawData === 'object' ? rawData : {};
+    const today = startOfDay(new Date());
+    const periodInput = data.period || {};
+    const start = parseDate(periodInput.start) || new Date(today.getFullYear(), today.getMonth(), 1);
+    const endCandidate = parseDate(periodInput.end) || new Date(start.getFullYear(), start.getMonth() + 1, 0);
+    const end = endCandidate < start ? new Date(start) : endCandidate;
+    const dayCount = Math.max(1, differenceInDays(start, end) + 1);
+
+    let selectedDate = parseDate(periodInput.selected);
+    const selectedDayNumber = Number(periodInput.selectedDay);
+    if (!selectedDate && Number.isFinite(selectedDayNumber) && selectedDayNumber >= 1) {
+        selectedDate = addDays(start, selectedDayNumber - 1);
+    }
+    if (!selectedDate) {
+        selectedDate = clampDate(today, start, end);
+    } else {
+        selectedDate = clampDate(selectedDate, start, end);
+    }
+    const selectedIndex = clamp(differenceInDays(start, selectedDate), 0, dayCount - 1);
+
+    const defaultDayNumber = Number(periodInput.defaultDay);
+    let defaultIndex;
+    if (Number.isFinite(defaultDayNumber) && defaultDayNumber >= 1) {
+        defaultIndex = clamp(defaultDayNumber - 1, 0, dayCount - 1);
+    } else {
+        defaultIndex = clamp(differenceInDays(start, clampDate(today, start, end)), 0, dayCount - 1);
+    }
+
+    const categoriesInput = Array.isArray(data.categories) ? data.categories : [];
+    const subCategoriesInput = Array.isArray(data.subCategories) ? data.subCategories : [];
+    const transactionsInput = Array.isArray(data.transactions) ? data.transactions : [];
+
+    const categoryMap = new Map();
+    categoriesInput.forEach((category) => {
+        if (!category || !category.id) return;
+        const colorStops = Array.isArray(category.colorStops) ? category.colorStops : null;
+        const color = category.color || (colorStops ? colorStops[0] : DEFAULT_CATEGORY_COLOR);
+        const name = category.name || category.label || category.id;
+        const budgetValue = Number(category.budget);
+        categoryMap.set(category.id, {
+            id: category.id,
+            name,
+            color,
+            budget: Number.isFinite(budgetValue) ? budgetValue : 0
+        });
+    });
+
+    const subToParent = new Map();
+    const subBudgetTotals = new Map();
+    subCategoriesInput.forEach((sub) => {
+        if (!sub || !sub.id) return;
+        const parentId = sub.parentId || sub.categoryId || (sub.parent && sub.parent.id);
+        if (!parentId) return;
+        const budgetAmount = Number(sub.budget);
+        subToParent.set(sub.id, parentId);
+        if (!categoryMap.has(parentId)) {
+            categoryMap.set(parentId, {
+                id: parentId,
+                name: sub.parentName || parentId,
+                color: DEFAULT_CATEGORY_COLOR,
+                budget: 0
+            });
+        }
+        if (Number.isFinite(budgetAmount)) {
+            subBudgetTotals.set(parentId, (subBudgetTotals.get(parentId) || 0) + budgetAmount);
+        }
+    });
+
+    const categories = Array.from(categoryMap.values());
+    categories.forEach((category) => {
+        const fallbackBudget = subBudgetTotals.get(category.id) || 0;
+        if (!(Number.isFinite(category.budget) && category.budget > 0)) {
+            category.budget = fallbackBudget;
+        }
+        category.daily = Array.from({ length: dayCount }, () => 0);
+        category.cumulative = Array.from({ length: dayCount }, () => 0);
+        category.totalSpent = 0;
+        category.spentToSelected = 0;
+    });
+
+    const categoryLookup = new Map(categories.map((category) => [category.id, category]));
+
+    let computedInflow = 0;
+    transactionsInput.forEach((txn) => {
+        if (!txn) return;
+        const amount = Number(txn.amount);
+        if (!Number.isFinite(amount) || amount === 0) return;
+        const txnDate = parseDate(txn.date);
+        if (!txnDate) return;
+        if (txnDate < start || txnDate > end) return;
+        if (amount > 0) {
+            computedInflow += amount;
+            return;
+        }
+        const parentId = resolveTransactionCategoryId(txn, categoryLookup, subToParent);
+        if (!parentId) return;
+        const category = categoryLookup.get(parentId);
+        if (!category) return;
+        const dayIndex = clamp(differenceInDays(start, txnDate), 0, dayCount - 1);
+        category.daily[dayIndex] += Math.abs(amount);
+    });
+
+    categories.forEach((category) => {
+        let running = 0;
+        category.cumulative = category.daily.map((value) => {
+            running += value;
+            return running;
+        });
+        category.totalSpent = running;
+        category.spentToSelected = category.cumulative[selectedIndex] || running;
+    });
+
+    const metrics = data.metrics || {};
+    let inflow = Number(metrics.inflow ?? data.inflow);
+    if (!Number.isFinite(inflow)) {
+        inflow = computedInflow;
+    }
+    if (!Number.isFinite(inflow)) {
+        inflow = 0;
+    }
+
+    const computedBudgeted = categories.reduce((sum, category) => sum + (Number(category.budget) || 0), 0);
+    const budgeted = Number.isFinite(Number(metrics.budgeted ?? data.budgeted))
+        ? Number(metrics.budgeted ?? data.budgeted)
+        : computedBudgeted;
+
+    const computedUnallocated = inflow - budgeted;
+    const unallocated = Number.isFinite(Number(metrics.unallocated ?? data.unallocated))
+        ? Number(metrics.unallocated ?? data.unallocated)
+        : computedUnallocated;
+
+    return {
+        period: {
+            startDate: start,
+            endDate: end,
+            selectedDate,
+            selectedIndex,
+            defaultIndex,
+            dayCount,
+            labelTemplate: typeof periodInput.label === 'string' ? periodInput.label : null,
+            monthLabel: typeof periodInput.monthLabel === 'string' ? periodInput.monthLabel : null
+        },
+        categories,
+        inflow,
+        budgeted,
+        unallocated
+    };
+}
+
+function setKpi(element, value) {
+    if (!element) return;
+    element.textContent = fmt(value);
+}
+
+function updateKpis(snapshot) {
+    if (!snapshot) {
+        setKpi(lblInflow, NaN);
+        setKpi(lblBudgeted, NaN);
+        setKpi(lblUnallocated, NaN);
+        return;
+    }
+    setKpi(lblInflow, snapshot.inflow);
+    setKpi(lblBudgeted, snapshot.budgeted);
+    setKpi(lblUnallocated, snapshot.unallocated);
+}
+
+function formatPeriodLabel(date, dayNumber, snapshot) {
+    if (!snapshot) return '—';
+    if (snapshot.period.labelTemplate) {
+        return snapshot.period.labelTemplate
+            .replace('{day}', String(dayNumber))
+            .replace('{date}', date.toISOString().slice(0, 10));
+    }
+    const monthPart = snapshot.period.monthLabel || date.toLocaleString(undefined, DATE_FORMAT_OPTIONS);
+    return `${monthPart} • Day ${dayNumber}`;
+}
+
+function updatePeriodLabel(index) {
+    const snapshot = timelineState.snapshot;
+    if (!snapshot) {
+        lblPeriod.textContent = '—';
+        return;
+    }
+    const safeIndex = clamp(index, 0, snapshot.period.dayCount - 1);
+    const currentDate = addDays(snapshot.period.startDate, safeIndex);
+    const dayNumber = currentDate.getDate();
+    lblPeriod.textContent = formatPeriodLabel(currentDate, dayNumber, snapshot);
+}
+
+function renderCategoryList(index) {
+    categoryList.innerHTML = '';
+    const snapshot = timelineState.snapshot;
+    if (!snapshot || !snapshot.categories.length) {
+        return;
+    }
+    const safeIndex = clamp(index, 0, snapshot.period.dayCount - 1);
+    snapshot.categories.forEach((category) => {
+        const spentToDay = category.cumulative[safeIndex] || 0;
+        const budget = Number(category.budget) || 0;
+        const pctValue = budget > 0 ? Math.round((spentToDay / budget) * 100) : 0;
+        const pct = Number.isFinite(pctValue) ? pctValue : 0;
+        const widthPct = Math.max(0, Math.min(100, pct));
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-3';
+        if (category.id) {
+            row.dataset.categoryId = category.id;
+        }
+        row.innerHTML = `
+      <div class="min-w-[140px] text-sm text-gray-300">${category.name}</div>
+      <div class="flex-1 bar">
+        <div class="bar-fill" style="width:${widthPct}%; background: linear-gradient(90deg, ${category.color || DEFAULT_CATEGORY_COLOR}, rgba(255,255,255,.35));"></div>
+      </div>
+      <div class="text-xs text-gray-400 min-w-[160px] text-right">${fmt(spentToDay)} / ${fmt(budget)} (${pct}%)</div>
+    `;
+        categoryList.appendChild(row);
+    });
+}
+
+function clearCanvas() {
+    if (!ctx || !canvas) return;
+    const DPR = window.devicePixelRatio || 1;
+    const width = canvas.clientWidth || canvas.width || 0;
+    const height = canvas.height || 0;
+    if (width <= 0 || height <= 0) return;
+    if (canvas.width !== Math.floor(width * DPR)) {
+        canvas.width = Math.floor(width * DPR);
+    }
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+}
+
+function draw(index) {
+    if (!ctx || !canvas) return;
+    const snapshot = timelineState.snapshot;
+    const DPR = window.devicePixelRatio || 1;
+    const width = canvas.clientWidth || canvas.width || 0;
+    const height = canvas.height || 0;
+    if (canvas.width !== Math.floor(width * DPR)) {
+        canvas.width = Math.floor(width * DPR);
+    }
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+    if (!snapshot || !snapshot.categories.length) {
+        return;
+    }
+
+    const leftPad = 92;
+    const topPad = 24;
+    const barHeight = 18;
+    const rowGap = 18;
+    const bottomPad = 48;
+    const availableWidth = Math.max(1, width - leftPad - 40);
+    const safeIndex = clamp(index, 0, snapshot.period.dayCount - 1);
+    const maxBudget = snapshot.categories.reduce((max, category) => {
+        const budget = Number(category.budget) || 0;
+        const spent = category.cumulative[snapshot.period.dayCount - 1] || 0;
+        return Math.max(max, budget, spent);
+    }, 1);
+    const budgetScale = maxBudget > 0 ? availableWidth / maxBudget : 1;
+    const dayWidth = snapshot.period.dayCount > 1
+        ? Math.min(24, availableWidth / (snapshot.period.dayCount - 1))
+        : 0;
+
+    ctx.fillStyle = 'rgba(255,255,255,0.02)';
+    const gridStep = Math.max(24, dayWidth || 24);
+    for (let x = 0; x < width; x += gridStep) {
+        ctx.fillRect(x, 0, 1, height);
+    }
+    for (let y = 0; y < height; y += 24) {
+        ctx.fillRect(0, y, width, 1);
+    }
+
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '12px ui-sans-serif, system-ui';
+    ctx.textAlign = 'center';
+    const dayLabelStep = Math.max(1, Math.floor(snapshot.period.dayCount / 10));
+    for (let i = 0; i < snapshot.period.dayCount; i++) {
+        const x = leftPad + i * dayWidth;
+        if (dayWidth > 0) {
+            if (i % 2 === 1) {
+                ctx.fillStyle = 'rgba(255,255,255,0.05)';
+                ctx.fillRect(x, topPad - 10, 1, height - topPad - bottomPad + 20);
+            }
+        }
+        if (i % dayLabelStep === 0 || i === snapshot.period.dayCount - 1) {
+            const dayDate = addDays(snapshot.period.startDate, i);
+            const label = `Day ${dayDate.getDate()}`;
+            ctx.fillStyle = '#6b7280';
+            ctx.fillText(label, x, height - 12);
+        }
+    }
+
+    snapshot.categories.forEach((category, indexRow) => {
+        const y = topPad + indexRow * (barHeight + rowGap);
+        const budgetWidth = Math.min(availableWidth, (Number(category.budget) || 0) * budgetScale);
+        const spentValue = category.cumulative[safeIndex] || 0;
+        const spentWidth = Math.min(availableWidth, spentValue * budgetScale);
+
+        ctx.fillStyle = 'rgba(59,130,246,0.35)';
+        ctx.fillRect(leftPad, y, budgetWidth, barHeight);
+
+        ctx.fillStyle = category.color || DEFAULT_CATEGORY_COLOR;
+        ctx.fillRect(leftPad, y, spentWidth, barHeight);
+
+        ctx.fillStyle = '#d1d5db';
+        ctx.textAlign = 'left';
+        ctx.fillText(category.name, 16, y + barHeight - 3);
+
+        ctx.fillStyle = '#9ca3af';
+        ctx.textAlign = 'right';
+        ctx.fillText(`${fmt(spentValue)} / ${fmt(category.budget)}`, width - 24, y + barHeight - 3);
+    });
+
+    if (dayWidth > 0) {
+        const markerX = leftPad + safeIndex * dayWidth;
+        ctx.fillStyle = 'rgba(96,165,250,0.8)';
+        ctx.fillRect(markerX, topPad - 12, 2, height - topPad - bottomPad + 36);
+    }
+}
+
+function renderDay(index) {
+    const snapshot = timelineState.snapshot;
+    if (!snapshot) {
+        daySlider.value = '1';
+        daySlider.setAttribute('aria-valuenow', '1');
+        return;
+    }
+    const safeIndex = clamp(index, 0, snapshot.period.dayCount - 1);
+    timelineState.currentIndex = safeIndex;
+    daySlider.value = String(safeIndex + 1);
+    daySlider.setAttribute('aria-valuenow', String(safeIndex + 1));
+    updatePeriodLabel(safeIndex);
+    renderCategoryList(safeIndex);
+    draw(safeIndex);
+}
+
+function applySnapshot(snapshot) {
+    timelineState.snapshot = snapshot;
+    timelineState.defaultIndex = snapshot ? snapshot.period.defaultIndex : 0;
+    const dayCount = snapshot ? snapshot.period.dayCount : 1;
+    daySlider.max = String(dayCount);
+    daySlider.disabled = !snapshot || dayCount <= 1;
+    daySlider.setAttribute('aria-valuemin', '1');
+    daySlider.setAttribute('aria-valuemax', String(dayCount));
+    daySlider.setAttribute('aria-disabled', daySlider.disabled ? 'true' : 'false');
+    if (sliderMinLabel && snapshot) {
+        sliderMinLabel.textContent = `Day ${snapshot.period.startDate.getDate()}`;
+    } else if (sliderMinLabel) {
+        sliderMinLabel.textContent = 'Day 1';
+    }
+    if (sliderMaxLabel && snapshot) {
+        sliderMaxLabel.textContent = `Day ${snapshot.period.endDate.getDate()}`;
+    } else if (sliderMaxLabel) {
+        sliderMaxLabel.textContent = 'Day 1';
+    }
+    updateKpis(snapshot);
+    if (snapshot) {
+        const initialIndex = clamp(snapshot.period.selectedIndex ?? snapshot.period.defaultIndex ?? 0, 0, snapshot.period.dayCount - 1);
+        renderDay(initialIndex);
+    } else {
+        renderDay(0);
+    }
+}
+
+function setTimelineData(data) {
+    const snapshot = buildSnapshot(data);
+    applySnapshot(snapshot);
+}
+
+function initializeUi() {
+    updateKpis(null);
+    lblPeriod.textContent = '—';
+    daySlider.value = '1';
+    daySlider.disabled = true;
+    daySlider.setAttribute('aria-valuemin', '1');
+    daySlider.setAttribute('aria-valuemax', '1');
+    daySlider.setAttribute('aria-valuenow', '1');
+    daySlider.setAttribute('aria-disabled', 'true');
+    if (sliderMinLabel) sliderMinLabel.textContent = 'Day 1';
+    if (sliderMaxLabel) sliderMaxLabel.textContent = 'Day 1';
+    categoryList.innerHTML = '';
+    clearCanvas();
+}
+
+function resetToDefaultDay() {
+    const snapshot = timelineState.snapshot;
+    if (!snapshot) return;
+    renderDay(snapshot.period.defaultIndex);
+}
+
+daySlider?.addEventListener('input', (event) => {
+    const value = Number(event.target.value);
+    if (!Number.isFinite(value)) return;
+    renderDay(value - 1);
+});
+
+window.addEventListener('resize', () => {
+    draw(timelineState.currentIndex);
+});
+
+document.addEventListener('keydown', (event) => {
+    if (event.key && event.key.toLowerCase() === 'r') {
+        resetToDefaultDay();
+    }
+});
+
+initializeUi();
+
+window.MoneyMapsTimeline = Object.assign(window.MoneyMapsTimeline || {}, {
+    setData: setTimelineData,
+    getSnapshot: () => shallowCloneSnapshot(timelineState.snapshot),
+    resetDay: resetToDefaultDay
+});
+
+window.addEventListener('moneymaps:timeline-data', (event) => {
+    if (event && event.detail) {
+        setTimelineData(event.detail);
+    }
+});
+
+window.addEventListener('moneyMapsTimelineData', (event) => {
+    if (event && event.detail) {
+        setTimelineData(event.detail);
+    }
+});
+
+const bootstrapData = window.MoneyMapsTimelineData || window.moneyMapsTimelineData;
+if (bootstrapData) {
+    setTimelineData(bootstrapData);
+}
+</script>
+</body>
+</html>
