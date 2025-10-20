@@ -99,7 +99,17 @@
     <div id="log-purchase-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 z-50 hidden items-center justify-center"></div>
     <div id="add-category-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 z-50 hidden items-center justify-center p-4"></div>
 
-    <script>
+    <script type="module">
+        import {
+            store,
+            getBudgetSummaries,
+            getGoals,
+            getSavings,
+            getTransactions,
+            getParentCategory,
+            getSubCategory,
+            getPlaceAssignment
+        } from './js/store.js';
         // --- API & DATA CONFIG ---
         
         // IMPORTANT: API KEY SECURITY
@@ -111,14 +121,33 @@
         // This makes the key usable ONLY on your website, even if someone copies it.
         const HERE_API_KEY = '6iHV0y797UXNMW3TZlJX6gXy67xGh2uEIX77Q7tHdjU'; // <-- PASTE YOUR RESTRICTED KEY HERE BEFORE DEPLOYING
 
-        let budgetData = {
-            'dining-out': { name: '🍽️ Dining Out', total: 250.00, color: 'red-500' }, 'groceries': { name: '🛒 Groceries', total: 500.00, color: 'green-500' }, 'transportation': { name: '⛽ Transportation', total: 150.00, color: 'yellow-500' }, 'shopping': { name: '🛍️ Shopping', total: 200.00, color: 'purple-500' }, 'entertainment': { name: '🎬 Entertainment', total: 150.00, color: 'pink-500' }, 'utilities': { name: '💡 Utilities', total: 200.00, color: 'amber-500' }, 'health': { name: '💊 Health', total: 100.00, color: 'teal-500' }, 'fitness': { name: '💪 Fitness', total: 50.00, color: 'emerald-500' }, 'home-improvement': { name: '🛠️ Home', total: 250.00, color: 'cyan-500' }, 'income': { name: '💰 Income', color: 'green-600' }, 'transfers': { name: '🔄 Transfers', color: 'gray-500' }
-        };
-        let goalsData = { 'emergency-fund': { name: '🏦 Emergency Fund', current: 750.00, total: 3000.00, color: 'blue-500' }, 'vacation': { name: '✈️ Vacation', current: 250.00, total: 1500.00, color: 'cyan-500' },};
-        let pureSavingsData = { 'cash-reserve': { name: '💵 Cash Reserve', current: 1200.00, total: 10000.00, color: 'lime-500' } };
-        let transactionsData = [ { id: 1, name: 'Axis Energy', amount: 2145.67, type: 'credit', date: '2025-10-10', category: 'income', source: 'Bank Sync (Payroll)', isInternalTransfer: false }, { id: 100, name: 'Check Deposit', amount: 150.00, type: 'credit', date: '2025-10-01', category: 'income', source: 'Check #8812', isInternalTransfer: false }, { id: 2, name: 'Whole Foods Market', amount: 142.33, type: 'debit', date: '2025-10-12', category: 'groceries', source: 'Bank Sync', isInternalTransfer: false }, { id: 3, name: 'Trader Joe\'s', amount: 98.22, type: 'debit', date: '2025-10-05', category: 'groceries', source: 'Bank Sync', isInternalTransfer: false }, { id: 4, name: 'Whole Foods Market', amount: 70.00, type: 'debit', date: '2025-10-01', category: 'groceries', source: 'Bank Sync', isInternalTransfer: false }, { id: 5, name: 'The Flying Squirrel', amount: 78.50, type: 'debit', date: '2025-10-11', category: 'dining-out', source: 'Bank Sync', isInternalTransfer: false }, { id: 6, name: "Rembrandt's Coffee House", amount: 18.75, type: 'debit', date: new Date().toISOString().split('T')[0], category: 'dining-out', source: 'Manual Log', isInternalTransfer: false }, { id: 7, name: 'Public House Restaurant', amount: 67.25, type: 'debit', date: '2025-10-08', category: 'dining-out', source: 'Bank Sync', isInternalTransfer: false }, { id: 8, name: 'Shell', amount: 48.12, type: 'debit', date: '2025-10-09', category: 'transportation', source: 'Bank Sync', isInternalTransfer: false }, { id: 9, name: 'Shell', amount: 46.78, type: 'debit', date: '2025-10-02', category: 'transportation', source: 'Bank Sync', isInternalTransfer: false }, { id: 10, name: 'Target', amount: 80.00, type: 'debit', date: '2025-10-04', category: 'shopping', source: 'Bank Sync', isInternalTransfer: false }, { id: 11, name: 'Target Refund', amount: 24.50, type: 'credit', date: '2025-10-06', category: 'shopping', source: 'Bank Sync', isInternalTransfer: false }, { id: 12, name: 'Regal Hamilton Place', amount: 75.00, type: 'debit', date: '2025-10-05', category: 'entertainment', source: 'Bank Sync', isInternalTransfer: false }, { id: 13, name: 'EPB Headquarters', amount: 20.00, type: 'debit', date: '2025-10-08', category: 'utilities', source: 'Check #2045', isInternalTransfer: false }, { id: 14, name: 'CVS', amount: 35.00, type: 'debit', date: '2025-10-07', category: 'health', source: 'Bank Sync', isInternalTransfer: false }, { id: 15, name: 'Erlanger Baroness Hospital', amount: 20.00, type: 'debit', date: '2025-10-03', category: 'health', source: 'Bank Sync', isInternalTransfer: false }, { id: 16, name: 'Orangetheory Fitness', amount: 15.00, type: 'debit', date: '2025-10-01', category: 'fitness', source: 'Bank Sync', isInternalTransfer: false }, { id: 17, name: 'The Home Depot', amount: 100.00, type: 'debit', date: '2025-09-30', category: 'home-improvement', source: 'Bank Sync', isInternalTransfer: false }, { id: 18, name: 'Transfer to Savings', amount: 500.00, type: 'debit', date: '2025-10-10', category: 'transfers', source: 'Checking', isInternalTransfer: true }, { id: 19, name: 'Transfer from Checking', amount: 500.00, type: 'credit', date: '2025-10-10', category: 'transfers', source: 'Savings', isInternalTransfer: true } ];
         const tailwindColors = { 'red-500': '#ef4444', 'green-500': '#22c55e', 'yellow-500': '#eab308', 'purple-500': '#8b5cf6', 'blue-500': '#3b82f6', 'cyan-500': '#06b6d4', 'indigo-500': '#6366f1', 'pink-500': '#ec4899', 'teal-500': '#14b8a6', 'amber-500': '#f59e0b', 'emerald-500': '#10b981', 'gray-500': '#6b7280', 'green-600': '#16a34a', 'lime-500': '#84cc16' };
-        const hereCategoryMap = { 'dining-out': '100-1000', 'groceries': '100-1011-0052,700-7000-0000', 'transportation': '100-1019,400-4000-0000', 'shopping': '600-6000-0000', 'entertainment': '300-3000-0000', 'health': '500-5000-0000', 'fitness': '800-8000-0165', 'home-improvement': '600-6000-0062' };
+        const hereCategoryMap = {
+            'food-dining:dining-out': '100-1000',
+            'food-dining:groceries': '100-1011-0052,700-7000-0000',
+            'transportation:fuel': '100-1019,400-4000-0000',
+            'shopping:general-merch': '600-6000-0000',
+            'entertainment:movies-events': '300-3000-0000',
+            'health:pharmacy-medical': '500-5000-0000',
+            'fitness:gym-membership': '800-8000-0165',
+            'home:home-improvement': '600-6000-0062'
+        };
+        const subCategoryIcons = {
+            'food-dining:dining-out': '🍽️',
+            'food-dining:groceries': '🛒',
+            'transportation:fuel': '⛽',
+            'shopping:general-merch': '🛍️',
+            'entertainment:movies-events': '🎬',
+            'health:pharmacy-medical': '💊',
+            'fitness:gym-membership': '💪',
+            'home:home-improvement': '🛠️',
+            'income:primary-income': '💰',
+            'transfers:internal': '🔄'
+        };
+        const getBudgetSnapshot = () => getBudgetSummaries();
+        const getGoalsSnapshot = () => getGoals();
+        const getSavingsSnapshot = () => getSavings();
+        const slugify = (label) => label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
         
         let map;
         const sidebarViews = document.querySelectorAll('.sidebar-view');
@@ -127,6 +156,25 @@
         let mapMarkers = [];
         let searchTimeout;
         let activeCategory = 'all';
+
+        store.subscribe(() => {
+            renderAll();
+            rebuildCategoryFilters();
+            if (currentPlace && currentPlace.id) {
+                const assignment = getPlaceAssignment(currentPlace.id) || currentPlace.category;
+                currentPlace = { ...currentPlace, category: assignment };
+                if (document.getElementById('place-detail-view').classList.contains('active')) {
+                    renderPlaceDetailView(currentPlace);
+                }
+            }
+            mapMarkers.forEach((entry) => {
+                const assignment = getPlaceAssignment(entry.place.id) || entry.place.category;
+                const categoryPath = assignment ? `${assignment.parentKey}:${assignment.subKey}` : null;
+                const icon = categoryPath ? (subCategoryIcons[categoryPath] || entry.place.icon || '📍') : '📍';
+                entry.place = { ...entry.place, category: assignment, icon };
+                entry.marker.setIcon(L.divIcon({ html: `<div class="custom-pin"><div>${icon}</div></div>`, className: '', iconSize: [36, 36], iconAnchor: [18, 36] }));
+            });
+        });
 
         // --- Persistent Cache with Time-To-Live (TTL) ---
         const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
@@ -170,35 +218,49 @@
 
         const formatCurrency = (amount) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
         
-        function calculateBudgetState() {
-            for (const key in budgetData) { if (budgetData[key].total) { budgetData[key].remaining = budgetData[key].total; } }
-            transactionsData.forEach(t => { if (budgetData[t.category] && budgetData[t.category].total) { if (t.type === 'debit') { budgetData[t.category].remaining -= t.amount; } else if (t.type === 'credit' && t.category !== 'income' && !t.isInternalTransfer) { budgetData[t.category].remaining += t.amount; } } });
-        }
-        
         function clearMarkers() {
             mapMarkers.forEach(({ marker }) => marker.removeFrom(map));
             mapMarkers = [];
         }
 
         function categoryForHereResult(hereItem) {
-            if (!hereItem || !Array.isArray(hereItem.categories)) return 'uncategorized';
+            if (!hereItem) return null;
+            const assignment = getPlaceAssignment(hereItem.id);
+            if (assignment) return assignment;
+
+            if (!Array.isArray(hereItem.categories)) return null;
             for (const category of hereItem.categories) {
-                if (category && category.id) {
-                    for (const appCat in hereCategoryMap) {
-                        if (hereCategoryMap[appCat].includes(category.id)) return appCat;
+                if (!category?.id) continue;
+                for (const [subKey, codes] of Object.entries(hereCategoryMap)) {
+                    if (!codes) continue;
+                    const match = codes.split(',').some(code => code.trim() === category.id);
+                    if (match) {
+                        const [parentKey, subCategoryKey] = subKey.split(':');
+                        return { parentKey, subKey: subCategoryKey };
                     }
                 }
             }
-            return 'uncategorized';
+            return null;
         }
 
         function addPlacesToMap(items) {
              clearMarkers();
             items.forEach(item => {
-                if (!item || !item.categories || !item.position) return;
-                const place = { id: item.id, name: item.title, type: item.categories[0]?.name || 'Place', lat: item.position.lat, lng: item.position.lng, category: categoryForHereResult(item) };
-                const categoryData = budgetData[place.category];
-                place.icon = categoryData ? categoryData.name.match(/\p{Emoji}/u)?.[0] || '📍' : '❓';
+                if (!item || !item.position) return;
+                const assignment = categoryForHereResult(item);
+                const subKeyPath = assignment ? `${assignment.parentKey}:${assignment.subKey}` : null;
+                const icon = subCategoryIcons[subKeyPath] || '📍';
+                const subCategory = assignment ? getSubCategory(assignment.parentKey, assignment.subKey) : null;
+                const place = {
+                    id: item.id,
+                    name: item.title,
+                    type: item.categories?.[0]?.name || 'Place',
+                    lat: item.position.lat,
+                    lng: item.position.lng,
+                    category: assignment,
+                    icon,
+                    budget: subCategory
+                };
                 const marker = L.marker([place.lat, place.lng], { icon: L.divIcon({ html: `<div class="custom-pin"><div>${place.icon}</div></div>`, className: '', iconSize: [36, 36], iconAnchor: [18, 36] }) });
                 mapMarkers.push({ marker, place });
                 marker.on('click', (e) => { L.DomEvent.stopPropagation(e); showPlaceView(place); map.flyTo([place.lat, place.lng], 15); });
@@ -304,10 +366,26 @@
         }
         
         function renderAll() {
-            calculateBudgetState();
             if(document.getElementById('budget-view').classList.contains('active')) renderBudgetView();
             if(document.getElementById('transactions-view').classList.contains('active')) renderTransactionsView();
             if(document.getElementById('place-detail-view').classList.contains('active')) renderPlaceDetailView(currentPlace);
+        }
+
+        function rebuildCategoryFilters() {
+            const filtersContainer = document.getElementById('category-filters-container');
+            if (!filtersContainer) return;
+            const budgets = getBudgetSnapshot();
+            let filterHtml = `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full transition-colors ${activeCategory === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}" data-category="all">All</button>`;
+            Object.values(budgets).forEach(parent => {
+                parent.subs.forEach(sub => {
+                    const key = `${parent.key}:${sub.key}`;
+                    const isActive = activeCategory === key;
+                    const baseClasses = 'category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full transition-colors';
+                    const stateClasses = isActive ? ' bg-blue-600 text-white' : ' bg-gray-100 text-gray-700 hover:bg-gray-200';
+                    filterHtml += `<button class="${baseClasses}${stateClasses}" data-category="${key}">${sub.name}</button>`;
+                });
+            });
+            filtersContainer.innerHTML = filterHtml;
         }
 
         function createSankey(svgElement) {
@@ -316,20 +394,23 @@
             svgElement.innerHTML = ''; 
             const svg = d3.select(svgElement).attr("viewBox", `0 0 ${width} ${height}`);
 
-            const spending = Object.entries(budgetData)
-                .filter(([key, cat]) => cat.total && key !== 'income' && key !== 'transfers')
-                .map(([key, cat]) => ({ category: key, spent: Math.max(0, cat.total - cat.remaining) }))
+            const budgets = getBudgetSnapshot();
+            const spending = Object.values(budgets)
+                .filter(parent => parent.total > 0 && parent.key !== 'income' && parent.key !== 'transfers')
+                .map(parent => ({ category: parent.key, spent: Math.max(0, parent.spent) }))
                 .filter(d => d.spent > 0);
 
-            const totalIncome = transactionsData.filter(t => t.category === 'income').reduce((sum, t) => sum + t.amount, 0);
+            const totalIncome = store.getState().transactions
+                .filter(t => t.category?.parentKey === 'income' && t.type === 'credit')
+                .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
             if (spending.length === 0 || totalIncome === 0) {
                  svg.append("text").attr("x", width/2).attr("y", height/2).attr("text-anchor", "middle").text("Not enough data for chart.").style("fill", "#6b7280");
                  return;
             }
 
-            const nodes = [{ name: "Income" }, ...spending.map(d => ({ name: budgetData[d.category].name }))];
-            const links = spending.map((d, i) => ({ source: 0, target: i + 1, value: d.spent, color: tailwindColors[budgetData[d.category].color] }));
+            const nodes = [{ name: "Income" }, ...spending.map(d => ({ name: budgets[d.category].name }))];
+            const links = spending.map((d, i) => ({ source: 0, target: i + 1, value: d.spent, color: tailwindColors[budgets[d.category].color] || '#3b82f6' }));
             
             const sankey = d3.sankey().nodeWidth(15).nodePadding(10).extent([[1, 1], [width - 1, height - 6]]);
             const {nodes: graphNodes, links: graphLinks} = sankey({ nodes: nodes.map(d => Object.assign({}, d)), links: links.map(d => Object.assign({}, d)) });
@@ -352,18 +433,25 @@
             const goalsList = document.getElementById('goals-list');
             const savingsList = document.getElementById('pure-savings-list');
             
-            budgetList.innerHTML = Object.entries(budgetData).filter(([_, cat]) => cat.total).map(([key, cat]) => {
-                const spent = Math.max(0, cat.total - cat.remaining);
-                const percent = cat.total > 0 ? Math.min(100, (spent / cat.total) * 100) : 0;
-                return `<div class="bg-gray-50 p-3 rounded-lg"><div class="flex justify-between items-center text-sm mb-1"><span class="font-semibold text-gray-700">${cat.name}</span><span class="text-gray-500">${formatCurrency(spent)} of ${formatCurrency(cat.total)}</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-${cat.color} h-2 rounded-full" style="width: ${percent}%"></div></div></div>`;
+            const budgets = getBudgetSnapshot();
+            budgetList.innerHTML = Object.values(budgets).filter(parent => parent.total).map(parent => {
+                const spent = Math.max(0, parent.spent);
+                const percent = parent.total > 0 ? Math.min(100, (spent / parent.total) * 100) : 0;
+                const subsMarkup = parent.subs.map(sub => {
+                    const subPercent = sub.total > 0 ? Math.min(100, (Math.max(0, sub.spent) / sub.total) * 100) : 0;
+                    const key = `${parent.key}:${sub.key}`;
+                    const icon = subCategoryIcons[key] || '•';
+                    return `<div class="mt-3"><div class="flex justify-between text-xs text-gray-600 mb-1"><span class="flex items-center space-x-2"><span class="text-base">${icon}</span><span class="font-semibold text-gray-700">${sub.name}</span></span><span>${formatCurrency(Math.max(0, sub.spent))} of ${formatCurrency(sub.total)}</span></div><div class="w-full bg-gray-200 rounded-full h-1.5"><div class="bg-${sub.color || parent.color} h-1.5 rounded-full" style="width: ${subPercent}%"></div></div><div class="text-[11px] text-gray-500 mt-1">Remaining: ${formatCurrency(sub.remaining)}</div></div>`;
+                }).join('');
+                return `<div class="bg-gray-50 p-3 rounded-lg"><div class="flex justify-between items-center text-sm mb-1"><span class="font-semibold text-gray-700">${parent.name}</span><span class="text-gray-500">${formatCurrency(spent)} of ${formatCurrency(parent.total)}</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-${parent.color} h-2 rounded-full" style="width: ${percent}%"></div></div>${subsMarkup}</div>`;
             }).join('');
 
-            goalsList.innerHTML = Object.values(goalsData).map(goal => {
+            goalsList.innerHTML = Object.values(getGoalsSnapshot()).map(goal => {
                 const percent = goal.total > 0 ? Math.min(100, (goal.current / goal.total) * 100) : 0;
                 return `<div class="bg-gray-50 p-3 rounded-lg"><div class="flex justify-between items-center text-sm mb-1"><span class="font-semibold text-gray-700">${goal.name}</span><span class="text-gray-500">${formatCurrency(goal.current)} of ${formatCurrency(goal.total)}</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-${goal.color} h-2 rounded-full" style="width: ${percent}%"></div></div></div>`;
             }).join('');
 
-            savingsList.innerHTML = Object.values(pureSavingsData).map(saving => {
+            savingsList.innerHTML = Object.values(getSavingsSnapshot()).map(saving => {
                  const percent = saving.total > 0 ? Math.min(100, (saving.current / saving.total) * 100) : 0;
                  return `<div class="bg-gray-50 p-3 rounded-lg"><div class="flex justify-between items-center text-sm mb-1"><span class="font-semibold text-gray-700">${saving.name}</span><span class="text-gray-500">${formatCurrency(saving.current)} of ${formatCurrency(saving.total)}</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-${saving.color} h-2 rounded-full" style="width: ${percent}%"></div></div></div>`;
             }).join('');
@@ -376,9 +464,10 @@
             const totalSpentEl = document.getElementById('total-spent');
             const assetsEl = document.getElementById('assets-display');
 
-            const sorted = [...transactionsData].sort((a, b) => new Date(b.date) - new Date(a.date));
-            const totalSpent = sorted.filter(t => t.type === 'debit' && !t.isInternalTransfer).reduce((sum, t) => sum + t.amount, 0);
-            const totalAssets = sorted.filter(t => t.type === 'credit' && !t.isInternalTransfer).reduce((sum, t) => sum + t.amount, 0) - totalSpent;
+            const sorted = getTransactions();
+            const totalSpent = sorted.filter(t => t.type === 'debit' && !t.isInternalTransfer).reduce((sum, t) => sum + Number(t.amount || 0), 0);
+            const totalCredits = sorted.filter(t => t.type === 'credit' && !t.isInternalTransfer).reduce((sum, t) => sum + Number(t.amount || 0), 0);
+            const totalAssets = totalCredits - totalSpent;
             
             totalSpentEl.textContent = formatCurrency(totalSpent);
             assetsEl.textContent = formatCurrency(totalAssets);
@@ -405,10 +494,17 @@
                     <h3 class="font-bold text-gray-700 text-sm mb-2">${date}</h3>
                     <div class="space-y-2">
                         ${transactions.map(t => {
-                            const category = budgetData[t.category];
-                            const icon = category ? category.name.match(/\p{Emoji}/u)?.[0] : '❓';
+                            const parentKey = t.category?.parentKey;
+                            const subKey = t.category?.subKey;
+                            const categoryPath = parentKey && subKey ? `${parentKey}:${subKey}` : null;
+                            const subCategory = parentKey && subKey ? getSubCategory(parentKey, subKey) : null;
+                            const parentCategory = parentKey ? getParentCategory(parentKey) : null;
+                            const icon = subCategoryIcons[categoryPath] || '❓';
                             const amountClass = t.type === 'credit' ? 'text-green-600' : 'text-gray-800';
-                            return `<div class="flex items-center bg-gray-50 p-3 rounded-lg"><div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center mr-3 text-xl">${icon}</div><div class="flex-grow"><p class="font-semibold text-gray-900">${t.name}</p><p class="text-xs text-gray-500">${category?.name || 'Uncategorized'}</p></div><div class="font-semibold ${amountClass}">${t.type === 'credit' ? '+' : ''}${formatCurrency(t.amount)}</div></div>`
+                            const label = subCategory?.name || parentCategory?.name || 'Uncategorized';
+                            const amount = Number(t.amount || 0);
+                            const sign = t.type === 'credit' ? '+' : '';
+                            return `<div class="flex items-center bg-gray-50 p-3 rounded-lg"><div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center mr-3 text-xl">${icon}</div><div class="flex-grow"><p class="font-semibold text-gray-900">${t.name}</p><p class="text-xs text-gray-500">${label}</p></div><div class="font-semibold ${amountClass}">${sign}${formatCurrency(amount)}</div></div>`
                         }).join('')}
                     </div>
                 </div>
@@ -417,17 +513,19 @@
         
         function renderPlaceDetailView(place) {
             if (!place) return;
-            calculateBudgetState();
             const placeViewEl = document.getElementById('place-detail-view');
-            const budget = budgetData[place.category];
-            const merchantTransactions = transactionsData.filter(t => t.name === place.name && t.type === 'debit').sort((a,b) => new Date(b.date) - new Date(a.date));
+            const budgets = getBudgetSnapshot();
+            const assignment = place.category || getPlaceAssignment(place.id);
+            const parent = assignment ? budgets[assignment.parentKey] : null;
+            const subSummary = assignment && parent ? parent.subs.find(sub => sub.key === assignment.subKey) : null;
+            const merchantTransactions = store.getState().transactions.filter(t => t.name === place.name && t.type === 'debit').sort((a,b) => new Date(b.date) - new Date(a.date));
             let hintText = '';
             if (merchantTransactions.length === 1) hintText = `Last spent here: ${formatCurrency(merchantTransactions[0].amount)}`;
             else if (merchantTransactions.length >= 2) { const avg = merchantTransactions.slice(0,3).reduce((a, t) => a + t.amount, 0) / Math.min(3, merchantTransactions.length); hintText = `Avg. spent per visit: ${formatCurrency(avg)}`; }
-            
+
             let categorySection = '';
-            if (budget) { // Category exists
-                categorySection = `<div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg my-4"><div class="flex justify-between items-baseline"><p class="text-sm font-medium text-blue-800">Available to Spend</p><div class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">${budget.name}</div></div><p class="text-4xl font-extrabold text-blue-900">${formatCurrency(budget.remaining)}</p><p class="text-xs text-blue-600 h-4 mt-1">${hintText}</p></div><button id="log-purchase-btn" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition">Log Purchase</button>`;
+            if (subSummary) { // Category exists
+                categorySection = `<div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg my-4"><div class="flex justify-between items-baseline"><p class="text-sm font-medium text-blue-800">Available to Spend</p><div class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">${subSummary.name}</div></div><p class="text-4xl font-extrabold text-blue-900">${formatCurrency(subSummary.remaining)}</p><p class="text-xs text-blue-600 h-4 mt-1">${hintText}</p></div><button id="log-purchase-btn" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition">Log Purchase</button>`;
             } else { // New/Uncategorized place
                 categorySection = `<div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-lg my-4"><h3 class="font-bold text-amber-900">New Place Category</h3><p class="text-sm text-amber-800 mt-1">This place doesn't match any of your current budgets. You can add it to an existing budget or create a new one.</p><button id="add-to-budget-btn" class="w-full bg-amber-500 text-white font-semibold py-3 rounded-xl hover:bg-amber-600 transition mt-4">Add to Budget</button></div>`;
             }
@@ -460,9 +558,11 @@
             saveBtn.innerHTML = '<div class="loader mx-auto" style="width:24px; height:24px; border-width: 2px;"></div>';
 
             const amount = parseFloat(currentAmountString);
-            if(amount > 0 && currentPlace) {
-                const newTransaction = { id: Date.now(), name: currentPlace.name, amount, type: 'debit', date: new Date().toISOString().split('T')[0], category: currentPlace.category, source: 'Manual Log', isInternalTransfer: false };
-                transactionsData.push(newTransaction);
+            const assignment = currentPlace?.category || (currentPlace ? getPlaceAssignment(currentPlace.id) : null);
+            if(amount > 0 && currentPlace && assignment) {
+                const newTransaction = { id: Date.now(), name: currentPlace.name, amount, type: 'debit', date: new Date().toISOString().split('T')[0], category: assignment, source: 'Manual Log', isInternalTransfer: false };
+                store.actions.ingestTransactions([newTransaction]);
+                currentPlace = { ...currentPlace, category: assignment };
                 hideLogPurchaseModal();
                 renderPlaceDetailView(currentPlace);
             } else {
@@ -478,8 +578,10 @@
         const addCategoryModalEl = document.getElementById('add-category-modal');
         function showAddCategoryModal() {
             addCategoryModalEl.classList.remove('hidden'); addCategoryModalEl.classList.add('flex');
-            const options = Object.entries(budgetData).filter(([k,v])=> v.total).map(([k,v]) => `<option value="${k}">${v.name}</option>`).join('');
-            addCategoryModalEl.innerHTML = `<div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"><h2 class="text-2xl font-bold text-gray-900 mb-4">Add to Budget</h2><div class="mb-4"><label for="existing-category-select" class="block text-sm font-medium text-gray-700">Assign to existing category:</label><select id="existing-category-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"><option value="">--Select One--</option>${options}</select></div><div class="text-center my-2 text-sm text-gray-500 font-semibold">OR</div><div class="mb-4"><label for="new-category-name" class="block text-sm font-medium text-gray-700">Create a new category:</label><input type="text" id="new-category-name" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="e.g. 📚 Books"></div><div class="mb-4"><label for="new-category-total" class="block text-sm font-medium text-gray-700">Monthly Budget Amount:</label><input type="number" id="new-category-total" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="e.g. 50"></div><div class="mt-6 grid grid-cols-2 gap-3"><button id="cancel-add-cat-btn" class="w-full bg-gray-200 text-gray-800 font-semibold py-3 rounded-xl hover:bg-gray-300">Cancel</button><button id="save-add-cat-btn" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700">Save</button></div></div>`;
+            const budgets = getBudgetSnapshot();
+            const existingOptions = Object.values(budgets).flatMap(parent => parent.subs.map(sub => `<option value="${parent.key}|${sub.key}">${parent.name} — ${sub.name}</option>`)).join('');
+            const parentOptions = Object.values(budgets).map(parent => `<option value="${parent.key}">${parent.name}</option>`).join('');
+            addCategoryModalEl.innerHTML = `<div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"><h2 class="text-2xl font-bold text-gray-900 mb-4">Add to Budget</h2><div class="mb-4"><label for="existing-category-select" class="block text-sm font-medium text-gray-700">Assign to existing category:</label><select id="existing-category-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"><option value="">--Select One--</option>${existingOptions}</select></div><div class="text-center my-2 text-sm text-gray-500 font-semibold">OR</div><div class="mb-4"><label for="new-category-name" class="block text-sm font-medium text-gray-700">Create a new sub-category:</label><input type="text" id="new-category-name" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="e.g. Neighborhood Cafés"></div><div class="mb-4"><label for="new-category-parent" class="block text-sm font-medium text-gray-700">Parent category:</label><select id="new-category-parent" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">${parentOptions}</select></div><div class="mb-4"><label for="new-category-total" class="block text-sm font-medium text-gray-700">Monthly Budget Amount:</label><input type="number" id="new-category-total" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="e.g. 50"></div><div class="mt-6 grid grid-cols-2 gap-3"><button id="cancel-add-cat-btn" class="w-full bg-gray-200 text-gray-800 font-semibold py-3 rounded-xl hover:bg-gray-300">Cancel</button><button id="save-add-cat-btn" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700">Save</button></div></div>`;
         }
         function hideAddCategoryModal() { addCategoryModalEl.classList.add('hidden'); addCategoryModalEl.classList.remove('flex'); }
 
@@ -502,26 +604,28 @@
             };
 
             if (existingCat) {
-                currentPlace.category = existingCat;
+                const [parentKey, subKey] = existingCat.split('|');
+                currentPlace.category = { parentKey, subKey };
+                store.actions.assignPlaceToSub(currentPlace.id, parentKey, subKey);
             } else if (newCatName && newCatTotal > 0) {
-                const newCatKey = newCatName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '');
-                if (budgetData[newCatKey]) {
+                const parentKey = document.getElementById('new-category-parent').value;
+                const subKey = slugify(newCatName);
+                if (getSubCategory(parentKey, subKey)) {
                     newCatNameInput.value = '';
-                    newCatNameInput.placeholder = "Category already exists!";
+                    newCatNameInput.placeholder = "Sub-category exists!";
                     failValidation([newCatNameInput]);
-                    setTimeout(() => newCatNameInput.placeholder = "e.g. 📚 Books", 2000);
+                    setTimeout(() => newCatNameInput.placeholder = "e.g. Neighborhood Cafés", 2000);
                     return;
                 }
-                const colors = ['red-500', 'green-500', 'yellow-500', 'purple-500', 'blue-500', 'cyan-500', 'pink-500', 'teal-500'];
-                budgetData[newCatKey] = { name: newCatName, total: newCatTotal, color: colors[Math.floor(Math.random()*colors.length)] };
-                currentPlace.category = newCatKey;
-                
-                const filtersContainer = document.getElementById('category-filters-container'); 
-                let filterHtml = `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200" data-category="all">All</button>`; 
-                const spendingCats = Object.entries(budgetData).filter(([_, cat]) => cat.total); 
-                spendingCats.forEach(([key, cat]) => { filterHtml += `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200" data-category="${key}">${cat.name}</button>`; }); 
-                filtersContainer.innerHTML = filterHtml;
-            } else { 
+                const parent = getParentCategory(parentKey);
+                const palette = Object.keys(tailwindColors);
+                const color = parent?.color || palette[Math.floor(Math.random() * palette.length)];
+                store.actions.addSubCategory(parentKey, { name: newCatName, total: newCatTotal, color });
+                store.actions.assignPlaceToSub(currentPlace.id, parentKey, subKey);
+                currentPlace.category = { parentKey, subKey };
+                subCategoryIcons[`${parentKey}:${subKey}`] = subCategoryIcons[`${parentKey}:${subKey}`] || '📍';
+                rebuildCategoryFilters();
+            } else {
                 const invalidInputs = [];
                 if (!newCatName) invalidInputs.push(newCatNameInput);
                 if (!newCatTotal || newCatTotal <= 0) invalidInputs.push(newCatTotalInput);
@@ -533,8 +637,10 @@
             renderPlaceDetailView(currentPlace);
             const markerData = mapMarkers.find(m => m.place.id === currentPlace.id);
             if (markerData) {
-                 const newIcon = budgetData[currentPlace.category].name.match(/\p{Emoji}/u)?.[0] || '📍';
+                 const categoryPath = currentPlace.category ? `${currentPlace.category.parentKey}:${currentPlace.category.subKey}` : null;
+                 const newIcon = categoryPath ? (subCategoryIcons[categoryPath] || '📍') : '📍';
                  markerData.marker.setIcon(L.divIcon({ html: `<div class="custom-pin"><div>${newIcon}</div></div>`, className: '', iconSize: [36, 36], iconAnchor: [18, 36] }));
+                 markerData.place = { ...markerData.place, category: currentPlace.category, icon: newIcon };
             }
         }
         
@@ -551,11 +657,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             initializeMap();
-            const filtersContainer = document.getElementById('category-filters-container'); 
-            let filterHtml = `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full bg-blue-600 text-white transition-colors" data-category="all">All</button>`; 
-            const spendingCats = Object.entries(budgetData).filter(([_, cat]) => cat.total); 
-            spendingCats.forEach(([key, cat]) => { filterHtml += `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200" data-category="${key}">${cat.name}</button>`; }); 
-            filtersContainer.innerHTML = filterHtml;
+            rebuildCategoryFilters();
             
             renderAll();
             // Automatically trigger a search for the initial view
@@ -566,17 +668,12 @@
 
             document.body.addEventListener('click', (e) => {
                 const filterBtn = e.target.closest('.category-filter-btn');
-                if(filterBtn) { 
-                    document.querySelectorAll('.category-filter-btn').forEach(b => {
-                        b.classList.remove('bg-blue-600', 'text-white');
-                        b.classList.add('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
-                    }); 
-                    filterBtn.classList.add('bg-blue-600', 'text-white');
-                    filterBtn.classList.remove('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
-                    activeCategory = filterBtn.dataset.category; 
-                    document.getElementById('search-input').value = ''; 
-                    searchPlaces(); 
-                    return; 
+                if(filterBtn) {
+                    activeCategory = filterBtn.dataset.category;
+                    document.getElementById('search-input').value = '';
+                    rebuildCategoryFilters();
+                    searchPlaces();
+                    return;
                 }
                 
                 const keypadBtn = e.target.closest('.keypad-btn');
