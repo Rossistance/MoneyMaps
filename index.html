@@ -4,610 +4,1342 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Money Maps - Web</title>
-    
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://unpkg.com/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
+
     <style>
-        body, html { height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        .main-container { display: flex; height: 100vh; }
-        #map-container { flex-grow: 1; position: relative; }
-        #sidebar { width: 450px; flex-shrink: 0; background-color: #ffffff; box-shadow: -5px 0 15px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
-        #sidebar-content { flex-grow: 1; overflow-y: auto; }
-        .sidebar-view { display: none; }
-        .sidebar-view.active { display: block; }
-        #map { width: 100%; height: 100%; z-index: 10; }
-        .custom-pin { background-color: #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); width: 36px; height: 36px; display: flex; justify-content: center; align-items: center; border: 2px solid #1e40af; box-shadow: 0 2px 5px rgba(0,0,0,0.2); cursor: pointer; transition: transform 0.1s ease-in-out; }
-        .custom-pin:hover { transform: rotate(-45deg) scale(1.1); }
-        .custom-pin div { transform: rotate(45deg); font-size: 16px; }
-        .leaflet-control-attribution { font-size: 11px !important; }
-        .nav-btn.active { background-color: #eef2ff; color: #3b82f6; }
-        .keypad-btn:active { background-color: #dbeafe; }
-        /* Scrollbar styles */
-        #sidebar-content::-webkit-scrollbar, .category-filters::-webkit-scrollbar, #autocomplete-results::-webkit-scrollbar { width: 4px; height: 4px; }
-        #sidebar-content::-webkit-scrollbar-thumb, .category-filters::-webkit-scrollbar-thumb, #autocomplete-results::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
-        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
-        .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #3498db; width: 30px; height: 30px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .sankey-link { fill: none; stroke-opacity: 0.3; } .sankey-link:hover { stroke-opacity: 0.6; } .sankey-node rect { stroke: #fff; stroke-width: 2px; }
+        :root {
+            color-scheme: light;
+        }
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .main-container {
+            display: flex;
+            height: 100vh;
+        }
+        #map-container {
+            flex-grow: 1;
+            position: relative;
+            background-color: #0f172a;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+        }
+        #sidebar {
+            width: 480px;
+            flex-shrink: 0;
+            background-color: #ffffff;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+        }
+        #sidebar-content {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+        .sidebar-view {
+            display: none;
+        }
+        .sidebar-view.active {
+            display: block;
+        }
+        .nav-btn.active {
+            background-color: #eef2ff;
+            color: #3b82f6;
+        }
+        .nav-btn svg {
+            margin-right: 0.35rem;
+        }
+        .gradient-pill {
+            background-image: linear-gradient(135deg, rgba(59,130,246,1) 0%, rgba(14,165,233,1) 100%);
+        }
+        #sidebar-content::-webkit-scrollbar,
+        .category-filters::-webkit-scrollbar,
+        #autocomplete-results::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        #sidebar-content::-webkit-scrollbar-thumb,
+        .category-filters::-webkit-scrollbar-thumb,
+        #autocomplete-results::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .pin-shell {
+            width: 40px;
+            height: 40px;
+            border-radius: 100% 100% 100% 0;
+            transform: rotate(-45deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.25);
+            border: 2px solid rgba(255,255,255,0.8);
+            background: linear-gradient(145deg, #10b981, #059669);
+        }
+        .pin-shell svg {
+            transform: rotate(45deg);
+        }
+        .pin-shell[data-status="categorized"] {
+            background: linear-gradient(145deg, #3b82f6, #1d4ed8);
+        }
+        .pin-shell[data-status="parent-housing"] {
+            background: linear-gradient(145deg, #6366f1, #4f46e5);
+        }
+        .pin-shell[data-status="parent-lifestyle"] {
+            background: linear-gradient(145deg, #ec4899, #db2777);
+        }
+        .pin-shell[data-status="parent-transport"] {
+            background: linear-gradient(145deg, #10b981, #059669);
+        }
+        .pin-shell[data-status="parent-health"] {
+            background: linear-gradient(145deg, #06b6d4, #0e7490);
+        }
+        .pin-shell[data-status="parent-savings"] {
+            background: linear-gradient(145deg, #f59e0b, #d97706);
+        }
+        .pin-shell[data-status="parent-income"] {
+            background: linear-gradient(145deg, #16a34a, #15803d);
+        }
+        .pin-shell[data-status="uncategorized"] {
+            background: linear-gradient(145deg, #22c55e, #15803d);
+        }
+        .timeline-wrapper {
+            position: relative;
+            width: 100%;
+            min-height: 260px;
+            border-radius: 1.25rem;
+            overflow: hidden;
+            background: #0f172a;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+        }
+        .timeline-wrapper canvas {
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
+        }
+        .budget-bar {
+            position: relative;
+            height: 42px;
+            border-radius: 12px;
+            background: #e2e8f0;
+            overflow: hidden;
+        }
+        .budget-bar span {
+            position: absolute;
+            inset: 0;
+            display: block;
+        }
+        .budget-bar .budget-target {
+            background-image: linear-gradient(90deg, rgba(226,232,240,0.8), rgba(148,163,184,0.4));
+        }
+        .budget-bar .budget-spent {
+            mix-blend-mode: multiply;
+        }
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(4px);
+            z-index: 50;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        .modal-backdrop.active {
+            display: flex;
+        }
+        .mobile-hidden { display: block; }
+        .desktop-hidden { display: none; }
+        @media (max-width: 1024px) {
+            body, html {
+                overflow: auto;
+            }
+            .main-container {
+                flex-direction: column;
+            }
+            #map-container {
+                order: -1;
+                height: 45vh;
+            }
+            #sidebar {
+                width: 100%;
+                height: auto;
+                box-shadow: none;
+            }
+            #sidebar-content {
+                height: auto;
+            }
+            .mobile-hidden { display: none; }
+            .desktop-hidden { display: block; }
+        }
     </style>
 </head>
 <body>
-
-    <div class="main-container">
-        <div id="map-container">
-            <div id="map"></div>
-            <div class="absolute top-0 left-0 right-0 p-4 z-20 space-y-2">
-                <div class="max-w-xl mx-auto">
-                    <div class="relative">
-                        <input type="text" id="search-input" placeholder="Search city, state, or business..." class="w-full pl-10 pr-4 py-3 bg-white rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800">
-                        <div class="absolute top-1/2 left-3 -translate-y-1/2 text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></div>
-                        <div id="autocomplete-results" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg z-30 overflow-hidden hidden max-h-80 overflow-y-auto"></div>
+<div id="app-root" class="main-container">
+    <div id="map-container">
+        <div id="map"></div>
+        <div class="absolute top-0 left-0 right-0 p-4 z-20 space-y-2">
+            <div class="max-w-xl mx-auto">
+                <div class="relative">
+                    <input type="text" id="search-input" placeholder="Search place or address..." class="w-full pl-11 pr-4 py-3 bg-white rounded-2xl shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800">
+                    <div class="absolute top-1/2 left-3 -translate-y-1/2 text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                     </div>
-                    <div id="category-filters-container" class="category-filters flex items-center space-x-2 overflow-x-auto p-2 bg-white/80 backdrop-blur-sm rounded-xl mt-2 shadow-md"></div>
+                    <div id="autocomplete-results" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl z-30 overflow-hidden hidden max-h-80 overflow-y-auto"></div>
                 </div>
+                <div id="place-type-filters" class="category-filters flex items-center space-x-2 overflow-x-auto p-2 bg-white/90 backdrop-blur rounded-xl mt-2 shadow-md"></div>
             </div>
-            <div id="map-loader" class="absolute inset-0 bg-white/50 z-30 items-center justify-center hidden"><div class="loader"></div></div>
         </div>
-
-        <div id="sidebar">
-            <div class="p-4 border-b">
-                <h1 class="text-2xl font-bold text-gray-900">Money Maps</h1>
+        <div id="map-loader" class="absolute inset-0 bg-white/60 z-30 items-center justify-center hidden"><div class="loader border-4 border-slate-200 border-t-blue-500 rounded-full w-10 h-10 animate-spin"></div></div>
+    </div>
+    <aside id="sidebar">
+        <div class="p-4 border-b border-slate-200">
+            <div class="flex items-center justify-between">
+                <h1 class="text-2xl font-bold text-slate-900">Money Maps</h1>
+                <span id="view-toggle-label" class="text-xs text-slate-500 desktop-hidden">Mobile View</span>
             </div>
-            <div id="sidebar-nav" class="grid grid-cols-2 gap-2 p-2 border-b bg-gray-50">
-                <button class="nav-btn active flex items-center justify-center p-2 rounded-lg font-semibold text-sm" data-view="budget-view"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><line x1="12" x2="12" y1="20" y2="10"></line><line x1="18" x2="18" y1="20" y2="4"></line><line x1="6" x2="6" y1="20" y2="16"></line></svg>Budget</button>
-                <button class="nav-btn flex items-center justify-center p-2 rounded-lg font-semibold text-gray-600 text-sm" data-view="transactions-view"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>History</button>
-            </div>
-
-            <div id="sidebar-content">
-                <!-- Budget View -->
-                <div id="budget-view" class="sidebar-view active p-4">
-                    <div id="sankey-hero-container" class="mt-2 p-2 h-48 cursor-pointer flex items-center justify-center bg-gray-50 rounded-xl"><svg id="sankey-hero" class="w-full h-full"></svg></div>
-                    <h2 class="text-xl font-bold text-gray-800 px-2 mt-6 flex justify-between items-center"><span>Fund Flows</span></h2>
-                    <div id="budget-list" class="mt-2 space-y-3 px-2"></div>
-                    <h2 class="text-xl font-bold text-gray-800 px-2 mt-8">Pure Savings</h2>
-                    <div id="pure-savings-list" class="mt-2 space-y-3 px-2"></div>
-                    <h2 class="text-xl font-bold text-gray-800 px-2 mt-8 flex justify-between items-center"><span>Time Targets</span></h2>
-                    <div id="goals-list" class="mt-2 space-y-3 px-2 pb-4"></div>
+        </div>
+        <nav id="sidebar-nav" class="grid grid-cols-3 gap-2 p-2 border-b bg-slate-50">
+            <button class="nav-btn active flex items-center justify-center p-2 rounded-xl font-semibold text-sm" data-view="budget-view">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="20" y2="10"></line><line x1="18" x2="18" y1="20" y2="4"></line><line x1="6" x2="6" y1="20" y2="16"></line></svg>
+                Budget
+            </button>
+            <button class="nav-btn flex items-center justify-center p-2 rounded-xl font-semibold text-sm text-slate-600" data-view="accounts-view">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7"></path><path d="M9 21V9h6v12"></path></svg>
+                Accounts
+            </button>
+            <button class="nav-btn flex items-center justify-center p-2 rounded-xl font-semibold text-sm text-slate-600" data-view="transactions-view">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                History
+            </button>
+        </nav>
+        <div id="sidebar-content">
+            <section id="budget-view" class="sidebar-view active p-4 space-y-6">
+                <div class="flex items-center justify-between px-2">
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span>Fund flows</span>
+                        <button class="add-parent-btn text-blue-500 hover:text-blue-600 transition" title="Add category" aria-label="Add category">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        </button>
+                    </h2>
+                    <div class="text-right">
+                        <p class="text-xs text-slate-500">Remaining</p>
+                        <p id="budget-remaining" class="text-lg font-bold text-emerald-600"></p>
+                    </div>
                 </div>
-
-                <!-- Transactions View -->
-                <div id="transactions-view" class="sidebar-view">
-                     <div class="p-4 bg-white border-b sticky top-0">
-                        <div class="flex justify-between items-end mt-2">
-                            <div><p class="text-sm text-gray-500">Assets</p><p id="assets-display" class="text-2xl font-bold text-green-600"></p></div>
-                             <div class="text-right"><p class="text-sm text-gray-500">Total Spent</p><p id="total-spent" class="text-2xl font-bold text-red-600"></p></div>
+                <div id="budget-timeline" class="timeline-wrapper"></div>
+                <div id="budget-category-list" class="space-y-4"></div>
+                <h3 class="text-lg font-semibold text-slate-800 px-2">Pure savings</h3>
+                <div id="savings-category-list" class="space-y-3"></div>
+                <h3 class="text-lg font-semibold text-slate-800 px-2">Time targets</h3>
+                <div id="goals-list" class="space-y-3 pb-6"></div>
+            </section>
+            <section id="accounts-view" class="sidebar-view p-4 space-y-6">
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                    <h2 class="text-lg font-semibold text-slate-800">Accounts Overview</h2>
+                    <p class="text-sm text-slate-500">Balances and remaining budgets</p>
+                </div>
+                <div id="accounts-summary" class="space-y-3"></div>
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-2">Places &amp; Remaining budgets</h3>
+                    <div id="accounts-places" class="space-y-3"></div>
+                </div>
+            </section>
+            <section id="transactions-view" class="sidebar-view p-4 space-y-4">
+                <div class="bg-white border border-slate-200 rounded-2xl p-4 sticky top-0 z-10">
+                    <div class="flex justify-between items-end">
+                        <div>
+                            <p class="text-xs text-slate-500 uppercase tracking-wide">Assets</p>
+                            <p id="assets-display" class="text-2xl font-bold text-emerald-600"></p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-slate-500 uppercase tracking-wide">Total spent</p>
+                            <p id="total-spent" class="text-2xl font-bold text-rose-600"></p>
                         </div>
                     </div>
-                    <div id="transactions-list" class="p-4 space-y-3"></div>
-                </div>
-
-                <!-- Place Detail View -->
-                <div id="place-detail-view" class="sidebar-view"></div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Modals -->
-    <div id="log-purchase-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 z-50 hidden items-center justify-center"></div>
-    <div id="add-category-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 z-50 hidden items-center justify-center p-4"></div>
-
-    <script>
-        // --- API & DATA CONFIG ---
-        
-        // IMPORTANT: API KEY SECURITY
-        // For a public website like GitHub Pages, do not commit your real API key here.
-        // 1. Paste your key here for local testing.
-        // 2. Before deploying, go to your HERE Developer Portal.
-        // 3. Select your key and add a "Domain Restriction" (or "HTTP Referer Restriction").
-        // 4. Set the allowed domain to your GitHub Pages URL (e.g., "your-username.github.io").
-        // This makes the key usable ONLY on your website, even if someone copies it.
-        const HERE_API_KEY = '6iHV0y797UXNMW3TZlJX6gXy67xGh2uEIX77Q7tHdjU'; // <-- PASTE YOUR RESTRICTED KEY HERE BEFORE DEPLOYING
-
-        let budgetData = {
-            'dining-out': { name: '🍽️ Dining Out', total: 250.00, color: 'red-500' }, 'groceries': { name: '🛒 Groceries', total: 500.00, color: 'green-500' }, 'transportation': { name: '⛽ Transportation', total: 150.00, color: 'yellow-500' }, 'shopping': { name: '🛍️ Shopping', total: 200.00, color: 'purple-500' }, 'entertainment': { name: '🎬 Entertainment', total: 150.00, color: 'pink-500' }, 'utilities': { name: '💡 Utilities', total: 200.00, color: 'amber-500' }, 'health': { name: '💊 Health', total: 100.00, color: 'teal-500' }, 'fitness': { name: '💪 Fitness', total: 50.00, color: 'emerald-500' }, 'home-improvement': { name: '🛠️ Home', total: 250.00, color: 'cyan-500' }, 'income': { name: '💰 Income', color: 'green-600' }, 'transfers': { name: '🔄 Transfers', color: 'gray-500' }
-        };
-        let goalsData = { 'emergency-fund': { name: '🏦 Emergency Fund', current: 750.00, total: 3000.00, color: 'blue-500' }, 'vacation': { name: '✈️ Vacation', current: 250.00, total: 1500.00, color: 'cyan-500' },};
-        let pureSavingsData = { 'cash-reserve': { name: '💵 Cash Reserve', current: 1200.00, total: 10000.00, color: 'lime-500' } };
-        let transactionsData = [ { id: 1, name: 'Axis Energy', amount: 2145.67, type: 'credit', date: '2025-10-10', category: 'income', source: 'Bank Sync (Payroll)', isInternalTransfer: false }, { id: 100, name: 'Check Deposit', amount: 150.00, type: 'credit', date: '2025-10-01', category: 'income', source: 'Check #8812', isInternalTransfer: false }, { id: 2, name: 'Whole Foods Market', amount: 142.33, type: 'debit', date: '2025-10-12', category: 'groceries', source: 'Bank Sync', isInternalTransfer: false }, { id: 3, name: 'Trader Joe\'s', amount: 98.22, type: 'debit', date: '2025-10-05', category: 'groceries', source: 'Bank Sync', isInternalTransfer: false }, { id: 4, name: 'Whole Foods Market', amount: 70.00, type: 'debit', date: '2025-10-01', category: 'groceries', source: 'Bank Sync', isInternalTransfer: false }, { id: 5, name: 'The Flying Squirrel', amount: 78.50, type: 'debit', date: '2025-10-11', category: 'dining-out', source: 'Bank Sync', isInternalTransfer: false }, { id: 6, name: "Rembrandt's Coffee House", amount: 18.75, type: 'debit', date: new Date().toISOString().split('T')[0], category: 'dining-out', source: 'Manual Log', isInternalTransfer: false }, { id: 7, name: 'Public House Restaurant', amount: 67.25, type: 'debit', date: '2025-10-08', category: 'dining-out', source: 'Bank Sync', isInternalTransfer: false }, { id: 8, name: 'Shell', amount: 48.12, type: 'debit', date: '2025-10-09', category: 'transportation', source: 'Bank Sync', isInternalTransfer: false }, { id: 9, name: 'Shell', amount: 46.78, type: 'debit', date: '2025-10-02', category: 'transportation', source: 'Bank Sync', isInternalTransfer: false }, { id: 10, name: 'Target', amount: 80.00, type: 'debit', date: '2025-10-04', category: 'shopping', source: 'Bank Sync', isInternalTransfer: false }, { id: 11, name: 'Target Refund', amount: 24.50, type: 'credit', date: '2025-10-06', category: 'shopping', source: 'Bank Sync', isInternalTransfer: false }, { id: 12, name: 'Regal Hamilton Place', amount: 75.00, type: 'debit', date: '2025-10-05', category: 'entertainment', source: 'Bank Sync', isInternalTransfer: false }, { id: 13, name: 'EPB Headquarters', amount: 20.00, type: 'debit', date: '2025-10-08', category: 'utilities', source: 'Check #2045', isInternalTransfer: false }, { id: 14, name: 'CVS', amount: 35.00, type: 'debit', date: '2025-10-07', category: 'health', source: 'Bank Sync', isInternalTransfer: false }, { id: 15, name: 'Erlanger Baroness Hospital', amount: 20.00, type: 'debit', date: '2025-10-03', category: 'health', source: 'Bank Sync', isInternalTransfer: false }, { id: 16, name: 'Orangetheory Fitness', amount: 15.00, type: 'debit', date: '2025-10-01', category: 'fitness', source: 'Bank Sync', isInternalTransfer: false }, { id: 17, name: 'The Home Depot', amount: 100.00, type: 'debit', date: '2025-09-30', category: 'home-improvement', source: 'Bank Sync', isInternalTransfer: false }, { id: 18, name: 'Transfer to Savings', amount: 500.00, type: 'debit', date: '2025-10-10', category: 'transfers', source: 'Checking', isInternalTransfer: true }, { id: 19, name: 'Transfer from Checking', amount: 500.00, type: 'credit', date: '2025-10-10', category: 'transfers', source: 'Savings', isInternalTransfer: true } ];
-        const tailwindColors = { 'red-500': '#ef4444', 'green-500': '#22c55e', 'yellow-500': '#eab308', 'purple-500': '#8b5cf6', 'blue-500': '#3b82f6', 'cyan-500': '#06b6d4', 'indigo-500': '#6366f1', 'pink-500': '#ec4899', 'teal-500': '#14b8a6', 'amber-500': '#f59e0b', 'emerald-500': '#10b981', 'gray-500': '#6b7280', 'green-600': '#16a34a', 'lime-500': '#84cc16' };
-        const hereCategoryMap = { 'dining-out': '100-1000', 'groceries': '100-1011-0052,700-7000-0000', 'transportation': '100-1019,400-4000-0000', 'shopping': '600-6000-0000', 'entertainment': '300-3000-0000', 'health': '500-5000-0000', 'fitness': '800-8000-0165', 'home-improvement': '600-6000-0062' };
-        
-        let map;
-        const sidebarViews = document.querySelectorAll('.sidebar-view');
-        const navBtns = document.querySelectorAll('.nav-btn');
-        let currentPlace = null, currentAmountString = "0";
-        let mapMarkers = [];
-        let searchTimeout;
-        let activeCategory = 'all';
-
-        // --- Persistent Cache with Time-To-Live (TTL) ---
-        const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
-        const persistentCache = {
-            get: (key) => {
-                try {
-                    const itemStr = localStorage.getItem(key);
-                    if (!itemStr) return null;
-                    const item = JSON.parse(itemStr);
-                    const now = new Date();
-                    if (now.getTime() > item.expiry) {
-                        localStorage.removeItem(key);
-                        return null;
-                    }
-                    return item.value;
-                } catch (e) {
-                    console.error("Cache read error:", e);
-                    return null;
-                }
-            },
-            set: (key, value) => {
-                try {
-                    const now = new Date();
-                    const item = { value: value, expiry: now.getTime() + CACHE_TTL };
-                    localStorage.setItem(key, JSON.stringify(item));
-                } catch (e) {
-                    console.error("Cache write error:", e);
-                }
-            }
-        };
-
-        // --- Debounce Utility Function ---
-        function debounce(func, delay) {
-            let timeout;
-            return function(...args) {
-                const context = this;
-                clearTimeout(timeout);
-                timeout = setTimeout(() => func.apply(context, args), delay);
-            };
-        }
-
-        const formatCurrency = (amount) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-        
-        function calculateBudgetState() {
-            for (const key in budgetData) { if (budgetData[key].total) { budgetData[key].remaining = budgetData[key].total; } }
-            transactionsData.forEach(t => { if (budgetData[t.category] && budgetData[t.category].total) { if (t.type === 'debit') { budgetData[t.category].remaining -= t.amount; } else if (t.type === 'credit' && t.category !== 'income' && !t.isInternalTransfer) { budgetData[t.category].remaining += t.amount; } } });
-        }
-        
-        function clearMarkers() {
-            mapMarkers.forEach(({ marker }) => marker.removeFrom(map));
-            mapMarkers = [];
-        }
-
-        function categoryForHereResult(hereItem) {
-            if (!hereItem || !Array.isArray(hereItem.categories)) return 'uncategorized';
-            for (const category of hereItem.categories) {
-                if (category && category.id) {
-                    for (const appCat in hereCategoryMap) {
-                        if (hereCategoryMap[appCat].includes(category.id)) return appCat;
-                    }
-                }
-            }
-            return 'uncategorized';
-        }
-
-        function addPlacesToMap(items) {
-             clearMarkers();
-            items.forEach(item => {
-                if (!item || !item.categories || !item.position) return;
-                const place = { id: item.id, name: item.title, type: item.categories[0]?.name || 'Place', lat: item.position.lat, lng: item.position.lng, category: categoryForHereResult(item) };
-                const categoryData = budgetData[place.category];
-                place.icon = categoryData ? categoryData.name.match(/\p{Emoji}/u)?.[0] || '📍' : '❓';
-                const marker = L.marker([place.lat, place.lng], { icon: L.divIcon({ html: `<div class="custom-pin"><div>${place.icon}</div></div>`, className: '', iconSize: [36, 36], iconAnchor: [18, 36] }) });
-                mapMarkers.push({ marker, place });
-                marker.on('click', (e) => { L.DomEvent.stopPropagation(e); showPlaceView(place); map.flyTo([place.lat, place.lng], 15); });
-                marker.addTo(map);
-            });
-        }
-        
-        async function searchPlaces() {
-            if (HERE_API_KEY === 'YOUR_HERE_API_KEY') {
-                console.error("API Key is not set. Please replace 'YOUR_HERE_API_KEY' with your actual key.");
-                // Optionally, show a user-facing error message on the UI
-                return;
-            }
-            document.getElementById('map-loader').style.display = 'flex';
-            const query = document.getElementById('search-input').value;
-            const center = map.getCenter();
-            
-            // --- Optimized cache grid key ---
-            const cacheKey = `places_${Math.round(center.lat * 10)}_${Math.round(center.lng * 10)}_${map.getZoom()}_${activeCategory}_${query}`;
-
-            // --- Use persistent cache ---
-            const cachedData = persistentCache.get(cacheKey);
-            if (cachedData) {
-                addPlacesToMap(cachedData);
-                document.getElementById('map-loader').style.display = 'none';
-                return;
-            }
-
-            const bounds = map.getBounds();
-            const inCircle = `${center.lat},${center.lng};r=${Math.round(center.distanceTo(bounds.getNorthEast()))}`;
-            let url;
-            if (query) {
-                url = `https://discover.search.hereapi.com/v1/discover?q=${encodeURIComponent(query)}&in=circle:${inCircle}&limit=100&apiKey=${HERE_API_KEY}`;
-            } else if (activeCategory !== 'all') {
-                const categoryCodes = hereCategoryMap[activeCategory];
-                url = `https://browse.search.hereapi.com/v1/browse?categories=${categoryCodes}&in=circle:${inCircle}&limit=100&apiKey=${HERE_API_KEY}`;
-            } else {
-                 document.getElementById('map-loader').style.display = 'none';
-                 clearMarkers();
-                 return;
-            }
-            try {
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error(`API request failed with status ${response.status}`);
-                }
-                const data = await response.json();
-                if (data.items) {
-                    persistentCache.set(cacheKey, data.items); // Store results in cache
-                    addPlacesToMap(data.items);
-                }
-            } catch (error) { console.error("Error fetching places:", error); } 
-            finally { document.getElementById('map-loader').style.display = 'none'; }
-        }
-
-        async function getAutocompleteSuggestions() {
-            const query = document.getElementById('search-input').value;
-            const resultsContainer = document.getElementById('autocomplete-results');
-            if (query.length < 3) { resultsContainer.innerHTML = ''; resultsContainer.classList.add('hidden'); return; }
-            const center = map.getCenter();
-            const url = `https://autosuggest.search.hereapi.com/v1/autosuggest?q=${encodeURIComponent(query)}&at=${center.lat},${center.lng}&limit=7&apiKey=${HERE_API_KEY}`;
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                renderAutocomplete(data.items);
-            } catch (error) { 
-                console.error("Autocomplete error:", error); 
-                resultsContainer.classList.add('hidden');
-            }
-        }
-
-        function renderAutocomplete(items) {
-            const resultsContainer = document.getElementById('autocomplete-results');
-            if (!items || items.length === 0) { resultsContainer.innerHTML = ''; resultsContainer.classList.add('hidden'); return; }
-            resultsContainer.innerHTML = items.map(item => `
-                <div class="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0" data-id="${item.id}" data-type="${item.resultType}">
-                    <p class="font-semibold text-gray-800">${item.title}</p>
-                    <p class="text-sm text-gray-500">${item.address?.label || 'Search suggestion'}</p>
-                </div>
-            `).join('');
-            resultsContainer.classList.remove('hidden');
-        }
-
-        async function selectSuggestion(id) {
-            document.getElementById('autocomplete-results').classList.add('hidden');
-            document.getElementById('map-loader').style.display = 'flex';
-            const url = `https://lookup.search.hereapi.com/v1/lookup?id=${id}&apiKey=${HERE_API_KEY}`;
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                if (data && data.position && data.position.lat && data.position.lng) {
-                    map.flyTo([data.position.lat, data.position.lng], 15);
-                    if (data.resultType === 'place') {
-                        addPlacesToMap([data]);
-                        const place = mapMarkers[0]?.place;
-                        if (place) showPlaceView(place);
-                    }
-                } else {
-                    console.warn("Selected suggestion does not have position data:", data);
-                }
-            } catch (error) { console.error("Lookup error:", error); } 
-            finally { document.getElementById('map-loader').style.display = 'none'; }
-        }
-        
-        function renderAll() {
-            calculateBudgetState();
-            if(document.getElementById('budget-view').classList.contains('active')) renderBudgetView();
-            if(document.getElementById('transactions-view').classList.contains('active')) renderTransactionsView();
-            if(document.getElementById('place-detail-view').classList.contains('active')) renderPlaceDetailView(currentPlace);
-        }
-
-        function createSankey(svgElement) {
-            const width = svgElement.clientWidth;
-            const height = svgElement.clientHeight;
-            svgElement.innerHTML = ''; 
-            const svg = d3.select(svgElement).attr("viewBox", `0 0 ${width} ${height}`);
-
-            const spending = Object.entries(budgetData)
-                .filter(([key, cat]) => cat.total && key !== 'income' && key !== 'transfers')
-                .map(([key, cat]) => ({ category: key, spent: Math.max(0, cat.total - cat.remaining) }))
-                .filter(d => d.spent > 0);
-
-            const totalIncome = transactionsData.filter(t => t.category === 'income').reduce((sum, t) => sum + t.amount, 0);
-
-            if (spending.length === 0 || totalIncome === 0) {
-                 svg.append("text").attr("x", width/2).attr("y", height/2).attr("text-anchor", "middle").text("Not enough data for chart.").style("fill", "#6b7280");
-                 return;
-            }
-
-            const nodes = [{ name: "Income" }, ...spending.map(d => ({ name: budgetData[d.category].name }))];
-            const links = spending.map((d, i) => ({ source: 0, target: i + 1, value: d.spent, color: tailwindColors[budgetData[d.category].color] }));
-            
-            const sankey = d3.sankey().nodeWidth(15).nodePadding(10).extent([[1, 1], [width - 1, height - 6]]);
-            const {nodes: graphNodes, links: graphLinks} = sankey({ nodes: nodes.map(d => Object.assign({}, d)), links: links.map(d => Object.assign({}, d)) });
-
-            svg.append("g").selectAll(".sankey-link").data(graphLinks).enter().append("path")
-                .attr("class", "sankey-link").attr("d", d3.sankeyLinkHorizontal())
-                .style("stroke", d => d.color).style("stroke-width", d => Math.max(1, d.width));
-            
-            const node = svg.append("g").selectAll(".sankey-node").data(graphNodes).enter().append("g").attr("class", "sankey-node").attr("transform", d => `translate(${d.x0},${d.y0})`);
-            node.append("rect").attr("height", d => d.y1 - d.y0).attr("width", sankey.nodeWidth())
-                .style("fill", (d, i) => i === 0 ? tailwindColors['green-600'] : links[i - 1].color);
-            node.append("text").attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
-                .attr("y", d => (d.y1 - d.y0) / 2).attr("dy", "0.35em")
-                .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
-                .text(d => d.name).style("font-size", "12px").style("fill", "#374151");
-        }
-
-        function renderBudgetView() {
-            const budgetList = document.getElementById('budget-list');
-            const goalsList = document.getElementById('goals-list');
-            const savingsList = document.getElementById('pure-savings-list');
-            
-            budgetList.innerHTML = Object.entries(budgetData).filter(([_, cat]) => cat.total).map(([key, cat]) => {
-                const spent = Math.max(0, cat.total - cat.remaining);
-                const percent = cat.total > 0 ? Math.min(100, (spent / cat.total) * 100) : 0;
-                return `<div class="bg-gray-50 p-3 rounded-lg"><div class="flex justify-between items-center text-sm mb-1"><span class="font-semibold text-gray-700">${cat.name}</span><span class="text-gray-500">${formatCurrency(spent)} of ${formatCurrency(cat.total)}</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-${cat.color} h-2 rounded-full" style="width: ${percent}%"></div></div></div>`;
-            }).join('');
-
-            goalsList.innerHTML = Object.values(goalsData).map(goal => {
-                const percent = goal.total > 0 ? Math.min(100, (goal.current / goal.total) * 100) : 0;
-                return `<div class="bg-gray-50 p-3 rounded-lg"><div class="flex justify-between items-center text-sm mb-1"><span class="font-semibold text-gray-700">${goal.name}</span><span class="text-gray-500">${formatCurrency(goal.current)} of ${formatCurrency(goal.total)}</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-${goal.color} h-2 rounded-full" style="width: ${percent}%"></div></div></div>`;
-            }).join('');
-
-            savingsList.innerHTML = Object.values(pureSavingsData).map(saving => {
-                 const percent = saving.total > 0 ? Math.min(100, (saving.current / saving.total) * 100) : 0;
-                 return `<div class="bg-gray-50 p-3 rounded-lg"><div class="flex justify-between items-center text-sm mb-1"><span class="font-semibold text-gray-700">${saving.name}</span><span class="text-gray-500">${formatCurrency(saving.current)} of ${formatCurrency(saving.total)}</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-${saving.color} h-2 rounded-full" style="width: ${percent}%"></div></div></div>`;
-            }).join('');
-
-            createSankey(document.getElementById('sankey-hero'));
-        }
-
-        function renderTransactionsView() {
-            const listEl = document.getElementById('transactions-list');
-            const totalSpentEl = document.getElementById('total-spent');
-            const assetsEl = document.getElementById('assets-display');
-
-            const sorted = [...transactionsData].sort((a, b) => new Date(b.date) - new Date(a.date));
-            const totalSpent = sorted.filter(t => t.type === 'debit' && !t.isInternalTransfer).reduce((sum, t) => sum + t.amount, 0);
-            const totalAssets = sorted.filter(t => t.type === 'credit' && !t.isInternalTransfer).reduce((sum, t) => sum + t.amount, 0) - totalSpent;
-            
-            totalSpentEl.textContent = formatCurrency(totalSpent);
-            assetsEl.textContent = formatCurrency(totalAssets);
-            
-            const today = new Date();
-            const yesterday = new Date(today);
-            yesterday.setDate(yesterday.getDate() - 1);
-            const todayStr = today.toISOString().split('T')[0];
-            const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-            const grouped = sorted.reduce((acc, t) => {
-                const date = t.date;
-                let groupName;
-                if (date === todayStr) groupName = 'Today';
-                else if (date === yesterdayStr) groupName = 'Yesterday';
-                else groupName = new Date(date.replace(/-/g, '/')).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-                if (!acc[groupName]) acc[groupName] = [];
-                acc[groupName].push(t);
-                return acc;
-            }, {});
-
-            listEl.innerHTML = Object.entries(grouped).map(([date, transactions]) => `
-                <div>
-                    <h3 class="font-bold text-gray-700 text-sm mb-2">${date}</h3>
-                    <div class="space-y-2">
-                        ${transactions.map(t => {
-                            const category = budgetData[t.category];
-                            const icon = category ? category.name.match(/\p{Emoji}/u)?.[0] : '❓';
-                            const amountClass = t.type === 'credit' ? 'text-green-600' : 'text-gray-800';
-                            return `<div class="flex items-center bg-gray-50 p-3 rounded-lg"><div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center mr-3 text-xl">${icon}</div><div class="flex-grow"><p class="font-semibold text-gray-900">${t.name}</p><p class="text-xs text-gray-500">${category?.name || 'Uncategorized'}</p></div><div class="font-semibold ${amountClass}">${t.type === 'credit' ? '+' : ''}${formatCurrency(t.amount)}</div></div>`
-                        }).join('')}
+                    <div class="flex gap-2 mt-4">
+                        <button id="demo-data-btn" class="flex-1 bg-slate-900 text-white py-2.5 rounded-xl text-sm font-semibold shadow-sm hover:bg-slate-800 transition">Use demo data</button>
+                        <button id="plaid-link-btn" class="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-sm font-semibold shadow-sm hover:bg-blue-500 transition">Link bank (Plaid)</button>
                     </div>
                 </div>
-            `).join('');
-        }
-        
-        function renderPlaceDetailView(place) {
-            if (!place) return;
-            calculateBudgetState();
-            const placeViewEl = document.getElementById('place-detail-view');
-            const budget = budgetData[place.category];
-            const merchantTransactions = transactionsData.filter(t => t.name === place.name && t.type === 'debit').sort((a,b) => new Date(b.date) - new Date(a.date));
-            let hintText = '';
-            if (merchantTransactions.length === 1) hintText = `Last spent here: ${formatCurrency(merchantTransactions[0].amount)}`;
-            else if (merchantTransactions.length >= 2) { const avg = merchantTransactions.slice(0,3).reduce((a, t) => a + t.amount, 0) / Math.min(3, merchantTransactions.length); hintText = `Avg. spent per visit: ${formatCurrency(avg)}`; }
-            
-            let categorySection = '';
-            if (budget) { // Category exists
-                categorySection = `<div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg my-4"><div class="flex justify-between items-baseline"><p class="text-sm font-medium text-blue-800">Available to Spend</p><div class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">${budget.name}</div></div><p class="text-4xl font-extrabold text-blue-900">${formatCurrency(budget.remaining)}</p><p class="text-xs text-blue-600 h-4 mt-1">${hintText}</p></div><button id="log-purchase-btn" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition">Log Purchase</button>`;
-            } else { // New/Uncategorized place
-                categorySection = `<div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-lg my-4"><h3 class="font-bold text-amber-900">New Place Category</h3><p class="text-sm text-amber-800 mt-1">This place doesn't match any of your current budgets. You can add it to an existing budget or create a new one.</p><button id="add-to-budget-btn" class="w-full bg-amber-500 text-white font-semibold py-3 rounded-xl hover:bg-amber-600 transition mt-4">Add to Budget</button></div>`;
+                <div id="transactions-list" class="space-y-3 pb-10"></div>
+            </section>
+            <section id="place-detail-view" class="sidebar-view p-4 space-y-4"></section>
+        </div>
+    </aside>
+</div>
+
+<div id="category-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="category-modal-title">
+    <div class="bg-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden">
+        <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+            <div>
+                <h2 id="category-modal-title" class="text-xl font-semibold">Create budget category</h2>
+                <p id="category-modal-subtitle" class="text-sm text-slate-300">Organize funds into flexible buckets.</p>
+            </div>
+            <button class="close-category-modal text-white/70 hover:text-white" aria-label="Close modal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <div class="px-6 py-6 space-y-5">
+            <div>
+                <label for="category-name" class="block text-sm font-medium text-slate-600">Category name</label>
+                <input id="category-name" type="text" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Dining Out">
+            </div>
+            <div>
+                <label for="category-parent" class="block text-sm font-medium text-slate-600">Parent category</label>
+                <select id="category-parent" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="category-budget" class="block text-sm font-medium text-slate-600">Budgeted amount</label>
+                    <input id="category-budget" type="number" min="0" step="0.01" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="250">
+                </div>
+                <div>
+                    <label for="category-icon" class="block text-sm font-medium text-slate-600">Icon (optional)</label>
+                    <input id="category-icon" type="text" maxlength="1" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="🍽️">
+                </div>
+            </div>
+        </div>
+        <div class="px-6 py-4 bg-slate-50 flex items-center justify-end gap-3 border-t border-slate-200">
+            <button class="close-category-modal px-4 py-2 rounded-xl text-slate-600 hover:text-slate-800 font-medium">Cancel</button>
+            <button id="category-modal-save" class="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 transition">Save</button>
+        </div>
+    </div>
+</div>
+
+<div id="categorize-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="categorize-modal-title">
+    <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden">
+        <div class="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
+            <h2 id="categorize-modal-title" class="text-xl font-semibold">Categorize transaction</h2>
+            <button class="close-categorize-modal text-white/80 hover:text-white" aria-label="Close modal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <div class="px-6 py-6 space-y-5">
+            <p id="categorize-modal-transaction" class="text-slate-700 font-semibold"></p>
+            <div>
+                <label for="categorize-select" class="block text-sm font-medium text-slate-600">Assign to sub-category</label>
+                <select id="categorize-select" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+            </div>
+            <button id="categorize-new-sub" class="w-full px-4 py-2.5 rounded-xl border border-dashed border-blue-400 text-blue-600 font-medium hover:bg-blue-50">Create new sub-category</button>
+        </div>
+        <div class="px-6 py-4 bg-slate-50 flex items-center justify-end gap-3 border-t border-slate-200">
+            <button class="close-categorize-modal px-4 py-2 rounded-xl text-slate-600 hover:text-slate-800 font-medium">Cancel</button>
+            <button id="categorize-save" class="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 transition">Save</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const HERE_API_KEY = 'YOUR_HERE_API_KEY';
+
+const tailwindPalette = {
+    "indigo": ['#6366f1', '#4338ca'],
+    "sky": ['#38bdf8', '#0ea5e9'],
+    "pink": ['#ec4899', '#db2777'],
+    "emerald": ['#10b981', '#059669'],
+    "amber": ['#f59e0b', '#d97706'],
+    "cyan": ['#06b6d4', '#0e7490'],
+    "rose": ['#f43f5e', '#e11d48'],
+    "purple": ['#a855f7', '#7c3aed'],
+    "slate": ['#64748b', '#475569']
+};
+
+const placeTypeConfig = [
+    { id: 'restaurant', label: 'Restaurants', here: '100-1000', icon: 'M4 9l8-7 8 7v11a2 2 0 0 1-2 2h-4', parentHint: 'lifestyle' },
+    { id: 'grocery', label: 'Groceries', here: '100-1011-0052,700-7000-0000', icon: 'M3 9h18l-1 11H4L3 9z M7 9V4h10v5', parentHint: 'living' },
+    { id: 'electronics', label: 'Electronics', here: '600-6000-0000', icon: 'M7 4h10a2 2 0 0 1 2 2v10H5V6a2 2 0 0 1 2-2z M2 18h20', parentHint: 'lifestyle' },
+    { id: 'transport', label: 'Transit', here: '400-4000-0000', icon: 'M5 16l1 1 1 4h10l1-4 1-1', parentHint: 'transport' },
+    { id: 'health', label: 'Healthcare', here: '500-5000-0000', icon: 'M12 5v14 M5 12h14', parentHint: 'health' },
+    { id: 'leisure', label: 'Leisure', here: '300-3000-0000', icon: 'M21 10l-9-7-9 7v11h18z', parentHint: 'lifestyle' },
+    { id: 'fitness', label: 'Fitness', here: '800-8000-0165', icon: 'M4 6h16M4 10h16M10 14h4', parentHint: 'health' }
+];
+
+const appState = {
+    viewMode: 'desktop',
+    budgets: {
+        parents: {
+            'living': {
+                id: 'living',
+                name: 'Living essentials',
+                gradient: 'from-sky-500 to-sky-600',
+                colorKey: 'sky',
+                icon: 'home',
+                children: {
+                    'living-rent': { id: 'living-rent', name: 'Rent', icon: 'home', budget: 1750, type: 'expense' },
+                    'living-groceries': { id: 'living-groceries', name: 'Groceries', icon: 'basket', budget: 450, type: 'expense' },
+                    'living-utilities': { id: 'living-utilities', name: 'Utilities', icon: 'bolt', budget: 220, type: 'expense' }
+                }
+            },
+            'lifestyle': {
+                id: 'lifestyle',
+                name: 'Lifestyle',
+                gradient: 'from-pink-500 to-rose-500',
+                colorKey: 'pink',
+                icon: 'sparkles',
+                children: {
+                    'lifestyle-dining-out': { id: 'lifestyle-dining-out', name: 'Dining out', icon: 'utensils', budget: 240, type: 'expense' },
+                    'lifestyle-entertainment': { id: 'lifestyle-entertainment', name: 'Entertainment', icon: 'ticket', budget: 160, type: 'expense' },
+                    'lifestyle-shopping': { id: 'lifestyle-shopping', name: 'Shopping', icon: 'shopping-bag', budget: 200, type: 'expense' }
+                }
+            },
+            'transport': {
+                id: 'transport',
+                name: 'Transportation',
+                gradient: 'from-emerald-500 to-emerald-600',
+                colorKey: 'emerald',
+                icon: 'car',
+                children: {
+                    'transport-gas': { id: 'transport-gas', name: 'Fuel & charging', icon: 'gas', budget: 180, type: 'expense' },
+                    'transport-rideshare': { id: 'transport-rideshare', name: 'Rideshare', icon: 'taxi', budget: 90, type: 'expense' }
+                }
+            },
+            'health': {
+                id: 'health',
+                name: 'Health & wellness',
+                gradient: 'from-cyan-500 to-indigo-500',
+                colorKey: 'cyan',
+                icon: 'heart',
+                children: {
+                    'health-healthcare': { id: 'health-healthcare', name: 'Healthcare', icon: 'cross', budget: 130, type: 'expense' },
+                    'health-fitness': { id: 'health-fitness', name: 'Fitness', icon: 'dumbbell', budget: 95, type: 'expense' }
+                }
+            },
+            'savings': {
+                id: 'savings',
+                name: 'Pure savings',
+                gradient: 'from-amber-400 to-amber-500',
+                colorKey: 'amber',
+                icon: 'piggy-bank',
+                children: {
+                    'savings-emergency': { id: 'savings-emergency', name: 'Emergency fund', icon: 'lifebuoy', budget: 400, type: 'savings' },
+                    'savings-vacation': { id: 'savings-vacation', name: 'Vacation', icon: 'plane', budget: 150, type: 'savings' }
+                }
             }
+        },
+        goals: {
+            'debt-free': { id: 'debt-free', name: 'Debt free', current: 2400, target: 5000, colorKey: 'purple' },
+            'college': { id: 'college', name: '529 college', current: 890, target: 5000, colorKey: 'slate' }
+        }
+    },
+    transactions: [],
+    accounts: {
+        byId: {
+            'checking': { id: 'checking', name: 'TriStar Checking', institution: 'TriStar Bank', balance: 3624.12 },
+            'savings': { id: 'savings', name: 'TriStar High Yield', institution: 'TriStar Bank', balance: 7250.40 },
+            'cash': { id: 'cash', name: 'Cash wallet', institution: 'On hand', balance: 320.00 }
+        }
+    },
+    map: {
+        markers: [],
+        activeType: 'all',
+        cachedPlaces: {},
+        selectedPlace: null
+    },
+    plaid: {
+        connected: false
+    }
+};
 
-            placeViewEl.innerHTML = `<div class="p-4"><button id="back-to-main-btn" class="text-sm font-semibold text-blue-600 mb-4">&larr; Back to Budget</button><div class="flex items-center mb-3"><div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-2xl mr-4">${place.icon}</div><div><h2 class="text-xl font-bold text-gray-900">${place.name}</h2><p class="text-sm text-gray-500">${place.type}</p></div></div>${categorySection}</div><div class="border-t p-4 mt-4"><h3 class="font-bold text-gray-800 mb-2">Recent Activity Here</h3><div class="space-y-2">${merchantTransactions.length === 0 ? '<p class="text-sm text-gray-500">No transactions recorded here yet.</p>' : merchantTransactions.map(t => `<div class="flex justify-between items-center text-sm"><span class="text-gray-600">${new Date(t.date.replace(/-/g, '/')).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span><span class="font-semibold text-gray-800">${formatCurrency(t.amount)}</span></div>`).join('')}</div></div>`;
+const eventBus = new EventTarget();
+
+function emit(eventName, detail) {
+    eventBus.dispatchEvent(new CustomEvent(eventName, { detail }));
+}
+
+function on(eventName, handler) {
+    eventBus.addEventListener(eventName, handler);
+}
+
+function withSubCategories(cb) {
+    const parents = appState.budgets.parents;
+    return Object.values(parents).flatMap(parent => Object.values(parent.children).map(child => cb(child, parent)));
+}
+
+function computeBudgetSnapshots() {
+    const snapshot = {};
+    withSubCategories((child, parent) => {
+        snapshot[child.id] = {
+            sub: child,
+            parent,
+            budget: child.budget,
+            spent: 0,
+            remaining: child.budget,
+            transactions: []
+        };
+    });
+
+    appState.transactions.forEach(txn => {
+        if (!txn.subCategoryId) return;
+        const entry = snapshot[txn.subCategoryId];
+        if (!entry) return;
+        if (txn.type === 'debit') {
+            entry.spent += txn.amount;
+            entry.remaining = entry.budget - entry.spent;
+        }
+        entry.transactions.push(txn);
+    });
+
+    return snapshot;
+}
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function randomGradient(key) {
+    const palette = tailwindPalette[key] || tailwindPalette['slate'];
+    return `linear-gradient(120deg, ${palette[0]}, ${palette[1]})`;
+}
+
+let map;
+
+function initMap() {
+    const startPos = [35.0456, -85.3097];
+    map = L.map('map', {
+        center: startPos,
+        zoom: 13,
+        zoomControl: false,
+        attributionControl: false
+    });
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(map);
+
+    map.on('click', () => {
+        switchSidebarView('budget-view');
+        appState.map.selectedPlace = null;
+        emit('place:selected', null);
+    });
+}
+
+function createSvgIcon(path) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-white">${path}</svg>`;
+}
+
+const pinTemplates = {
+    restaurant: createSvgIcon('<path d="M4 21v-2a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2"/><circle cx="12" cy="7" r="4"/>'),
+    grocery: createSvgIcon('<path d="M3 4h18l-1 16H4L3 4z"/><line x1="7" y1="9" x2="7" y2="4"/><line x1="17" y1="9" x2="17" y2="4"/>'),
+    electronics: createSvgIcon('<rect x="4" y="5" width="16" height="12" rx="2"/><line x1="2" y1="19" x2="22" y2="19"/>'),
+    transport: createSvgIcon('<rect x="3" y="7" width="18" height="10" rx="2"/><path d="M6 17l-1 3h3"/><path d="M18 17l1 3h-3"/>'),
+    health: createSvgIcon('<path d="M12 21s-6-4.35-6-8.5S8.5 4 12 7.5 18 4 18 12.5 12 21 12 21z"/>'),
+    leisure: createSvgIcon('<path d="M20 21V8l-8-5-8 5v13"/><path d="M12 22V11"/><path d="M4 15h16"/>'),
+    fitness: createSvgIcon('<path d="M5 16l-1 4"/><path d="M19 16l1 4"/><path d="M2 12h20"/><path d="M7 8v8"/><path d="M17 8v8"/>'),
+    default: createSvgIcon('<path d="M21 10c0 6-9 13-9 13S3 16 3 10a9 9 0 1 1 18 0z"/><circle cx="12" cy="10" r="3"/>')
+};
+function clearMapMarkers() {
+    appState.map.markers.forEach(({ marker }) => marker.remove());
+    appState.map.markers = [];
+}
+
+function placeParentColor(place) {
+    const parent = appState.budgets.parents[place.parentId || ''];
+    if (!parent) return 'categorized';
+    return `parent-${parent.id}`;
+}
+
+function renderPlaceMarkers(items, highlightNew = false) {
+    clearMapMarkers();
+    const snapshot = computeBudgetSnapshots();
+
+    items.forEach(item => {
+        if (!item.position) return;
+        const place = {
+            id: item.id,
+            title: item.title || item.name,
+            type: item.resultType || item.categories?.[0]?.name || 'Place',
+            lat: item.position.lat,
+            lng: item.position.lng,
+            iconKey: item.iconKey || 'default',
+            hereRaw: item,
+            subCategoryId: item.subCategoryId || null,
+            parentId: item.parentId || null,
+            amountHint: 0,
+            remainingHint: null,
+            isDemo: highlightNew
+        };
+
+        if (place.subCategoryId && snapshot[place.subCategoryId]) {
+            const entry = snapshot[place.subCategoryId];
+            place.parentId = entry.parent.id;
+            place.amountHint = entry.spent;
+            place.remainingHint = entry.remaining;
         }
 
-        function switchSidebarView(targetViewId) {
-            sidebarViews.forEach(v => v.classList.toggle('active', v.id === targetViewId));
-            navBtns.forEach(b => { b.classList.toggle('active', b.dataset.view === targetViewId); b.classList.toggle('text-gray-600', b.dataset.view !== targetViewId); });
-            if (targetViewId === 'budget-view' || targetViewId === 'transactions-view') renderAll();
-        }
+        const status = place.subCategoryId ? placeParentColor(place) : 'uncategorized';
+        const iconHtml = pinTemplates[place.iconKey] || pinTemplates.default;
+        const marker = L.marker([place.lat, place.lng], {
+            icon: L.divIcon({
+                html: `<div class="pin-shell" data-status="${status}">${iconHtml}</div>`,
+                className: '',
+                iconSize: [40, 40],
+                iconAnchor: [20, 40]
+            })
+        }).addTo(map);
 
-        function showPlaceView(place) {
-            currentPlace = place;
-            renderPlaceDetailView(place);
+        marker.on('click', () => {
+            appState.map.selectedPlace = place;
+            emit('place:selected', place);
             switchSidebarView('place-detail-view');
-        }
-        
-        const logPurchaseModalEl = document.getElementById('log-purchase-modal');
-        function showLogPurchaseModal() {
-            logPurchaseModalEl.classList.remove('hidden'); logPurchaseModalEl.classList.add('flex');
-            logPurchaseModalEl.innerHTML = `<div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6"><h2 class="text-2xl font-bold text-gray-900 text-center mb-2">Log Purchase</h2><p class="text-center text-gray-600 mb-4">${currentPlace.name}</p><div class="my-6"><p class="text-6xl font-bold text-center text-gray-800" id="log-amount-display">$0.00</p></div><div class="grid grid-cols-3 gap-2">${[1,2,3,4,5,6,7,8,9,'.',0,'del'].map(k => `<button class="keypad-btn text-2xl font-semibold rounded-xl h-16 transition-colors bg-gray-100 text-gray-800">${k === 'del' ? '&larr;' : k}</button>`).join('')}</div><div class="mt-6 grid grid-cols-2 gap-3"><button id="cancel-log-btn" class="w-full bg-gray-200 text-gray-800 font-semibold py-3 rounded-xl hover:bg-gray-300">Cancel</button><button id="save-log-btn" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700">Save</button></div></div>`;
-        }
-        function hideLogPurchaseModal() { logPurchaseModalEl.classList.add('hidden'); logPurchaseModalEl.classList.remove('flex'); currentAmountString = "0"; }
-        
-        function saveTransaction() {
-            const saveBtn = logPurchaseModalEl.querySelector('#save-log-btn');
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = '<div class="loader mx-auto" style="width:24px; height:24px; border-width: 2px;"></div>';
-
-            const amount = parseFloat(currentAmountString);
-            if(amount > 0 && currentPlace) {
-                const newTransaction = { id: Date.now(), name: currentPlace.name, amount, type: 'debit', date: new Date().toISOString().split('T')[0], category: currentPlace.category, source: 'Manual Log', isInternalTransfer: false };
-                transactionsData.push(newTransaction);
-                hideLogPurchaseModal();
-                renderPlaceDetailView(currentPlace);
-            } else {
-                logPurchaseModalEl.querySelector('#log-amount-display').classList.add('shake', 'text-red-500');
-                setTimeout(()=> {
-                    logPurchaseModalEl.querySelector('#log-amount-display').classList.remove('shake', 'text-red-500');
-                    saveBtn.disabled = false;
-                    saveBtn.innerHTML = 'Save';
-                }, 500);
-            }
-        }
-
-        const addCategoryModalEl = document.getElementById('add-category-modal');
-        function showAddCategoryModal() {
-            addCategoryModalEl.classList.remove('hidden'); addCategoryModalEl.classList.add('flex');
-            const options = Object.entries(budgetData).filter(([k,v])=> v.total).map(([k,v]) => `<option value="${k}">${v.name}</option>`).join('');
-            addCategoryModalEl.innerHTML = `<div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"><h2 class="text-2xl font-bold text-gray-900 mb-4">Add to Budget</h2><div class="mb-4"><label for="existing-category-select" class="block text-sm font-medium text-gray-700">Assign to existing category:</label><select id="existing-category-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"><option value="">--Select One--</option>${options}</select></div><div class="text-center my-2 text-sm text-gray-500 font-semibold">OR</div><div class="mb-4"><label for="new-category-name" class="block text-sm font-medium text-gray-700">Create a new category:</label><input type="text" id="new-category-name" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="e.g. 📚 Books"></div><div class="mb-4"><label for="new-category-total" class="block text-sm font-medium text-gray-700">Monthly Budget Amount:</label><input type="number" id="new-category-total" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="e.g. 50"></div><div class="mt-6 grid grid-cols-2 gap-3"><button id="cancel-add-cat-btn" class="w-full bg-gray-200 text-gray-800 font-semibold py-3 rounded-xl hover:bg-gray-300">Cancel</button><button id="save-add-cat-btn" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700">Save</button></div></div>`;
-        }
-        function hideAddCategoryModal() { addCategoryModalEl.classList.add('hidden'); addCategoryModalEl.classList.remove('flex'); }
-
-        function saveNewCategory() {
-            const saveBtn = addCategoryModalEl.querySelector('#save-add-cat-btn');
-            saveBtn.disabled = true;
-
-            const newCatNameInput = document.getElementById('new-category-name');
-            const newCatTotalInput = document.getElementById('new-category-total');
-            const existingCat = document.getElementById('existing-category-select').value;
-            const newCatName = newCatNameInput.value.trim();
-            const newCatTotal = parseFloat(newCatTotalInput.value);
-
-            const failValidation = (inputsToShake) => {
-                inputsToShake.forEach(input => input.classList.add('shake', 'border-red-500'));
-                setTimeout(() => {
-                    inputsToShake.forEach(input => input.classList.remove('shake', 'border-red-500'));
-                    saveBtn.disabled = false; // Re-enable button
-                }, 500);
-            };
-
-            if (existingCat) {
-                currentPlace.category = existingCat;
-            } else if (newCatName && newCatTotal > 0) {
-                const newCatKey = newCatName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '');
-                if (budgetData[newCatKey]) {
-                    newCatNameInput.value = '';
-                    newCatNameInput.placeholder = "Category already exists!";
-                    failValidation([newCatNameInput]);
-                    setTimeout(() => newCatNameInput.placeholder = "e.g. 📚 Books", 2000);
-                    return;
-                }
-                const colors = ['red-500', 'green-500', 'yellow-500', 'purple-500', 'blue-500', 'cyan-500', 'pink-500', 'teal-500'];
-                budgetData[newCatKey] = { name: newCatName, total: newCatTotal, color: colors[Math.floor(Math.random()*colors.length)] };
-                currentPlace.category = newCatKey;
-                
-                const filtersContainer = document.getElementById('category-filters-container'); 
-                let filterHtml = `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200" data-category="all">All</button>`; 
-                const spendingCats = Object.entries(budgetData).filter(([_, cat]) => cat.total); 
-                spendingCats.forEach(([key, cat]) => { filterHtml += `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200" data-category="${key}">${cat.name}</button>`; }); 
-                filtersContainer.innerHTML = filterHtml;
-            } else { 
-                const invalidInputs = [];
-                if (!newCatName) invalidInputs.push(newCatNameInput);
-                if (!newCatTotal || newCatTotal <= 0) invalidInputs.push(newCatTotalInput);
-                failValidation(invalidInputs);
-                return;
-            }
-            
-            hideAddCategoryModal();
-            renderPlaceDetailView(currentPlace);
-            const markerData = mapMarkers.find(m => m.place.id === currentPlace.id);
-            if (markerData) {
-                 const newIcon = budgetData[currentPlace.category].name.match(/\p{Emoji}/u)?.[0] || '📍';
-                 markerData.marker.setIcon(L.divIcon({ html: `<div class="custom-pin"><div>${newIcon}</div></div>`, className: '', iconSize: [36, 36], iconAnchor: [18, 36] }));
-            }
-        }
-        
-        function initializeMap() {
-            const startPos = [35.7915, -77.9153]; // Wilson, NC
-            map = L.map('map', { center: startPos, zoom: 13, zoomControl: false, attributionControl: false });
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(map);
-
-            // Removed automatic geolocation to default to Wilson, NC
-            
-            const debouncedSearch = debounce(searchPlaces, 500);
-            map.on('moveend', () => { if (!document.getElementById('search-input').value) debouncedSearch(); });
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            initializeMap();
-            const filtersContainer = document.getElementById('category-filters-container'); 
-            let filterHtml = `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full bg-blue-600 text-white transition-colors" data-category="all">All</button>`; 
-            const spendingCats = Object.entries(budgetData).filter(([_, cat]) => cat.total); 
-            spendingCats.forEach(([key, cat]) => { filterHtml += `<button class="category-filter-btn text-sm font-semibold whitespace-nowrap px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200" data-category="${key}">${cat.name}</button>`; }); 
-            filtersContainer.innerHTML = filterHtml;
-            
-            renderAll();
-            // Automatically trigger a search for the initial view
-            searchPlaces();
-            
-            document.getElementById('search-input').addEventListener('input', () => { clearTimeout(searchTimeout); searchTimeout = setTimeout(getAutocompleteSuggestions, 300); });
-            document.getElementById('autocomplete-results').addEventListener('click', (e) => { const s = e.target.closest('[data-id]'); if (s) selectSuggestion(s.dataset.id); });
-
-            document.body.addEventListener('click', (e) => {
-                const filterBtn = e.target.closest('.category-filter-btn');
-                if(filterBtn) { 
-                    document.querySelectorAll('.category-filter-btn').forEach(b => {
-                        b.classList.remove('bg-blue-600', 'text-white');
-                        b.classList.add('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
-                    }); 
-                    filterBtn.classList.add('bg-blue-600', 'text-white');
-                    filterBtn.classList.remove('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
-                    activeCategory = filterBtn.dataset.category; 
-                    document.getElementById('search-input').value = ''; 
-                    searchPlaces(); 
-                    return; 
-                }
-                
-                const keypadBtn = e.target.closest('.keypad-btn');
-                if (keypadBtn) {
-                    const key = keypadBtn.textContent;
-                    const display = document.getElementById('log-amount-display');
-                    if (key === '←') { currentAmountString = currentAmountString.slice(0, -1) || "0"; }
-                    else if (key === '.' && !currentAmountString.includes('.')) { currentAmountString += '.'; }
-                    else if (key !== '.') { if(currentAmountString === "0") currentAmountString = key; else currentAmountString += key; }
-                    
-                    if (currentAmountString.includes('.') && currentAmountString.split('.')[1].length > 2) currentAmountString = currentAmountString.slice(0,-1);
-                    
-                    if (currentAmountString.endsWith('.')) {
-                        display.textContent = formatCurrency(parseFloat(currentAmountString)).slice(0, -3) + '.';
-                    } else {
-                        display.textContent = formatCurrency(parseFloat(currentAmountString) || 0);
-                    }
-                    return;
-                }
-                
-                const navBtn = e.target.closest('.nav-btn'); if (navBtn) { switchSidebarView(navBtn.dataset.view); return; }
-                if (e.target.closest('#back-to-main-btn')) { switchSidebarView('budget-view'); return; }
-                if (e.target.closest('#log-purchase-btn')) { showLogPurchaseModal(); return; }
-                if (e.target.closest('#cancel-log-btn') || e.target.id === 'log-purchase-modal') { hideLogPurchaseModal(); return; }
-                if (e.target.closest('#save-log-btn')) { saveTransaction(); return; }
-                if (e.target.closest('#add-to-budget-btn')) { showAddCategoryModal(); return; }
-                if (e.target.closest('#cancel-add-cat-btn') || e.target.id === 'add-category-modal') { hideAddCategoryModal(); return; }
-                if (e.target.closest('#save-add-cat-btn')) { saveNewCategory(); return; }
-            });
         });
-    </script>
+
+        appState.map.markers.push({ marker, place });
+    });
+}
+
+async function fetchPlaces() {
+    const query = document.getElementById('search-input').value.trim();
+    const center = map.getCenter();
+    const activeType = appState.map.activeType;
+    const cacheKey = `${center.lat.toFixed(3)}_${center.lng.toFixed(3)}_${map.getZoom()}_${activeType}_${query}`;
+
+    if (appState.map.cachedPlaces[cacheKey]) {
+        renderPlaceMarkers(appState.map.cachedPlaces[cacheKey]);
+        renderAccountsView();
+        return;
+    }
+
+    if (HERE_API_KEY === 'YOUR_HERE_API_KEY') {
+        console.warn('HERE API key missing, skipping live search.');
+        return;
+    }
+
+    document.getElementById('map-loader').classList.remove('hidden');
+
+    try {
+        const bounds = map.getBounds();
+        const radius = Math.round(center.distanceTo(bounds.getNorthEast()));
+        let url;
+        if (query) {
+            url = `https://discover.search.hereapi.com/v1/discover?q=${encodeURIComponent(query)}&in=circle:${center.lat},${center.lng};r=${radius}&limit=80&apiKey=${HERE_API_KEY}`;
+        } else if (activeType !== 'all') {
+            const type = placeTypeConfig.find(t => t.id === activeType);
+            url = `https://browse.search.hereapi.com/v1/browse?categories=${type?.here || ''}&in=circle:${center.lat},${center.lng};r=${radius}&limit=80&apiKey=${HERE_API_KEY}`;
+        } else {
+            document.getElementById('map-loader').classList.add('hidden');
+            return;
+        }
+        const response = await fetch(url);
+        const data = await response.json();
+        const items = (data.items || []).map(item => {
+            const iconKey = activeType !== 'all' ? activeType : detectPlaceType(item);
+            return { ...item, iconKey };
+        });
+        appState.map.cachedPlaces[cacheKey] = items;
+        renderPlaceMarkers(items, !query);
+        renderAccountsView();
+    } catch (err) {
+        console.error('Place search failed', err);
+    } finally {
+        document.getElementById('map-loader').classList.add('hidden');
+    }
+}
+
+function detectPlaceType(item) {
+    const categories = item.categories || [];
+    for (const type of placeTypeConfig) {
+        if (type.here && categories.some(cat => type.here.split(',').includes(cat.id))) {
+            return type.id;
+        }
+    }
+    return 'default';
+}
+
+function renderBudgetView() {
+    const snapshot = computeBudgetSnapshots();
+    let totalRemaining = 0;
+    const budgetList = document.getElementById('budget-category-list');
+    const savingsList = document.getElementById('savings-category-list');
+    budgetList.innerHTML = '';
+    savingsList.innerHTML = '';
+
+    Object.values(appState.budgets.parents).forEach(parent => {
+        const isSavings = parent.id === 'savings';
+        const container = isSavings ? savingsList : budgetList;
+        const cards = Object.values(parent.children).map(child => {
+            const entry = snapshot[child.id];
+            const spent = entry?.spent || 0;
+            const remaining = Math.max(0, child.budget - spent);
+            const percent = child.budget ? Math.min(100, (spent / child.budget) * 100) : 0;
+            const gradient = randomGradient(parent.colorKey);
+            if (!isSavings) {
+                totalRemaining += remaining;
+            }
+            return `
+                <article class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="font-semibold text-slate-900">${child.name}</p>
+                            <p class="text-xs text-slate-500">${formatCurrency(spent)} spent of ${formatCurrency(child.budget)}</p>
+                        </div>
+                        <button class="add-sub-btn text-blue-500 hover:text-blue-600" data-parent="${parent.id}" data-sub="${child.id}" title="Add sub-category">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        </button>
+                    </div>
+                    <div class="budget-bar mt-4">
+                        <span class="budget-target"></span>
+                        <span class="budget-spent" style="width:${percent}% ; background:${gradient};"></span>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <p class="text-xs font-semibold text-white drop-shadow">${percent.toFixed(0)}%</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex justify-between text-xs font-medium">
+                        <span class="text-slate-500">Remaining</span>
+                        <span class="text-emerald-600">${formatCurrency(remaining)}</span>
+                    </div>
+                </article>
+            `;
+        }).join('');
+
+        container.insertAdjacentHTML('beforeend', `
+            <section class="space-y-3">
+                <header class="flex items-center justify-between px-2">
+                    <h3 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                        <span>${parent.name}</span>
+                    </h3>
+                    <button class="add-parent-child text-blue-500 hover:text-blue-600" data-parent="${parent.id}" title="Add sub-category">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                </header>
+                <div class="space-y-3">${cards}</div>
+            </section>
+        `);
+    });
+
+    document.getElementById('budget-remaining').textContent = formatCurrency(totalRemaining);
+
+    const goalsList = document.getElementById('goals-list');
+    goalsList.innerHTML = Object.values(appState.budgets.goals).map(goal => {
+        const percent = goal.target ? Math.min(100, (goal.current / goal.target) * 100) : 0;
+        const gradient = randomGradient(goal.colorKey);
+        return `
+            <article class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+                <div class="flex justify-between">
+                    <p class="font-semibold text-slate-900">${goal.name}</p>
+                    <span class="text-sm text-slate-500">${formatCurrency(goal.current)} / ${formatCurrency(goal.target)}</span>
+                </div>
+                <div class="budget-bar mt-3">
+                    <span class="budget-target"></span>
+                    <span class="budget-spent" style="width:${percent}% ; background:${gradient};"></span>
+                </div>
+            </article>
+        `;
+    }).join('');
+}
+let financialCanvas;
+function initTimeline() {
+    if (!financialCanvas) {
+        financialCanvas = new FinancialCanvas('budget-timeline', buildTimelineData());
+    } else {
+        financialCanvas.updateData(buildTimelineData());
+    }
+}
+
+function buildTimelineData() {
+    const snapshot = computeBudgetSnapshots();
+    const spendingData = withSubCategories((child, parent) => {
+        if (child.type === 'savings') return null;
+        const entry = snapshot[child.id];
+        return {
+            id: child.id,
+            label: child.name,
+            finalSpent: entry?.spent || 0,
+            total: child.budget,
+            color: tailwindPalette[parent.colorKey]?.[0] || '#3b82f6'
+        };
+    }).filter(Boolean);
+
+    const savingsData = withSubCategories((child, parent) => {
+        if (child.type !== 'savings') return null;
+        const entry = snapshot[child.id];
+        return {
+            id: child.id,
+            label: child.name,
+            finalSaved: entry ? entry.budget - entry.spent : child.budget,
+            total: child.budget,
+            color: tailwindPalette[parent.colorKey]?.[0] || '#f59e0b'
+        };
+    }).filter(Boolean);
+
+    const assumedIncome = 6200;
+    return { spendingData, savingsData, assumedIncome };
+}
+
+class FinancialCanvas {
+    constructor(containerId, data) {
+        this.container = document.getElementById(containerId);
+        this.canvas = document.createElement('canvas');
+        this.container.appendChild(this.canvas);
+        this.ctx = this.canvas.getContext('2d');
+        this.scale = window.devicePixelRatio || 1;
+        this.width = this.container.clientWidth;
+        this.height = this.container.clientHeight;
+        this.canvas.width = this.width * this.scale;
+        this.canvas.height = this.height * this.scale;
+        this.canvas.style.width = `${this.width}px`;
+        this.canvas.style.height = `${this.height}px`;
+        this.ctx.scale(this.scale, this.scale);
+        this.data = data;
+        this.drag = { active: false, x: 0, offset: 0 };
+        this.sliderValue = 20;
+        this.bindEvents();
+        this.draw();
+    }
+
+    bindEvents() {
+        window.addEventListener('resize', () => this.resize());
+        this.canvas.addEventListener('pointerdown', (e) => {
+            const { left } = this.canvas.getBoundingClientRect();
+            const x = e.clientX - left;
+            if (this.isSliderHit(x)) {
+                this.drag.active = true;
+                this.drag.offset = x - this.sliderX();
+            }
+        });
+        window.addEventListener('pointerup', () => this.drag.active = false);
+        window.addEventListener('pointermove', (e) => {
+            if (!this.drag.active) return;
+            const { left } = this.canvas.getBoundingClientRect();
+            const x = e.clientX - left - this.drag.offset;
+            const clamped = Math.max(50, Math.min(this.width - 50, x));
+            const percent = (clamped - 50) / (this.width - 100);
+            this.sliderValue = Math.round(1 + percent * 30);
+            this.draw();
+        });
+    }
+
+    resize() {
+        this.width = this.container.clientWidth;
+        this.height = this.container.clientHeight;
+        this.canvas.width = this.width * this.scale;
+        this.canvas.height = this.height * this.scale;
+        this.canvas.style.width = `${this.width}px`;
+        this.canvas.style.height = `${this.height}px`;
+        this.ctx.scale(this.scale, this.scale);
+        this.draw();
+    }
+
+    sliderX() {
+        return 50 + ((this.sliderValue - 1) / 30) * (this.width - 100);
+    }
+
+    isSliderHit(x) {
+        return Math.abs(x - this.sliderX()) < 20;
+    }
+
+    updateData(data) {
+        this.data = data;
+        this.draw();
+    }
+
+    draw() {
+        const ctx = this.ctx;
+        ctx.save();
+        ctx.clearRect(0, 0, this.width, this.height);
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, this.width, this.height);
+        ctx.font = '12px Inter';
+        ctx.fillStyle = '#cbd5f5';
+        ctx.fillText('Spending velocity', 32, 32);
+        ctx.fillText(`Day ${this.sliderValue}`, this.width - 90, 32);
+
+        const laneHeight = 52;
+        const startY = 64;
+        const maxAmount = Math.max(1, ...this.data.spendingData.map(d => d.total));
+        this.data.spendingData.forEach((item, index) => {
+            const y = startY + index * laneHeight;
+            const width = (item.finalSpent / maxAmount) * (this.width - 140);
+            ctx.fillStyle = '#1f2937';
+            ctx.fillRect(32, y, this.width - 64, laneHeight - 12);
+            const gradient = ctx.createLinearGradient(32, y, 32 + width, y);
+            gradient.addColorStop(0, item.color);
+            gradient.addColorStop(1, '#1d4ed8');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(32, y, width, laneHeight - 12);
+            ctx.fillStyle = '#e5e7eb';
+            ctx.fillText(item.label, 40, y + 24);
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillText(`${formatCurrency(item.finalSpent)} / ${formatCurrency(item.total)}`, 40, y + 40);
+        });
+
+        const sliderX = this.sliderX();
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(sliderX, 40);
+        ctx.lineTo(sliderX, this.height - 40);
+        ctx.stroke();
+
+        ctx.fillStyle = '#0ea5e9';
+        ctx.beginPath();
+        ctx.arc(sliderX, this.height - 48, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 12px Inter';
+        ctx.fillText(this.sliderValue.toString(), sliderX - 6, this.height - 44);
+        ctx.restore();
+    }
+}
+function renderTransactions() {
+    const listEl = document.getElementById('transactions-list');
+    const assetsEl = document.getElementById('assets-display');
+    const totalSpentEl = document.getElementById('total-spent');
+    const snapshot = computeBudgetSnapshots();
+
+    const sorted = [...appState.transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const totalSpent = sorted.filter(t => t.type === 'debit').reduce((sum, t) => sum + t.amount, 0);
+    const totalCredits = sorted.filter(t => t.type === 'credit').reduce((sum, t) => sum + t.amount, 0);
+    const assets = Object.values(appState.accounts.byId).reduce((sum, a) => sum + a.balance, 0);
+
+    totalSpentEl.textContent = formatCurrency(totalSpent);
+    assetsEl.textContent = formatCurrency(assets + totalCredits - totalSpent);
+
+    const groups = sorted.reduce((acc, txn) => {
+        const day = new Date(txn.date).toISOString().split('T')[0];
+        if (!acc[day]) acc[day] = [];
+        acc[day].push(txn);
+        return acc;
+    }, {});
+
+    listEl.innerHTML = Object.entries(groups).map(([day, txns]) => {
+        const label = new Date(day).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        return `
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+                <h3 class="text-sm font-semibold text-slate-600 mb-3">${label}</h3>
+                <div class="space-y-3">
+                    ${txns.map(txn => {
+                        const entry = txn.subCategoryId ? snapshot[txn.subCategoryId] : null;
+                        const parentName = entry ? entry.parent.name : 'Uncategorized';
+                        const subName = entry ? entry.sub.name : 'Assign category';
+                        return `
+                            <article class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-semibold text-slate-900">${txn.name}</p>
+                                    <p class="text-xs text-slate-500">${subName} · ${parentName}</p>
+                                    <p class="text-xs text-slate-400">${formatDate(txn.date)}</p>
+                                </div>
+                                <div class="text-right flex flex-col items-end gap-1">
+                                    <span class="font-semibold ${txn.type === 'debit' ? 'text-slate-900' : 'text-emerald-600'}">${txn.type === 'debit' ? '-' : '+'}${formatCurrency(txn.amount)}</span>
+                                    <button class="txn-categorize text-xs text-blue-600 flex items-center gap-1" data-id="${txn.id}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                        Assign
+                                    </button>
+                                </div>
+                            </article>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderAccountsView() {
+    const summaryEl = document.getElementById('accounts-summary');
+    const placesEl = document.getElementById('accounts-places');
+    const snapshot = computeBudgetSnapshots();
+
+    summaryEl.innerHTML = Object.values(appState.accounts.byId).map(account => {
+        return `
+            <article class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="font-semibold text-slate-900">${account.name}</h3>
+                        <p class="text-xs text-slate-500">${account.institution}</p>
+                    </div>
+                    <p class="text-lg font-bold text-slate-900">${formatCurrency(account.balance)}</p>
+                </div>
+            </article>
+        `;
+    }).join('');
+
+    const placeCards = appState.map.markers.map(({ place }) => {
+        const entry = place.subCategoryId ? snapshot[place.subCategoryId] : null;
+        const remaining = entry ? entry.remaining : null;
+        return `
+            <article class="bg-white border border-slate-200 rounded-2xl p-4 flex justify-between items-center shadow-sm">
+                <div>
+                    <h3 class="font-semibold text-slate-900">${place.title}</h3>
+                    <p class="text-xs text-slate-500">${place.type}</p>
+                </div>
+                <div class="text-right">
+                    ${remaining !== null ? `<p class="text-xs text-slate-500">Remaining</p><p class="text-sm font-bold text-emerald-600">${formatCurrency(remaining)}</p>` : '<p class="text-xs text-amber-600">Uncategorized</p>'}
+                </div>
+            </article>
+        `;
+    }).join('');
+    placesEl.innerHTML = placeCards || '<p class="text-sm text-slate-500">Search for places to see budget matches.</p>';
+}
+
+function renderPlaceDetail(place) {
+    const container = document.getElementById('place-detail-view');
+    if (!place) {
+        container.innerHTML = '';
+        return;
+    }
+    const snapshot = computeBudgetSnapshots();
+    const entry = place.subCategoryId ? snapshot[place.subCategoryId] : null;
+    const subName = entry ? entry.sub.name : 'Uncategorized';
+    const parentName = entry ? entry.parent.name : 'No parent assigned';
+    const remaining = entry ? formatCurrency(entry.remaining) : '—';
+
+    container.innerHTML = `
+        <button class="text-sm text-blue-600 font-semibold" id="back-to-budget">← Back to overview</button>
+        <div class="bg-white border border-slate-200 rounded-3xl p-5 shadow-lg space-y-4">
+            <div>
+                <h2 class="text-xl font-bold text-slate-900">${place.title}</h2>
+                <p class="text-sm text-slate-500">${place.type}</p>
+            </div>
+            <div class="bg-slate-900 text-white rounded-2xl p-4">
+                <p class="text-sm text-slate-300">Assigned category</p>
+                <p class="text-lg font-semibold">${subName}</p>
+                <p class="text-xs text-slate-400">${parentName}</p>
+                <p class="text-sm mt-2">Remaining: <span class="font-semibold">${remaining}</span></p>
+            </div>
+            <div class="flex gap-3">
+                <button class="map-add-existing flex-1 bg-blue-600 text-white py-2.5 rounded-xl font-semibold flex items-center justify-center gap-2" data-place="${place.id}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    Add to sub-category
+                </button>
+                <button class="map-create-new flex-1 border border-dashed border-blue-400 text-blue-600 py-2.5 rounded-xl font-semibold flex items-center justify-center gap-2" data-place="${place.id}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                    Create new
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function renderPlaceFilters() {
+    const container = document.getElementById('place-type-filters');
+    container.innerHTML = `
+        <button class="filter-btn px-4 py-2 rounded-full text-sm font-semibold ${appState.map.activeType === 'all' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600'}" data-filter="all">All</button>
+        ${placeTypeConfig.map(type => `
+            <button class="filter-btn px-4 py-2 rounded-full text-sm font-semibold ${appState.map.activeType === type.id ? 'bg-blue-600 text-white' : 'bg-white text-slate-600'}" data-filter="${type.id}">${type.label}</button>
+        `).join('')}
+    `;
+}
+
+function switchSidebarView(targetId) {
+    document.querySelectorAll('.sidebar-view').forEach(view => view.classList.toggle('active', view.id === targetId));
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        const isActive = btn.dataset.view === targetId;
+        btn.classList.toggle('active', isActive);
+        btn.classList.toggle('text-slate-600', !isActive);
+    });
+    if (targetId === 'budget-view') {
+        renderBudgetView();
+        initTimeline();
+    } else if (targetId === 'transactions-view') {
+        renderTransactions();
+    } else if (targetId === 'accounts-view') {
+        renderAccountsView();
+    }
+}
+function updateViewMode() {
+    const width = window.innerWidth;
+    const mode = width <= 1024 ? 'mobile' : 'desktop';
+    if (appState.viewMode !== mode) {
+        appState.viewMode = mode;
+        document.getElementById('view-toggle-label').textContent = mode === 'mobile' ? 'Mobile view' : '';
+        emit('viewport:changed', mode);
+    }
+}
+
+function openCategoryModal(options = {}) {
+    const modal = document.getElementById('category-modal');
+    modal.classList.add('active');
+    document.getElementById('category-name').value = options.name || '';
+    document.getElementById('category-budget').value = options.budget || '';
+    document.getElementById('category-icon').value = options.icon || '';
+    const select = document.getElementById('category-parent');
+    select.innerHTML = Object.values(appState.budgets.parents).map(parent => {
+        return `<option value="${parent.id}" ${options.parentId === parent.id ? 'selected' : ''}>${parent.name}</option>`;
+    }).join('');
+    if (options.allowParentCreation) {
+        select.insertAdjacentHTML('afterbegin', '<option value="__new">Create new parent</option>');
+    }
+    select.value = options.parentId || select.options[0]?.value;
+    modal.dataset.mode = options.mode || 'sub';
+    modal.dataset.parent = options.parentId || '';
+}
+
+function closeCategoryModal() {
+    const modal = document.getElementById('category-modal');
+    modal.classList.remove('active');
+}
+
+function openCategorizeModal(target, context = 'transaction') {
+    const modal = document.getElementById('categorize-modal');
+    modal.classList.add('active');
+    modal.dataset.context = context;
+    const select = document.getElementById('categorize-select');
+    select.innerHTML = withSubCategories((child, parent) => `<option value=\"${child.id}\">${parent.name} — ${child.name}</option>`).join('');
+    if (context === 'transaction') {
+        modal.dataset.txn = target.id;
+        modal.dataset.place = '';
+        document.getElementById('categorize-modal-transaction').textContent = `${target.name} • ${formatCurrency(target.amount)}`;
+        select.value = target.subCategoryId || select.options[0]?.value;
+    } else {
+        modal.dataset.place = target.id;
+        modal.dataset.txn = '';
+        document.getElementById('categorize-modal-transaction').textContent = `Assign ${target.title}`;
+        select.value = target.subCategoryId || select.options[0]?.value;
+    }
+}
+
+function closeCategorizeModal() {
+    document.getElementById('categorize-modal').classList.remove('active');
+}
+
+function createParentCategory(name, colorKey = 'slate', icon = '') {
+    const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    if (!appState.budgets.parents[id]) {
+        appState.budgets.parents[id] = { id, name, gradient: `from-${colorKey}-500 to-${colorKey}-600`, colorKey, icon, children: {} };
+    }
+    return appState.budgets.parents[id];
+}
+
+function createSubCategory(parentId, name, budget, icon = '', type = 'expense') {
+    const parent = appState.budgets.parents[parentId];
+    if (!parent) return null;
+    const id = `${parentId}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+    parent.children[id] = { id, name, icon, budget: Number(budget), type };
+    return parent.children[id];
+}
+
+function attachNewCategory({ parentId, name, budget, icon, type }) {
+    if (parentId === '__new') {
+        const newParentName = name;
+        const paletteKeys = Object.keys(tailwindPalette);
+        const colorKey = paletteKeys[Math.floor(Math.random() * paletteKeys.length)];
+        const parent = createParentCategory(newParentName, colorKey, icon);
+        parent.children[`${parent.id}-main`] = { id: `${parent.id}-main`, name: `${newParentName} main`, icon, budget: Number(budget), type };
+    } else {
+        createSubCategory(parentId, name, budget, icon, type);
+    }
+    emit('state:changed');
+}
+
+function applyCategoryChangesFromModal() {
+    const modal = document.getElementById('category-modal');
+    const parentId = document.getElementById('category-parent').value;
+    const name = document.getElementById('category-name').value.trim();
+    const budget = parseFloat(document.getElementById('category-budget').value);
+    const icon = document.getElementById('category-icon').value.trim();
+    if (!name || isNaN(budget)) return;
+    attachNewCategory({ parentId, name, budget, icon, type: 'expense' });
+    closeCategoryModal();
+}
+
+function saveCategorizationFromModal() {
+    const modal = document.getElementById('categorize-modal');
+    const select = document.getElementById('categorize-select');
+    const subCategoryId = select.value;
+    if (!subCategoryId) return;
+    const context = modal.dataset.context || 'transaction';
+    if (context === 'transaction') {
+        const txnId = Number(modal.dataset.txn);
+        const txn = appState.transactions.find(t => t.id === txnId);
+        if (!txn) return;
+        txn.subCategoryId = subCategoryId;
+    } else if (context === 'place') {
+        const placeId = modal.dataset.place;
+        const markerEntry = appState.map.markers.find(m => m.place.id === placeId);
+        if (markerEntry) {
+            markerEntry.place.subCategoryId = subCategoryId;
+            let matchParent = null;
+            for (const parent of Object.values(appState.budgets.parents)) {
+                if (parent.children[subCategoryId]) {
+                    matchParent = { parent, child: parent.children[subCategoryId] };
+                    break;
+                }
+            }
+            markerEntry.place.parentId = matchParent?.parent.id || null;
+            const status = markerEntry.place.subCategoryId ? placeParentColor(markerEntry.place) : 'uncategorized';
+            const iconHtml = pinTemplates[markerEntry.place.iconKey] || pinTemplates.default;
+            markerEntry.marker.setIcon(L.divIcon({ html: `<div class=\"pin-shell\" data-status=\"${status}\">${iconHtml}</div>`, className: '', iconSize: [40, 40], iconAnchor: [20, 40] }));
+            renderPlaceDetail(markerEntry.place);
+        }
+    }
+    closeCategorizeModal();
+    emit('state:changed');
+}
+
+function loadInitialTransactions() {
+    const seed = [
+        { id: 1, name: 'Public House Restaurant', amount: 72.5, type: 'debit', date: '2025-10-08', subCategoryId: 'lifestyle-dining-out' },
+        { id: 2, name: 'Whole Foods Chattanooga', amount: 128.33, type: 'debit', date: '2025-10-05', subCategoryId: 'living-groceries' },
+        { id: 3, name: 'EPB Chattanooga', amount: 94.12, type: 'debit', date: '2025-10-02', subCategoryId: 'living-utilities' },
+        { id: 4, name: 'BlueCross Premium', amount: 210.0, type: 'debit', date: '2025-10-01', subCategoryId: 'health-healthcare' },
+        { id: 5, name: 'Remote salary', amount: 4200, type: 'credit', date: '2025-10-01', subCategoryId: null }
+    ];
+    appState.transactions = seed;
+}
+
+function generateDemoTransactions() {
+    const merchants = [
+        { name: 'Mean Mug Coffeehouse', type: 'debit', range: [6, 18], category: 'lifestyle-dining-out' },
+        { name: 'Easy Bistro', type: 'debit', range: [32, 120], category: 'lifestyle-dining-out' },
+        { name: 'Walmart Neighborhood Market', type: 'debit', range: [20, 95], category: 'living-groceries' },
+        { name: 'Publix Super Market', type: 'debit', range: [25, 140], category: 'living-groceries' },
+        { name: 'Fuel Center', type: 'debit', range: [28, 75], category: 'transport-gas' },
+        { name: 'Orange Theory Northshore', type: 'debit', range: [19, 45], category: 'health-fitness' },
+        { name: 'BlueCross Payroll', type: 'credit', range: [1800, 2200], category: null },
+        { name: 'Volkswagen Credit', type: 'debit', range: [210, 420], category: 'transport-rideshare' },
+        { name: 'Tennessee Aquarium', type: 'debit', range: [15, 55], category: 'lifestyle-entertainment' }
+    ];
+    const demo = [];
+    for (let i = 0; i < 200; i++) {
+        const merchant = merchants[Math.floor(Math.random() * merchants.length)];
+        const amount = Number((Math.random() * (merchant.range[1] - merchant.range[0]) + merchant.range[0]).toFixed(2));
+        const date = new Date();
+        date.setDate(date.getDate() - Math.floor(Math.random() * 45));
+        demo.push({
+            id: Date.now() + i,
+            name: merchant.name,
+            amount,
+            type: merchant.type,
+            date: date.toISOString().split('T')[0],
+            subCategoryId: merchant.category
+        });
+    }
+    appState.transactions = demo;
+    emit('state:changed');
+}
+
+function simulatePlaidLink() {
+    appState.plaid.connected = true;
+    document.getElementById('demo-data-btn').classList.add('hidden');
+    document.getElementById('plaid-link-btn').textContent = 'Bank linked';
+    document.getElementById('plaid-link-btn').disabled = true;
+    emit('state:changed');
+}
+
+function initEventHandlers() {
+    document.body.addEventListener('click', (event) => {
+        if (event.target.closest('.nav-btn')) {
+            const targetId = event.target.closest('.nav-btn').dataset.view;
+            switchSidebarView(targetId);
+        }
+        if (event.target.closest('.add-parent-btn')) {
+            openCategoryModal({ allowParentCreation: true, mode: 'parent' });
+        }
+        if (event.target.closest('.add-parent-child')) {
+            const parentId = event.target.closest('.add-parent-child').dataset.parent;
+            openCategoryModal({ parentId });
+        }
+        if (event.target.closest('.add-sub-btn')) {
+            const { parent } = event.target.closest('.add-sub-btn').dataset;
+            openCategoryModal({ parentId: parent });
+        }
+        if (event.target.closest('#category-modal-save')) {
+            applyCategoryChangesFromModal();
+        }
+        if (event.target.closest('.close-category-modal')) {
+            closeCategoryModal();
+        }
+        if (event.target.closest('#categorize-save')) {
+            saveCategorizationFromModal();
+        }
+        if (event.target.closest('.close-categorize-modal')) {
+            closeCategorizeModal();
+        }
+        if (event.target.closest('#demo-data-btn')) {
+            generateDemoTransactions();
+        }
+        if (event.target.closest('#plaid-link-btn') && !appState.plaid.connected) {
+            simulatePlaidLink();
+        }
+        if (event.target.closest('.txn-categorize')) {
+            const txnId = Number(event.target.closest('.txn-categorize').dataset.id);
+            const txn = appState.transactions.find(t => t.id === txnId);
+            if (txn) openCategorizeModal(txn, 'transaction');
+        }
+        if (event.target.closest('.filter-btn')) {
+            const filter = event.target.closest('.filter-btn').dataset.filter;
+            appState.map.activeType = filter;
+            renderPlaceFilters();
+            fetchPlaces();
+        }
+        if (event.target.closest('#back-to-budget')) {
+            switchSidebarView('budget-view');
+        }
+        if (event.target.closest('.map-add-existing')) {
+            const placeId = event.target.closest('.map-add-existing').dataset.place;
+            const marker = appState.map.markers.find(m => m.place.id === placeId);
+            if (marker) openCategorizeModal(marker.place, 'place');
+        }
+        if (event.target.closest('.map-create-new')) {
+            const parentId = Object.keys(appState.budgets.parents)[0];
+            openCategoryModal({ parentId });
+        }
+    });
+
+    document.getElementById('categorize-new-sub').addEventListener('click', () => {
+        closeCategorizeModal();
+        openCategoryModal({ parentId: Object.keys(appState.budgets.parents)[0] });
+    });
+
+    document.getElementById('search-input').addEventListener('input', debounce(() => {
+        fetchPlaces();
+    }, 400));
+}
+
+function debounce(fn, delay) {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fn.apply(null, args), delay);
+    };
+}
+
+function initializeApp() {
+    initMap();
+    renderPlaceFilters();
+    loadInitialTransactions();
+    switchSidebarView('budget-view');
+    updateViewMode();
+    initEventHandlers();
+    renderPlaceDetail(null);
+    emit('state:changed');
+}
+
+on('state:changed', () => {
+    renderBudgetView();
+    renderTransactions();
+    renderAccountsView();
+    initTimeline();
+    if (appState.map.selectedPlace) {
+        renderPlaceDetail(appState.map.selectedPlace);
+    }
+});
+
+on('place:selected', (event) => {
+    renderPlaceDetail(event.detail);
+});
+
+window.addEventListener('resize', () => updateViewMode());
+
+initializeApp();
+</script>
 </body>
 </html>
-
